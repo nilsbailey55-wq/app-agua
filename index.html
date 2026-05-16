@@ -543,6 +543,29 @@
     .popup-body  { color: var(--text-muted); line-height: 1.5; }
     .popup-status { font-weight: 700; margin-top: 6px; font-size: 0.78rem; }
 
+    /* ── flow chart ── */
+    .flow-chart-wrap {
+      margin-top: 4px;
+      background: #f7fafd;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 12px 10px 8px;
+      overflow: hidden;
+    }
+    .flow-chart-title {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;
+    }
+    .flow-chart-svg { width: 100%; display: block; }
+    .flow-chart-note {
+      font-size: 0.60rem; color: #aab; margin-top: 6px;
+      line-height: 1.35;
+    }
+    .flow-chart-loading {
+      text-align: center; color: var(--text-muted);
+      font-size: 0.75rem; padding: 18px 0;
+    }
+
     /* toast */
     #toast {
       position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -1018,6 +1041,8 @@ async function selectBasin(id, panTo = false) {
     if (!res.ok) throw new Error('Not found');
     const b = await res.json();
     renderDetail(b);
+    // Cargar serie histórica async (oculta el contenedor si no hay datos)
+    loadFlowChart(b.id, 'flow-chart-container');
   } catch {
     detailEl.innerHTML = '<div class="error-box">No se pudo cargar el detalle.</div>';
   }
@@ -1233,6 +1258,9 @@ function renderDetail(b) {
       <summary>🚦 Estado actual</summary>
       <div class="section-body">
         <div class="lights-grid">${lightsHtml}</div>
+        <div id="flow-chart-container" class="flow-chart-wrap">
+          <div class="flow-chart-loading">Cargando serie histórica…</div>
+        </div>
       </div>
     </details>
 
@@ -2952,6 +2980,117 @@ document.getElementById('locateBtn').addEventListener('click', () => {
     }
   }, () => toast('No se pudo obtener tu ubicación'));
 });
+
+// ── flow chart (SVG puro, sin dependencias) ───────────────────────────────
+function buildFlowChartSVG(metric) {
+  const data = metric.data;
+  if (!data || data.length < 2) return '<p class="flow-chart-loading">Sin datos suficientes.</p>';
+
+  const W = 320, H = 110;
+  const PAD = { top: 10, right: 12, bottom: 24, left: 44 };
+  const cW = W - PAD.left - PAD.right;
+  const cH = H - PAD.top - PAD.bottom;
+
+  const years  = data.map(d => d.year);
+  const values = data.map(d => d.value);
+  const minY   = Math.min(...values) - 0.3;
+  const maxY   = Math.max(...values) + 0.3;
+  const mean   = metric.historical_mean;
+  const alertL = metric.alert_low;
+
+  const xS = i => PAD.left + (i / (data.length - 1)) * cW;
+  const yS = v => PAD.top  + cH - ((v - minY) / (maxY - minY)) * cH;
+
+  // Polilínea de valores
+  const pts = data.map((d, i) => `${xS(i).toFixed(1)},${yS(d.value).toFixed(1)}`).join(' ');
+
+  // Área bajo la curva
+  const areaPath = `M${xS(0).toFixed(1)},${yS(data[0].value).toFixed(1)} ` +
+    data.map((d, i) => `L${xS(i).toFixed(1)},${yS(d.value).toFixed(1)}`).join(' ') +
+    ` L${xS(data.length-1).toFixed(1)},${(PAD.top+cH).toFixed(1)} L${PAD.left.toFixed(1)},${(PAD.top+cH).toFixed(1)} Z`;
+
+  // Marcador del punto actual
+  const currentIdx = data.findIndex(d => d.is_current);
+  const currentDot = currentIdx >= 0 ? (() => {
+    const cx = xS(currentIdx), cy = yS(data[currentIdx].value);
+    const isLow = data[currentIdx].value < mean;
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.5" fill="${isLow ? '#e74c3c' : '#1976d2'}" stroke="#fff" stroke-width="1.5"/>`;
+  })() : '';
+
+  // Línea de media histórica
+  const meanY = yS(mean).toFixed(1);
+  const meanLine = `<line x1="${PAD.left}" y1="${meanY}" x2="${W-PAD.right}" y2="${meanY}" stroke="#1565c0" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>`;
+  const meanLabel = `<text x="${W-PAD.right+2}" y="${parseFloat(meanY)+4}" font-size="7" fill="#1565c0" opacity="0.8">media</text>`;
+
+  // Línea de alerta baja (si existe)
+  const alertLine = alertL ? (() => {
+    const ay = yS(alertL).toFixed(1);
+    return `<line x1="${PAD.left}" y1="${ay}" x2="${W-PAD.right}" y2="${ay}" stroke="#e74c3c" stroke-width="0.8" stroke-dasharray="2 3" opacity="0.6"/>
+            <text x="${W-PAD.right+2}" y="${parseFloat(ay)+4}" font-size="7" fill="#e74c3c" opacity="0.8">alerta</text>`;
+  })() : '';
+
+  // Eje X: ticks de año cada 5 años
+  const xAxisTicks = data.filter((d,i) => d.year % 5 === 0).map((d, _, arr) => {
+    const i = data.indexOf(d);
+    const x = xS(i).toFixed(1);
+    const y = (PAD.top + cH + 10).toFixed(1);
+    return `<text x="${x}" y="${y}" text-anchor="middle" font-size="7.5" fill="#888">${d.year}</text>`;
+  }).join('');
+
+  // Eje Y: 3 etiquetas
+  const yTicks = [minY, mean, maxY].map(v => {
+    const y = yS(v).toFixed(1);
+    return `<text x="${PAD.left - 3}" y="${parseFloat(y)+3}" text-anchor="end" font-size="7" fill="#888">${v.toFixed(1)}</text>`;
+  }).join('');
+
+  // Label unidad
+  const unitLabel = `<text x="${PAD.left}" y="${PAD.top - 2}" font-size="6.5" fill="#aaa">${metric.unit}</text>`;
+
+  return `
+  <svg class="flow-chart-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <!-- área -->
+    <path d="${areaPath}" fill="#1e88e5" opacity="0.10"/>
+    <!-- rejilla horizontal sutil -->
+    ${[minY, mean, maxY].map(v =>
+      `<line x1="${PAD.left}" y1="${yS(v).toFixed(1)}" x2="${W-PAD.right}" y2="${yS(v).toFixed(1)}" stroke="#e0e8f0" stroke-width="0.5"/>`
+    ).join('')}
+    <!-- línea alerta -->
+    ${alertLine}
+    <!-- línea media -->
+    ${meanLine}${meanLabel}
+    <!-- serie -->
+    <polyline points="${pts}" fill="none" stroke="#1976d2" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- punto actual -->
+    ${currentDot}
+    <!-- ejes -->
+    ${unitLabel}
+    ${yTicks}
+    ${xAxisTicks}
+  </svg>`;
+}
+
+async function loadFlowChart(basinId, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/api/water/flow-series?basin=${basinId}`);
+    if (!res.ok) { el.style.display = 'none'; return; }
+    const d = await res.json();
+    const metrics = d.metrics || [];
+    if (!metrics.length) { el.style.display = 'none'; return; }
+
+    const metric = metrics[0];
+    el.innerHTML = `
+      <div class="flow-chart-title">📈 ${metric.label}</div>
+      ${buildFlowChartSVG(metric)}
+      <div class="flow-chart-note">
+        Media histórica: ${metric.historical_mean} ${metric.unit} · Fuente: ${metric.source}
+        ${d.metadata?.note ? ' · <em>' + d.metadata.note + '</em>' : ''}
+      </div>`;
+  } catch(e) {
+    el.style.display = 'none';
+  }
+}
 
 // ── init ──────────────────────────────────────────────────────────────────
 loadAll();

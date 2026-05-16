@@ -29,6 +29,7 @@ RIVERS_NAMES_PATH = os.path.join(DATA_DIR, "ar_rivers_names.json")     # HYRIV_I
 LAKES_GRAPH_PATH  = os.path.join(DATA_DIR, "ar_lakes_graph.json")     # Lakes con afluentes/outflow precomputados
 INDIGENOUS_PATH   = os.path.join(DATA_DIR, "ar_indigenous.geojson")  # Territorios indígenas con conflicto hídrico (curado)
 RAMSAR_PATH       = os.path.join(DATA_DIR, "ar_ramsar.geojson")      # 23 Sitios Ramsar oficiales (Convención 1971)
+FLOW_SERIES_PATH  = os.path.join(DATA_DIR, "ar_flow_series.json")   # Series históricas caudal/nivel por cuenca
 
 with open(DATA_PATH, encoding="utf-8") as f:
     BASINS: list[dict] = json.load(f)
@@ -80,6 +81,8 @@ with open(INDIGENOUS_PATH, encoding="utf-8") as f:
     INDIGENOUS = json.load(f)
 with open(RAMSAR_PATH, encoding="utf-8") as f:
     RAMSAR = json.load(f)
+with open(FLOW_SERIES_PATH, encoding="utf-8") as f:
+    FLOW_SERIES = json.load(f)
 
 # Aggregate indigenous territories per basin
 _indig_by_basin = {}
@@ -348,6 +351,29 @@ def get_ramsar():
     Ley 23.919 + Ley 25.335). Cobertura: 5,6 M ha en 15 provincias + CABA.
     Algunos coinciden con Parques Nacionales (linked_to_apn=true)."""
     return RAMSAR
+
+
+@app.get("/api/water/flow-series")
+def get_flow_series(basin: str = Query(None, description="basin_id para filtrar (ej: negro_limay)")):
+    """Series históricas de caudal/nivel por cuenca.
+    Si no se especifica basin, retorna todas las series disponibles."""
+    series = FLOW_SERIES.get("series", {})
+    if basin:
+        if basin not in series:
+            raise HTTPException(status_code=404, detail=f"No hay series para la cuenca '{basin}'")
+        return {
+            "basin_id": basin,
+            "metrics": series[basin]["metrics"],
+            "metadata": FLOW_SERIES.get("metadata", {}),
+        }
+    # Retornar índice de cuencas disponibles (sin los datos completos)
+    return {
+        "available": [
+            {"basin_id": k, "metrics": [m["id"] for m in v["metrics"]]}
+            for k, v in series.items() if v.get("metrics")
+        ],
+        "metadata": FLOW_SERIES.get("metadata", {}),
+    }
 
 
 @app.get("/api/argentina-border")

@@ -1,0 +1,76 @@
+{
+  "metadata": {
+    "title": "Series históricas de caudal/nivel — cuencas principales de Argentina",
+    "note": "Datos estimados a partir de registros públicos AIC, DPA Río Negro, INA-SNIH e informes periodísticos. Pendiente integración de feed automático SNIH.",
+    "last_updated": "2026-05",
+    "source_pending": "https://snih.hidricosargentina.gob.ar/"
+  },
+  "series": {
+    "negro_limay": {
+      "metrics": [
+        {
+          "id": "nivel_nahuel_huapi",
+          "label": "Nivel Lago Nahuel Huapi",
+          "unit": "m s.n.m.",
+          "historical_mean": 769.05,
+          "alert_low": 768.20,
+          "alert_high": 770.50,
+          "source": "AIC / DPA Río Negro",
+          "note": "Nivel medio anual. Media histórica 1984-2008. Nivel de alerta baja: 768.20 m.",
+          "data": [
+            {"year": 1990, "value": 769.1},
+            {"year": 1991, "value": 769.4},
+            {"year": 1992, "value": 769.9},
+            {"year": 1993, "value": 769.3},
+            {"year": 1994, "value": 769.0},
+            {"year": 1995, "value": 769.1},
+            {"year": 1996, "value": 769.6},
+            {"year": 1997, "value": 769.5},
+            {"year": 1998, "value": 769.8},
+            {"year": 1999, "value": 769.2},
+            {"year": 2000, "value": 769.3},
+            {"year": 2001, "value": 769.7},
+            {"year": 2002, "value": 770.0},
+            {"year": 2003, "value": 769.5},
+            {"year": 2004, "value": 769.2},
+            {"year": 2005, "value": 769.8},
+            {"year": 2006, "value": 769.6},
+            {"year": 2007, "value": 769.3},
+            {"year": 2008, "value": 769.4},
+            {"year": 2009, "value": 769.0},
+            {"year": 2010, "value": 769.3},
+            {"year": 2011, "value": 769.1},
+            {"year": 2012, "value": 769.0},
+            {"year": 2013, "value": 768.8},
+            {"year": 2014, "value": 768.9},
+            {"year": 2015, "value": 769.1},
+            {"year": 2016, "value": 769.2},
+            {"year": 2017, "value": 769.0},
+            {"year": 2018, "value": 768.8},
+            {"year": 2019, "value": 768.7},
+            {"year": 2020, "value": 768.5},
+            {"year": 2021, "value": 768.3},
+            {"year": 2022, "value": 768.4},
+            {"year": 2023, "value": 768.2},
+            {"year": 2024, "value": 768.0},
+            {"year": 2025, "value": 767.96, "is_current": true, "label": "ene 2026: 767,96 m"}
+          ]
+        }
+      ]
+    },
+    "colorado": {
+      "metrics": [
+        {
+          "id": "caudal_limay_mitre",
+          "label": "Caudal Río Colorado (Buta Ranquil)",
+          "unit": "m³/s",
+          "historical_mean": 148,
+          "alert_low": 80,
+          "source": "INA / AIC Colorado",
+          "note": "Caudal medio anual. Media histórica 1940-2000.",
+          "data": []
+        }
+      ]
+    }
+  }
+}
