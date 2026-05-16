@@ -9,6 +9,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from shapely.geometry import shape, Point
 import json
 import os
+import asyncio
+import ssl
+import urllib.request
+import urllib.parse
+
+# SSL: usar certificados del sistema macOS (/etc/ssl/cert.pem)
+_SSL_CTX = ssl.create_default_context()
+_SSL_CTX.load_verify_locations("/etc/ssl/cert.pem")
 
 # ── load data ──────────────────────────────────────────────────────────────
 DATA_DIR  = os.path.join(os.path.dirname(__file__), "data")
@@ -30,6 +38,7 @@ LAKES_GRAPH_PATH  = os.path.join(DATA_DIR, "ar_lakes_graph.json")     # Lakes co
 INDIGENOUS_PATH   = os.path.join(DATA_DIR, "ar_indigenous.geojson")  # Territorios indígenas con conflicto hídrico (curado)
 RAMSAR_PATH       = os.path.join(DATA_DIR, "ar_ramsar.geojson")      # 23 Sitios Ramsar oficiales (Convención 1971)
 FLOW_SERIES_PATH  = os.path.join(DATA_DIR, "ar_flow_series.json")   # Series históricas caudal/nivel por cuenca
+PRECIP_GRID_PATH  = os.path.join(DATA_DIR, "ar_precip_grid.json")   # Grid ERA5 pre-computado (build_precip_grid.py)
 
 with open(DATA_PATH, encoding="utf-8") as f:
     BASINS: list[dict] = json.load(f)
@@ -83,6 +92,16 @@ with open(RAMSAR_PATH, encoding="utf-8") as f:
     RAMSAR = json.load(f)
 with open(FLOW_SERIES_PATH, encoding="utf-8") as f:
     FLOW_SERIES = json.load(f)
+
+# Grid de precipitación ERA5 pre-computado (opcional — generado por build_precip_grid.py)
+_PRECIP_GRID: dict = {}
+if os.path.exists(PRECIP_GRID_PATH):
+    with open(PRECIP_GRID_PATH, encoding="utf-8") as f:
+        _raw_grid = json.load(f)
+        _PRECIP_GRID = _raw_grid.get("cells", {})
+    print(f"[precip grid] {len(_PRECIP_GRID)} celdas cargadas desde ar_precip_grid.json")
+else:
+    print("[precip grid] ar_precip_grid.json no encontrado — usando Open-Meteo on-demand")
 
 # Aggregate indigenous territories per basin
 _indig_by_basin = {}
@@ -351,6 +370,117 @@ def get_ramsar():
     Ley 23.919 + Ley 25.335). Cobertura: 5,6 M ha en 15 provincias + CABA.
     Algunos coinciden con Parques Nacionales (linked_to_apn=true)."""
     return RAMSAR
+
+
+# ── precipitation cache (in-memory, keyed by 0.5° grid cell) ──────────────
+_PRECIP_CACHE: dict = {}
+
+def _grid_key(lat: float, lng: float, res: float = 0.5) -> tuple:
+    """Redondea a la celda de grilla más cercana para caching."""
+    return (round(lat / res) * res, round(lng / res) * res)
+
+def _grid_str_key(lat: float, lng: float, res: float = 0.5) -> str:
+    """Clave string para el grid pre-computado (formato del JSON)."""
+    glat = round(round(lat / res) * res, 1)
+    glng = round(round(lng / res) * res, 1)
+    return f"{glat:.1f}_{glng:.1f}"
+
+def _build_response_from_grid(cell: dict) -> dict:
+    """Arma la respuesta estándar del endpoint a partir de una celda del grid."""
+    return {
+        "lat": cell["lat"],
+        "lng": cell["lng"],
+        "source": "grid",
+        "metrics": [{
+            "id":              "precip_annual",
+            "label":           "Precipitación anual",
+            "unit":            "mm/año",
+            "historical_mean": cell["mean"],
+            "alert_low":       None,
+            "source":          "ERA5 reanalysis · Open-Meteo (pre-computado)",
+            "note":            "Reanálisis ERA5 (~27 km). Media 1990-2025.",
+            "data":            cell["data"],
+        }],
+    }
+
+def _fetch_openmeteo(lat: float, lng: float) -> dict:
+    """Llama a Open-Meteo ERA5 y retorna precipitación diaria 1990-2025."""
+    params = urllib.parse.urlencode({
+        "latitude":   round(lat, 4),
+        "longitude":  round(lng, 4),
+        "start_date": "1990-01-01",
+        "end_date":   "2025-12-31",
+        "daily":      "precipitation_sum",
+        "timezone":   "UTC",
+    })
+    url = f"https://archive-api.open-meteo.com/v1/era5?{params}"
+    req = urllib.request.Request(url, headers={"User-Agent": "AppAgua/1.0"})
+    with urllib.request.urlopen(req, timeout=60, context=_SSL_CTX) as r:
+        return json.loads(r.read())
+
+def _aggregate_annual(daily_data: dict) -> list[dict]:
+    """Suma precipitación diaria → totales anuales."""
+    times  = daily_data.get("time", [])
+    values = daily_data.get("precipitation_sum", [])
+    by_year: dict[int, list] = {}
+    for t, v in zip(times, values):
+        year = int(t[:4])
+        if v is not None:
+            by_year.setdefault(year, []).append(v)
+    annual = []
+    for year in sorted(by_year):
+        vals = by_year[year]
+        if len(vals) >= 300:         # descartar años con datos incompletos (<300 días)
+            total = round(sum(vals), 1)
+            annual.append({"year": year, "value": total})
+    # Marcar el último dato como "actual"
+    if annual:
+        annual[-1]["is_current"] = True
+    return annual
+
+
+@app.get("/api/climate/precip")
+async def get_climate_precip(
+    lat: float = Query(..., description="Latitud decimal"),
+    lng: float = Query(..., description="Longitud decimal"),
+):
+    """Precipitación anual histórica (1990-2025) para un punto geográfico.
+    Usa grid pre-computado si está disponible; si no, llama a Open-Meteo on-demand.
+    Cache en memoria por celda de 0.5° (~55 km)."""
+    key     = _grid_key(lat, lng)
+    str_key = _grid_str_key(lat, lng)
+
+    if key not in _PRECIP_CACHE:
+        # ── 1. intentar grid pre-computado ──────────────────────────────────
+        if str_key in _PRECIP_GRID and _PRECIP_GRID[str_key] is not None:
+            _PRECIP_CACHE[key] = _build_response_from_grid(_PRECIP_GRID[str_key])
+        else:
+            # ── 2. fallback: Open-Meteo on-demand ───────────────────────────
+            try:
+                raw = await asyncio.to_thread(_fetch_openmeteo, lat, lng)
+            except Exception as e:
+                raise HTTPException(status_code=502, detail=f"Error al consultar Open-Meteo: {e}")
+            daily  = raw.get("daily", {})
+            annual = _aggregate_annual(daily)
+            if not annual:
+                raise HTTPException(status_code=404, detail="Sin datos de precipitación para este punto.")
+            values  = [d["value"] for d in annual]
+            mean    = round(sum(values) / len(values), 1)
+            _PRECIP_CACHE[key] = {
+                "lat": raw.get("latitude", lat),
+                "lng": raw.get("longitude", lng),
+                "metrics": [{
+                    "id":               "precip_annual",
+                    "label":            "Precipitación anual",
+                    "unit":             "mm/año",
+                    "historical_mean":  mean,
+                    "alert_low":        None,
+                    "source":           "ERA5 reanalysis · Open-Meteo",
+                    "note":             "Estimación por reanálisis (~27 km). Media calculada sobre el período 1990-2025.",
+                    "data":             annual,
+                }],
+            }
+    return _PRECIP_CACHE[key]
 
 
 @app.get("/api/water/flow-series")
