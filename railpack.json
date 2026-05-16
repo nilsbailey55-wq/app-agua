@@ -1,5 +1,5 @@
 {
-  "providers": ["python"],
+  "provider": "python",
   "build": {
     "install": ["pip install -r backend/requirements.txt"]
   },
