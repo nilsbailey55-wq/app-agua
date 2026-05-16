@@ -1,0 +1,1591 @@
+[
+  {
+    "id": "salado_bonaerense",
+    "name": "Salado Bonaerense — Río de la Plata",
+    "region": "Región Pampeana — Buenos Aires",
+    "area_km2": 175000,
+    "length_km": 700,
+    "origin": "Lagunas encadenadas del noroeste bonaerense (Junín, Bragado)",
+    "mouth": "Bahía de Samborombón / Río de la Plata",
+    "glaciers": [],
+    "status": {
+      "overall": "yellow",
+      "caudal": {
+        "level": "yellow",
+        "label": "Inundaciones cíclicas",
+        "detail": "Cuenca de llanura plana con drenaje deficiente; inundaciones graves en 2001, 2012 y 2017"
+      },
+      "calidad": {
+        "level": "yellow",
+        "label": "Contaminación agrícola",
+        "detail": "Nitratos, agroquímicos y efluentes ganaderos; calidad variable en tramos bajos (CONICET 2022)"
+      },
+      "glaciares": {
+        "level": "na",
+        "label": "Sin glaciares",
+        "detail": "Cuenca de llanura; sin aporte glaciario"
+      },
+      "legal": {
+        "level": "yellow",
+        "label": "Gestión fragmentada",
+        "detail": "Ley 25.688 (marco hídrico nacional); AySA regula el abastecimiento metropolitano desde el Plata"
+      }
+    },
+    "facts": [
+      "AySA (Agua y Saneamiento Argentino) abastece a ~9 millones de personas en el AMBA tomando agua del Río de la Plata",
+      "La cuenca del Salado tiene el drenaje más lento de Argentina: su pendiente es de apenas 5 cm por km",
+      "El sistema de lagunas encadenadas (Chascomús, Vitel, Esquivel) es hábitat de flamencos y patos migratorios",
+      "Las inundaciones de 2001 (Santa Fe) y 2012 (La Plata) expusieron la falta de infraestructura de drenaje"
+    ],
+    "sources": [
+      "AySA — Agua y Saneamiento Argentino (informes anuales de calidad)",
+      "INA — Centro Regional Litoral / Buenos Aires",
+      "CONICET — Grupo de Estudios sobre Recursos Hídricos Pampeanos"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -60.5,
+            -33.0
+          ],
+          [
+            -58.5,
+            -33.5
+          ],
+          [
+            -57.0,
+            -34.0
+          ],
+          [
+            -56.5,
+            -35.5
+          ],
+          [
+            -57.5,
+            -38.0
+          ],
+          [
+            -60.0,
+            -39.0
+          ],
+          [
+            -63.0,
+            -37.5
+          ],
+          [
+            -64.0,
+            -36.0
+          ],
+          [
+            -63.0,
+            -34.0
+          ],
+          [
+            -60.5,
+            -33.0
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "alto_parana",
+    "name": "Alto Paraná",
+    "region": "Litoral — Nordeste",
+    "area_km2": 170000,
+    "length_km": 1800,
+    "origin": "Serra Geral (Brasil)",
+    "mouth": "Confluencia con el río Paraguay (Corrientes)",
+    "glaciers": [],
+    "status": {
+      "overall": "yellow",
+      "caudal": {
+        "level": "yellow",
+        "label": "Bajo la media",
+        "detail": "Estiaje prolongado 2019-2024; bajante histórica 2022-2023 en el Paraná"
+      },
+      "calidad": {
+        "level": "yellow",
+        "label": "Contaminación puntual",
+        "detail": "Agroquímicos y efluentes urbanos en afluentes (CONICET, 2023)"
+      },
+      "glaciares": {
+        "level": "na",
+        "label": "Sin glaciares",
+        "detail": "Cuenca húmeda; no hay glaciares relevantes"
+      },
+      "legal": {
+        "level": "green",
+        "label": "Tratado Cuenca del Plata",
+        "detail": "Marco binacional Argentina-Brasil-Paraguay-Uruguay-Bolivia (1969)"
+      }
+    },
+    "facts": [
+      "Segunda cuenca fluvial más grande de América del Sur (3,1 M km² total)",
+      "Bajante histórica 2022-2023: niveles mínimos en 77 años en Corrientes",
+      "Comparte cuenca con Brasil, Paraguay, Uruguay y Bolivia",
+      "Produce más del 60% de la energía hidroeléctrica argentina (Yacyretá, Corpus)"
+    ],
+    "sources": [
+      "INA — Boletín Hidrológico Mensual",
+      "CONICET — Red de investigación cuenca Plata",
+      "Comité Intergubernamental de la Cuenca del Plata (CIC)"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -54.0,
+            -22.0
+          ],
+          [
+            -53.6,
+            -24.0
+          ],
+          [
+            -53.6,
+            -27.5
+          ],
+          [
+            -55.5,
+            -28.5
+          ],
+          [
+            -57.0,
+            -29.0
+          ],
+          [
+            -58.5,
+            -27.5
+          ],
+          [
+            -59.0,
+            -25.0
+          ],
+          [
+            -59.0,
+            -22.5
+          ],
+          [
+            -57.5,
+            -22.0
+          ],
+          [
+            -54.0,
+            -22.0
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "paraguay_pilcomayo",
+    "name": "Paraguay — Pilcomayo",
+    "region": "Litoral — Gran Chaco",
+    "area_km2": 115000,
+    "length_km": 750,
+    "origin": "Pantanal mato-grossense (Bolivia/Brasil)",
+    "mouth": "Río Paraguay confluye con el Paraná en Corrientes",
+    "glaciers": [],
+    "status": {
+      "overall": "yellow",
+      "caudal": {
+        "level": "yellow",
+        "label": "Variabilidad alta",
+        "detail": "Régimen marcadamente estacional; El Niño/La Niña amplifica variaciones"
+      },
+      "calidad": {
+        "level": "red",
+        "label": "Contaminación",
+        "detail": "Sedimentos, hidrocarburos y agroquímicos; cuenca del Pilcomayo crítica"
+      },
+      "glaciares": {
+        "level": "na",
+        "label": "Sin glaciares",
+        "detail": "Cuenca tropical/subtropical"
+      },
+      "legal": {
+        "level": "yellow",
+        "label": "Gestión compartida",
+        "detail": "Comisión Trinacional del Pilcomayo (ARG-PAR-BOL); implementación débil"
+      }
+    },
+    "facts": [
+      "El Pilcomayo es uno de los ríos con mayor carga de sedimentos del mundo",
+      "El río Paraguay actúa como regulador del sistema Plata",
+      "El Chaco es una de las zonas de deforestación más rápidas de América (2010-2023)",
+      "Comunidades indígenas Wichí, Qom y Pilagá dependen directamente de la cuenca"
+    ],
+    "sources": [
+      "Comisión Trinacional del Pilcomayo",
+      "INA — Dirección de Hidrología",
+      "PNUD — Proyecto de Gestión Integrada del Pilcomayo"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -59.0,
+            -22.5
+          ],
+          [
+            -59.0,
+            -25.0
+          ],
+          [
+            -59.5,
+            -27.5
+          ],
+          [
+            -60.5,
+            -27.5
+          ],
+          [
+            -62.0,
+            -26.5
+          ],
+          [
+            -62.5,
+            -24.5
+          ],
+          [
+            -62.0,
+            -22.0
+          ],
+          [
+            -60.0,
+            -21.8
+          ],
+          [
+            -59.0,
+            -22.5
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "bermejo",
+    "name": "Río Bermejo",
+    "region": "Noroeste — Litoral",
+    "area_km2": 123000,
+    "length_km": 1200,
+    "origin": "Cordillera Oriental (Salta/Jujuy)",
+    "mouth": "Río Paraguay (Chaco)",
+    "glaciers": [],
+    "status": {
+      "overall": "yellow",
+      "caudal": {
+        "level": "yellow",
+        "label": "Irregular",
+        "detail": "Caudales muy variables; alta torrencialidad en tramos serranos"
+      },
+      "calidad": {
+        "level": "red",
+        "label": "Alta turbidez",
+        "detail": "Río con mayor carga de sedimentos de Sudamérica: hasta 500 mg/L SST"
+      },
+      "glaciares": {
+        "level": "na",
+        "label": "Sin glaciares activos",
+        "detail": "Origen en precipitaciones; pequeños nevados estacionales"
+      },
+      "legal": {
+        "level": "yellow",
+        "label": "Comité Interjurisdiccional",
+        "detail": "Proyecto de aprovechamiento multipropósito sin concretar desde los 90s"
+      }
+    },
+    "facts": [
+      "Transporta ~140 millones de toneladas de sedimento por año al río Paraguay",
+      "Cuenca con alta vulnerabilidad a eventos de inundación en el Chaco",
+      "Proyecto de regulación (dique Los Blancos) postergado décadas por financiamiento",
+      "Los Yungas en cabecera son ecosistemas críticos para la regulación hídrica"
+    ],
+    "sources": [
+      "Comité Interjurisdiccional del Río Bermejo (COREBE)",
+      "INA — Centro Regional Litoral",
+      "CONICET — INENCO (Salta)"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -62.5,
+            -24.5
+          ],
+          [
+            -62.0,
+            -26.5
+          ],
+          [
+            -62.5,
+            -28.5
+          ],
+          [
+            -63.5,
+            -28.5
+          ],
+          [
+            -65.5,
+            -27.5
+          ],
+          [
+            -65.5,
+            -25.0
+          ],
+          [
+            -65.0,
+            -23.0
+          ],
+          [
+            -63.5,
+            -22.0
+          ],
+          [
+            -62.0,
+            -22.0
+          ],
+          [
+            -62.5,
+            -24.5
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "uruguay",
+    "name": "Río Uruguay",
+    "region": "Litoral — Mesopotamia",
+    "area_km2": 85000,
+    "length_km": 1840,
+    "origin": "Serra Geral (Brasil/RS)",
+    "mouth": "Río de la Plata (Punta Lara / Gualeguaychú)",
+    "glaciers": [],
+    "status": {
+      "overall": "green",
+      "caudal": {
+        "level": "green",
+        "label": "Dentro de media",
+        "detail": "Caudal sostenido; regulado por embalses binacionales (Salto Grande)"
+      },
+      "calidad": {
+        "level": "yellow",
+        "label": "Monitoreo activo",
+        "detail": "Eutrofización en tramos medios; efluentes de celulosa monitoreados"
+      },
+      "glaciares": {
+        "level": "na",
+        "label": "Sin glaciares",
+        "detail": "Cuenca subtropical"
+      },
+      "legal": {
+        "level": "green",
+        "label": "CARU operativa",
+        "detail": "Comisión Administradora del Río Uruguay (ARG-URU) con monitoreo conjunto"
+      }
+    },
+    "facts": [
+      "Compartido entre Argentina, Uruguay y Brasil (cuenca total 340.000 km²)",
+      "Represa Salto Grande produce 1.890 MW (binacional ARG-URU, desde 1979)",
+      "El conflicto por la planta de Botnia (2006-2010) fue icónico en disputa ambiental binacional",
+      "Corredor de biodiversidad: selva paranaense y palmares de Entre Ríos"
+    ],
+    "sources": [
+      "CARU — Comisión Administradora del Río Uruguay",
+      "CTM — Comisión Técnica Mixta de Salto Grande",
+      "INA — Boletín Hidrológico"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -55.5,
+            -28.5
+          ],
+          [
+            -53.6,
+            -27.5
+          ],
+          [
+            -53.6,
+            -33.5
+          ],
+          [
+            -58.5,
+            -34.0
+          ],
+          [
+            -58.5,
+            -32.0
+          ],
+          [
+            -57.5,
+            -30.5
+          ],
+          [
+            -57.0,
+            -29.0
+          ],
+          [
+            -55.5,
+            -28.5
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "salado_norte",
+    "name": "Salado del Norte — Juramento",
+    "region": "Centro-Norte — Chaco-Pampeano",
+    "area_km2": 170000,
+    "length_km": 2000,
+    "origin": "Valles Calchaquíes (Salta/Tucumán)",
+    "mouth": "Río Paraná (Santa Fe)",
+    "glaciers": [],
+    "status": {
+      "overall": "yellow",
+      "caudal": {
+        "level": "yellow",
+        "label": "Alta variabilidad",
+        "detail": "Régimen torrencial en cabecera; llanura con inundaciones cíclicas"
+      },
+      "calidad": {
+        "level": "yellow",
+        "label": "Sin datos sistemáticos",
+        "detail": "Escasa red de monitoreo en tramos medios y bajos"
+      },
+      "glaciares": {
+        "level": "na",
+        "label": "Sin glaciares",
+        "detail": "Pequeños nevados en cabecera; no inventariados como glaciares"
+      },
+      "legal": {
+        "level": "yellow",
+        "label": "Gestión fragmentada",
+        "detail": "Varias provincias, coordinación limitada; proyecto de manejo integrado en etapas"
+      }
+    },
+    "facts": [
+      "Una de las cuencas de llanura más extensas de Argentina",
+      "Inundaciones recurrentes afectan a Santiago del Estero, Chaco y Santa Fe",
+      "El embalse Cabra Corral (Salta) regula el tramo superior del Juramento",
+      "Alta dependencia de acuíferos subterráneos en tramos medios del sistema"
+    ],
+    "sources": [
+      "INA — Centro Regional NOA",
+      "Autoridad de la Cuenca del Salado (Prov. Buenos Aires)",
+      "INTA — Red Agrometeorológica"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -60.5,
+            -27.5
+          ],
+          [
+            -60.0,
+            -30.5
+          ],
+          [
+            -60.5,
+            -33.5
+          ],
+          [
+            -63.5,
+            -33.0
+          ],
+          [
+            -65.5,
+            -32.0
+          ],
+          [
+            -65.5,
+            -30.0
+          ],
+          [
+            -65.5,
+            -27.5
+          ],
+          [
+            -63.5,
+            -28.5
+          ],
+          [
+            -60.5,
+            -27.5
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "puna",
+    "name": "Cuencas Endorreicas — Puna",
+    "region": "Noroeste Andino — Altiplano",
+    "area_km2": 90000,
+    "length_km": 0,
+    "origin": "Cordillera de los Andes (4.000–6.000 m s.n.m.)",
+    "mouth": "Sin salida al mar — lagunas y salares",
+    "glaciers": [
+      {
+        "name": "Nevado de Cachi",
+        "detail": "5.432 m · cubierto nival estacional · sin inventario formal"
+      },
+      {
+        "name": "Nevados del Aconquija",
+        "detail": "Pequeños glaciaretes en cordón oriental · monitoreo limitado"
+      }
+    ],
+    "status": {
+      "overall": "yellow",
+      "caudal": {
+        "level": "yellow",
+        "label": "Cuencas cerradas",
+        "detail": "Lagunas altoandinas con tendencia a reducción superficial (CONICET 2021)"
+      },
+      "calidad": {
+        "level": "yellow",
+        "label": "Litio y minería",
+        "detail": "Impacto potencial de explotación de salares sobre acuíferos superficiales"
+      },
+      "glaciares": {
+        "level": "yellow",
+        "label": "Monitoreo insuficiente",
+        "detail": "Inventario IANIGLA 2017 con cobertura parcial en regiones de alta montaña"
+      },
+      "legal": {
+        "level": "yellow",
+        "label": "Ley 26.639 aplicable",
+        "detail": "Protege glaciares pero debate activo sobre glaciares de roca y explotación minera"
+      }
+    },
+    "facts": [
+      "Alberga reservas de litio entre las más grandes del mundo (\"Triángulo del Litio\")",
+      "Lagunas altoandinas son hábitat de flamencos y biodiversidad única de alta montaña",
+      "El nivel de la Laguna de Pozuelos (Ramsar) descendió significativamente desde los 2000s",
+      "Comunidades andinas dependen de bofedales (humedales) cada vez más escasos"
+    ],
+    "sources": [
+      "IANIGLA — Inventario Nacional de Glaciares 2017",
+      "CONICET — INECOA (Jujuy)",
+      "Secretaría de Minería — informes de impacto hídrico"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -65.0,
+            -23.0
+          ],
+          [
+            -65.5,
+            -25.0
+          ],
+          [
+            -66.0,
+            -27.5
+          ],
+          [
+            -68.0,
+            -27.5
+          ],
+          [
+            -69.5,
+            -26.0
+          ],
+          [
+            -69.5,
+            -23.5
+          ],
+          [
+            -68.0,
+            -22.0
+          ],
+          [
+            -65.5,
+            -22.0
+          ],
+          [
+            -65.0,
+            -23.0
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "cuyo",
+    "name": "Sistema del Desaguadero — Cuyo",
+    "region": "Centro-Oeste Andino",
+    "area_km2": 280000,
+    "length_km": 1200,
+    "origin": "Cordillera de los Andes (Mendoza / San Juan)",
+    "mouth": "Endorréico — Laguna La Amarga (La Pampa)",
+    "glaciers": [
+      {
+        "name": "Glaciar del Plomo",
+        "detail": "Alto Mendoza · glaciar de roca en debate de protección legal"
+      },
+      {
+        "name": "Glaciares del Tupungato",
+        "detail": "6.570 m · inventariados en IANIGLA 2017 · retroceso documentado"
+      },
+      {
+        "name": "Glaciares del Aconcagua",
+        "detail": "6.961 m · zona de amortiguamiento · impacto directo en río Mendoza"
+      }
+    ],
+    "status": {
+      "overall": "red",
+      "caudal": {
+        "level": "red",
+        "label": "Déficit hídrico severo",
+        "detail": "Río Mendoza: 40% menos caudal respecto a media 1970-2000 (DGI Mendoza)"
+      },
+      "calidad": {
+        "level": "yellow",
+        "label": "Monitoreo activo",
+        "detail": "Contaminación agrícola (agroquímicos) y minera en afluentes de San Juan"
+      },
+      "glaciares": {
+        "level": "red",
+        "label": "Retroceso acelerado",
+        "detail": "Glaciares del Plomo y Tupungato: reducción >25% en superficie (IANIGLA 2022)"
+      },
+      "legal": {
+        "level": "yellow",
+        "label": "Conflicto minería-glaciares",
+        "detail": "Ley 26.639 vs. proyectos mineros en zona periglacial (San Juan, Mendoza)"
+      }
+    },
+    "facts": [
+      "El río Mendoza abastece a más de 1 millón de personas en el oasis más poblado de Argentina",
+      "Sistema de riego por acequia con 3.000 años de historia en el desierto mendocino",
+      "El DGI (Dpto. Gral. de Irrigación) administra el agua con código hídrico propio desde 1884",
+      "La Ley provincial 7.722 (prohíbe minería a cielo abierto con cianuro) fue históricamente resistida"
+    ],
+    "sources": [
+      "DGI — Departamento General de Irrigación (Mendoza)",
+      "IANIGLA / CONICET — seguimiento glaciares Cuyo",
+      "INA — Centro Regional Andino"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -65.5,
+            -27.5
+          ],
+          [
+            -66.0,
+            -27.5
+          ],
+          [
+            -69.5,
+            -28.0
+          ],
+          [
+            -71.0,
+            -30.0
+          ],
+          [
+            -71.0,
+            -33.0
+          ],
+          [
+            -70.5,
+            -35.0
+          ],
+          [
+            -68.0,
+            -35.5
+          ],
+          [
+            -65.5,
+            -35.0
+          ],
+          [
+            -65.5,
+            -33.0
+          ],
+          [
+            -65.5,
+            -30.0
+          ],
+          [
+            -65.5,
+            -27.5
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "colorado",
+    "name": "Río Colorado",
+    "region": "Centro-Patagónica",
+    "area_km2": 147000,
+    "length_km": 1100,
+    "origin": "Andes de Mendoza/Neuquén (río Grande + río Barrancas)",
+    "mouth": "Océano Atlántico (Buenos Aires / La Pampa / Río Negro)",
+    "glaciers": [
+      {
+        "name": "Glaciar Sosneado",
+        "detail": "Nevado del Sosneado, Mendoza · tributario del río Atuel-Grande"
+      }
+    ],
+    "status": {
+      "overall": "yellow",
+      "caudal": {
+        "level": "yellow",
+        "label": "Disputado entre provincias",
+        "detail": "Comité Interjurisdiccional del Río Colorado (COIRCO): 5 provincias, conflictos de asignación"
+      },
+      "calidad": {
+        "level": "green",
+        "label": "Buena calidad relativa",
+        "detail": "Bajo impacto industrial; alta mineralización natural en tramos medios"
+      },
+      "glaciares": {
+        "level": "yellow",
+        "label": "Pequeños, en seguimiento",
+        "detail": "Glaciares en cabecera cordillerana; menor volumen que en cuencas más al sur"
+      },
+      "legal": {
+        "level": "green",
+        "label": "COIRCO operativo",
+        "detail": "Comité Interjurisdiccional con reparto formal de caudales desde 1976"
+      }
+    },
+    "facts": [
+      "Sus aguas son compartidas por Mendoza, Neuquén, Río Negro, La Pampa y Buenos Aires",
+      "El río Atuel (afluente) está en disputa histórica entre Mendoza y La Pampa desde 1947",
+      "La Pampa ganó un fallo histórico de la Corte Suprema en 2017 sobre las aguas del Atuel",
+      "La cuenca del Colorado cubre el 40% del territorio de La Pampa pero abastece muy poco"
+    ],
+    "sources": [
+      "COIRCO — Comité Interjurisdiccional del Río Colorado",
+      "INA — Boletín del Colorado",
+      "Corte Suprema de Justicia — Fallo La Pampa c/ Mendoza (2017)"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -65.5,
+            -35.0
+          ],
+          [
+            -68.0,
+            -35.5
+          ],
+          [
+            -70.5,
+            -35.0
+          ],
+          [
+            -71.0,
+            -37.0
+          ],
+          [
+            -70.5,
+            -38.5
+          ],
+          [
+            -68.5,
+            -38.5
+          ],
+          [
+            -66.0,
+            -38.0
+          ],
+          [
+            -64.0,
+            -37.5
+          ],
+          [
+            -64.0,
+            -35.5
+          ],
+          [
+            -65.5,
+            -35.0
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "negro_limay",
+    "name": "Río Negro — Limay — Neuquén",
+    "region": "Norte Patagónica",
+    "area_km2": 98000,
+    "length_km": 730,
+    "origin": "Lago Nahuel Huapi (Limay) y Andes neuquinos (Neuquén)",
+    "mouth": "Océano Atlántico (Viedma / El Cóndor)",
+    "glaciers": [
+      {
+        "name": "Glaciar Manso (Ventisquero Negro)",
+        "detail": "Lengua cubierta de detritos — único glaciar 'negro' de América del Sur. Pérdida de espesor >80 m (2000-2012). Laguna proglacial formada a partir de 2005: actualmente ~1 km² de superficie y 70 m de profundidad. Fuente: IANIGLA-CONICET / Ruiz et al."
+      },
+      {
+        "name": "Glaciar Casa Pangue",
+        "detail": "Monte Tronador. Pérdida de espesor >80 m (2000-2012), la mayor del sistema junto al Manso. Balance de masa negativo continuo. Fuente: Ruiz et al. (IANIGLA-CONICET / Univ. de Toulouse)."
+      },
+      {
+        "name": "Glaciar Castaño Overa",
+        "detail": "Monte Tronador. Monitoreado por IANIGLA desde fines de los '70. Balance de masa ligeramente negativo. Forma parte de los 4 glaciares principales estudiados en el sistema Tronador."
+      },
+      {
+        "name": "Glaciar Alerce",
+        "detail": "Monte Tronador. Sistema de glaciares pequeños y medianos (1-11 km² individuales). Balance de masa general del macizo: -0,17 m w.e./año (2000-2012). Fuente: Masiokas et al., IANIGLA-CONICET."
+      },
+      {
+        "name": "Glaciar Frías",
+        "detail": "Alimenta el río Frías, afluente directo del Lago Nahuel Huapi. Parque Nacional Nahuel Huapi. Protegido bajo Ley 26.639."
+      }
+    ],
+    "status": {
+      "overall": "red",
+      "caudal": {
+        "level": "red",
+        "label": "Crisis severa",
+        "detail": "Lago Nahuel Huapi: 90 cm bajo la media histórica (enero 2026, cota 767,96 m s.n.m.) — segundo nivel más bajo desde 1983. Precipitaciones 2025: 447,9 mm vs. 790,9 mm histórico (43% de déficit). Río Quemquemtreu: 1.500 L/s vs. 3.000-4.000 L/s esperados para la estación. Fuente: AIC / ANBariloche ene-2026."
+      },
+      "calidad": {
+        "level": "green",
+        "label": "Muy buena",
+        "detail": "Agua oligotrófica de alta calidad. Programa permanente de monitoreo DPA/AIC desde 1994 (continuo desde 2010). Impacto humano concentrado en costa sur (Bariloche) y norte (Villa La Angostura). ARSA produce 60 M de litros/día; calidad considerada entre las mejores del país. Fuente: DPA Río Negro / ARSA 2014-2026."
+      },
+      "glaciares": {
+        "level": "red",
+        "label": "Pérdida acelerada",
+        "detail": "Sistema Tronador: ~60 km² de hielo total, 4.800 Hm³ de volumen (Ruiz et al., CONICET 2020). Balance de masa: -0,17 m w.e./año (2000-2012). Lenguas principales pierden >80 m de espesor. Laguna del Ventisquero Negro: 70 m de profundidad, ~1 km². Fuente: IANIGLA-CONICET."
+      },
+      "legal": {
+        "level": "green",
+        "label": "Ley 26.639 activa",
+        "detail": "Monte Tronador y sus glaciares protegidos bajo Ley de Presupuestos Mínimos para la Preservación de Glaciares (2010). Parque Nacional Nahuel Huapi (est. 1934) cubre la cuenca alta. IANIGLA es autoridad de aplicación del inventario nacional."
+      }
+    },
+    "water_supply": {
+      "city": "San Carlos de Bariloche",
+      "utility": "Aguas Rionegrinas S.A. (ARSA)",
+      "production_lpd": 60000000,
+      "quality_monitoring": "Programa Permanente DPA/AIC desde 1994 (continuo desde 2010)",
+      "alert_jan2026": "Nivel del lago 90 cm bajo media histórica (767,96 m s.n.m.); déficit hídrico más severo desde 1983",
+      "intake_sources": [
+        {
+          "name": "Lago Nahuel Huapi",
+          "share_pct": 75,
+          "status": "yellow",
+          "location": "Toma directa — costa sur del lago",
+          "method": "Bombeo desde el lago a planta potabilizadora central",
+          "treatment": [
+            "Captación",
+            "Decantación",
+            "Floculación y filtración",
+            "Cloración"
+          ],
+          "note": "Nivel del lago 90 cm bajo media histórica (enero 2026). Sistema de bombeo depende de cota del lago."
+        },
+        {
+          "name": "Arroyo Ñireco",
+          "share_pct": 25,
+          "status": "red",
+          "location": "Toma en Barrio Pilar II — nacientes en Cerro Ventana",
+          "method": "Captación por gravedad (sin bombeo) — planta potabilizadora Pilar II",
+          "treatment": [
+            "Captación en nacientes",
+            "Sedimentación",
+            "4 filtros (cap. 500 m³/h)",
+            "Cloración"
+          ],
+          "neighborhoods": [
+            "Frutillar",
+            "Unión",
+            "Arrayanes",
+            "Maitén",
+            "2 de Abril",
+            "Cooperativa 258",
+            "Alto Jardín Botánico",
+            "645 Viviendas",
+            "Nahuel Hue",
+            "Nuestras Malvinas"
+          ],
+          "infrastructure_cost": "USD 10 M+ (financiado por CAF — Corporación Andina de Fomento)",
+          "advantage": "Sistema por gravedad: independiente del bombeo del lago y más resiliente ante bajantes",
+          "risk_segemar": "Zona roja SEGEMAR — alto riesgo de aludes y deslizamientos. Turbidez alta durante semanas en temporada de deshielo.",
+          "note": "Las nacientes del Ñireco están en territorio de la Lof Che Buenuleo (comunidad mapuche, 481 ha reconocidas por INAI 2020). Orden de desalojo confirmada feb 2025. Legisladoras Odarda y Spósito solicitan auditoría de la captación (may 2025).",
+          "active_conflict": true
+        }
+      ],
+      "local_alerts": [
+        {
+          "severity": "red",
+          "title": "Desalojo Lof Che Buenuleo — riesgo para nacientes del Ñireco",
+          "body": "La comunidad mapuche Buenuleo habita las nacientes del Arroyo Ñireco desde 1880 y ha sido su guardiana histórica. En feb. 2025 la justicia confirmó sentencia por 'usurpación' de 92 ha (de 481 reconocidas por INAI). Vecinos y legisladoras alertan que el desalojo habilita desarrollos privados en zona roja de SEGEMAR que podrían comprometer el agua de ~25% de Bariloche.",
+          "sources": [
+            {
+              "label": "ANRed — Lof Buenuleo: el agua no es una mercancía",
+              "url": "https://www.anred.org/lof-buenuleo-el-agua-es-para-los-pueblos-no-una-mercancia/"
+            },
+            {
+              "label": "ANCCOM UBA — Comunidades Buenuleo y Los Alerces a punto de ser desalojadas (dic 2024)",
+              "url": "https://anccom.sociales.uba.ar/2024/12/04/las-comunidades-buenuleo-y-los-alerces-a-punto-de-ser-desalojadas/"
+            },
+            {
+              "label": "Canal Abierto — Buenuleo: vamos a resistir cualquier intento de desalojo (nov 2024)",
+              "url": "https://canalabierto.com.ar/2024/11/22/comunidad-mapuche-buenuleo-vamos-a-resistir-cualquier-intento-de-desalojo/"
+            }
+          ]
+        },
+        {
+          "severity": "yellow",
+          "title": "Sin auditoría pública de la captación del Ñireco (mayo 2025)",
+          "body": "Las legisladoras Magdalena Odarda y Ayelén Spósito presentaron pedido de informes al Ejecutivo provincial solicitando: estudios técnicos sobre caudales captados, controles periódicos de calidad, evaluación de impacto de proyectos privados en zona de captación, y existencia de una noria hidráulica no autorizada en el predio 127.",
+          "sources": [
+            {
+              "label": "ANBariloche — Reclaman controles sobre captación del Ñireco (may 2025)",
+              "url": "https://www.anbariloche.com.ar/noticias/2025/05/10/98199-reclaman-controles-y-transparencia-sobre-la-captacion-de-agua-del-ireco"
+            },
+            {
+              "label": "ANBariloche — Vecinos visibilizan el Ñireco (feb 2025)",
+              "url": "https://www.anbariloche.com.ar/noticias/2025/02/24/97298-vecinos-realizaron-una-jornada-de-visibilizacion-del-arroyo-ireco"
+            }
+          ]
+        }
+      ]
+    },
+    "measurements": [
+      {
+        "date": "2026-01",
+        "metric": "Nivel lago Nahuel Huapi",
+        "value": "767,96 m s.n.m.",
+        "vs_historical": "-90 cm",
+        "source": "AIC / ANBariloche",
+        "url": "https://www.anbariloche.com.ar/noticias/2026/01/26/102062-el-lago-nahuel-huapi-esta-90-centimetros-por-debajo-de-su-nivel-historico"
+      },
+      {
+        "date": "2025",
+        "metric": "Precipitaciones anuales Bariloche",
+        "value": "447,9 mm",
+        "vs_historical": "-43% (media histórica: 790,9 mm)",
+        "source": "SMN / AIC",
+        "url": "https://rionegro.gov.ar/articulo/36574/los-registros-del-lago-nahuel-huapi-evidencia-la-condicion-de-sequia-que-atraviesa-la-cuenca"
+      },
+      {
+        "date": "2026-01",
+        "metric": "Caudal Río Quemquemtreu (El Bolsón)",
+        "value": "1.500 L/s",
+        "vs_historical": "50% del caudal esperado (3.000-4.000 L/s)",
+        "source": "ANBariloche / delegado AIC",
+        "url": "https://www.anbariloche.com.ar/noticias/2026/01/26/102062-el-lago-nahuel-huapi-esta-90-centimetros-por-debajo-de-su-nivel-historico"
+      },
+      {
+        "date": "2000-2012",
+        "metric": "Balance de masa glaciares Tronador",
+        "value": "-0,17 m w.e./año (promedio macizo)",
+        "vs_historical": "Pérdida continua desde cambio climático 1976",
+        "source": "Ruiz et al. — IANIGLA/CONICET / Univ. Toulouse",
+        "url": "https://www.conicet.gov.ar/el-balance-de-masa-de-los-glaciares-del-monte-tronador/"
+      },
+      {
+        "date": "2020",
+        "metric": "Volumen total hielo glaciares Tronador",
+        "value": "4.800 Hm³ (~60 km² superficie)",
+        "vs_historical": "En disminución continua",
+        "source": "CONICET — estimación espesor y volumen",
+        "url": "https://www.conicet.gov.ar/estiman-el-espesor-y-volumen-de-los-glaciares-del-monte-tronador/"
+      },
+      {
+        "date": "2023",
+        "metric": "Laguna proglacial Ventisquero Negro",
+        "value": "~1 km² superficie, 70 m profundidad",
+        "vs_historical": "Formada a partir de 2005; evento aluvional 2009",
+        "source": "Modenutti, INIBIOMA-CONICET / La Nación",
+        "url": "https://www.lanacion.com.ar/sociedad/el-retroceso-del-glaciar-ventisquero-negro-creo-un-nuevo-lago-que-ya-tiene-70-metros-de-profundidad-nid07082023/"
+      }
+    ],
+    "facts": [
+      "El lago Nahuel Huapi (557 km²) es la fuente directa de agua potable de Bariloche; ARSA produce 60 millones de litros por día",
+      "Enero 2026: el lago está 90 cm bajo la media histórica (767,96 m s.n.m.) — segundo nivel más bajo desde 1983",
+      "2025: Bariloche recibió 447,9 mm de lluvia, un 43% menos que el promedio histórico de 790,9 mm",
+      "Los glaciares del Monte Tronador suman ~60 km² y 4.800 Hm³ de hielo; pierden masa a -0,17 m w.e./año (IANIGLA)",
+      "El complejo hidroeléctrico del Limay produce ~3.800 MW (El Chocón, Alicurá, Arroyito, Piedra del Águila)",
+      "El Ventisquero Negro generó una laguna proglacial de 70 m de profundidad y ~1 km² de superficie desde 2005"
+    ],
+    "sources": [
+      {
+        "label": "AIC / ANBariloche — Nivel lago Nahuel Huapi enero 2026",
+        "url": "https://www.anbariloche.com.ar/noticias/2026/01/26/102062-el-lago-nahuel-huapi-esta-90-centimetros-por-debajo-de-su-nivel-historico"
+      },
+      {
+        "label": "Ruiz et al. — Balance de masa glaciares Tronador (IANIGLA-CONICET)",
+        "url": "https://www.conicet.gov.ar/el-balance-de-masa-de-los-glaciares-del-monte-tronador/"
+      },
+      {
+        "label": "CONICET — Espesor y volumen glaciares Tronador (2020)",
+        "url": "https://www.conicet.gov.ar/estiman-el-espesor-y-volumen-de-los-glaciares-del-monte-tronador/"
+      },
+      {
+        "label": "La Nación — Ventisquero Negro: lago proglacial de 70 m (2023)",
+        "url": "https://www.lanacion.com.ar/sociedad/el-retroceso-del-glaciar-ventisquero-negro-creo-un-nuevo-lago-que-ya-tiene-70-metros-de-profundidad-nid07082023/"
+      },
+      {
+        "label": "DPA Río Negro — Programa de Control Calidad Nahuel Huapi",
+        "url": "https://dpa.rionegro.gov.ar/programa/123/control-nahuel-huapi"
+      },
+      {
+        "label": "Gobierno Río Negro — ARSA producción Bariloche",
+        "url": "https://rionegro.gov.ar/articulo/8373/aguas-rionegrinas-garantiza-60-millones-de-litros-de-agua-potable-por-dia-en-bariloche"
+      }
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -71.9,
+            -41.2
+          ],
+          [
+            -71.6,
+            -41.05
+          ],
+          [
+            -71.4,
+            -40.85
+          ],
+          [
+            -71.1,
+            -40.6
+          ],
+          [
+            -70.75,
+            -40.3
+          ],
+          [
+            -70.3,
+            -39.95
+          ],
+          [
+            -69.9,
+            -39.6
+          ],
+          [
+            -69.4,
+            -39.25
+          ],
+          [
+            -68.9,
+            -38.95
+          ],
+          [
+            -68.4,
+            -38.8
+          ],
+          [
+            -66.0,
+            -38.8
+          ],
+          [
+            -64.5,
+            -39.0
+          ],
+          [
+            -63.0,
+            -39.5
+          ],
+          [
+            -63.0,
+            -41.0
+          ],
+          [
+            -65.0,
+            -41.5
+          ],
+          [
+            -67.0,
+            -41.8
+          ],
+          [
+            -69.0,
+            -42.0
+          ],
+          [
+            -71.0,
+            -42.0
+          ],
+          [
+            -71.9,
+            -41.2
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "chubut",
+    "name": "Río Chubut",
+    "region": "Patagonia Central",
+    "area_km2": 53000,
+    "length_km": 820,
+    "origin": "Cordillera Patagónica (Lago La Plata, Fontana)",
+    "mouth": "Océano Atlántico (Rawson)",
+    "glaciers": [
+      {
+        "name": "Glaciar La Plata",
+        "detail": "Lago La Plata · naciente del Chubut · IANIGLA 2017"
+      }
+    ],
+    "status": {
+      "overall": "yellow",
+      "caudal": {
+        "level": "yellow",
+        "label": "Estrés hídrico creciente",
+        "detail": "Demanda de agua en Trelew/Rawson supera disponibilidad en años secos (INA 2022)"
+      },
+      "calidad": {
+        "level": "green",
+        "label": "Calidad aceptable",
+        "detail": "Bajo impacto industrial; monitoreo provincial activo"
+      },
+      "glaciares": {
+        "level": "yellow",
+        "label": "Retroceso moderado",
+        "detail": "Glaciares en nacientes con reducción; menor exposición mediática que Patagonia Sur"
+      },
+      "legal": {
+        "level": "green",
+        "label": "Ley 26.639 vigente",
+        "detail": "Glaciares en cordillera chubutense protegidos; sin conflictos activos relevantes"
+      }
+    },
+    "facts": [
+      "Abastece a Trelew, Rawson y Gaiman (>150.000 personas) y el Valle Inferior del Chubut",
+      "El embalse Florentino Ameghino (1963) regula el caudal para riego y agua potable",
+      "El Valle Inferior del Chubut tiene riego por canal desde 1910 (colonia galesa)",
+      "La trucha y el salmón en tramos cordilleranos generan turismo de pesca relevante"
+    ],
+    "sources": [
+      "INA — Centro Regional Patagonia Norte",
+      "Gobierno de Chubut — Dirección de Recursos Hídricos",
+      "IANIGLA — Inventario Nacional de Glaciares"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -71.0,
+            -42.0
+          ],
+          [
+            -69.0,
+            -42.0
+          ],
+          [
+            -66.5,
+            -42.5
+          ],
+          [
+            -65.0,
+            -43.0
+          ],
+          [
+            -65.0,
+            -44.5
+          ],
+          [
+            -66.0,
+            -45.0
+          ],
+          [
+            -68.5,
+            -45.0
+          ],
+          [
+            -70.0,
+            -44.5
+          ],
+          [
+            -71.5,
+            -43.5
+          ],
+          [
+            -71.0,
+            -42.0
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "santa_cruz",
+    "name": "Río Santa Cruz — Lago Argentino",
+    "region": "Patagonia Sur",
+    "area_km2": 30000,
+    "length_km": 385,
+    "origin": "Lago Argentino (alimentado por Campo de Hielo Patagónico Sur)",
+    "mouth": "Océano Atlántico (Puerto Santa Cruz)",
+    "glaciers": [
+      {
+        "name": "Glaciar Perito Moreno",
+        "detail": "258 km² · el único en equilibrio dinámico documentado · UNESCO / IUCN"
+      },
+      {
+        "name": "Glaciar Upsala",
+        "detail": "850 km² · mayor glaciar de Argentina · retroceso acelerado"
+      },
+      {
+        "name": "Campo de Hielo Patagónico Sur",
+        "detail": "13.000 km² · tercer reservorio de agua dulce no polar del mundo"
+      }
+    ],
+    "status": {
+      "overall": "yellow",
+      "caudal": {
+        "level": "green",
+        "label": "Caudal sostenido",
+        "detail": "Alimentado por fusión glaciaria; caudal estable en el corto plazo"
+      },
+      "calidad": {
+        "level": "green",
+        "label": "Excelente",
+        "detail": "Agua de deshielo glaciario; mínima contaminación antrópica"
+      },
+      "glaciares": {
+        "level": "red",
+        "label": "Pérdida masiva en curso",
+        "detail": "Upsala perdió >25 km² entre 1990-2020; CHP perdió ~500 km² en 50 años (IANIGLA)"
+      },
+      "legal": {
+        "level": "green",
+        "label": "Parque Nacional + Ley 26.639",
+        "detail": "Los Glaciares es Patrimonio de la Humanidad (UNESCO, 1981); Ley 26.639 vigente"
+      }
+    },
+    "facts": [
+      "El Campo de Hielo Patagónico Sur es el tercer mayor reservorio de agua dulce no polar del mundo",
+      "El Glaciar Perito Moreno es uno de los pocos glaciares del mundo que no retrocede neta­mente",
+      "El glaciar Upsala perdió más de 3 km de longitud en los últimos 30 años",
+      "La represa Cóndor Cliff / Barrancoso fue suspendida por impacto ambiental en 2020"
+    ],
+    "sources": [
+      "IANIGLA — Inventario y seguimiento de glaciares patagónicos",
+      "UNESCO — Patrimonio Mundial 'Los Glaciares'",
+      "CONICET — CCT Patagonia"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -73.0,
+            -49.0
+          ],
+          [
+            -72.0,
+            -48.5
+          ],
+          [
+            -70.0,
+            -49.0
+          ],
+          [
+            -68.0,
+            -49.5
+          ],
+          [
+            -66.0,
+            -50.0
+          ],
+          [
+            -65.0,
+            -51.0
+          ],
+          [
+            -66.0,
+            -52.0
+          ],
+          [
+            -69.0,
+            -52.0
+          ],
+          [
+            -72.0,
+            -52.0
+          ],
+          [
+            -73.5,
+            -51.5
+          ],
+          [
+            -73.0,
+            -49.0
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "deseado",
+    "name": "Río Deseado",
+    "region": "Patagonia Central-Sur",
+    "area_km2": 70000,
+    "length_km": 615,
+    "origin": "Lag. Colorada / Colhué Huapi (Santa Cruz)",
+    "mouth": "Océano Atlántico (Puerto Deseado)",
+    "glaciers": [],
+    "status": {
+      "overall": "yellow",
+      "caudal": {
+        "level": "yellow",
+        "label": "Cuenca semiseca",
+        "detail": "Régimen irregular; en muchos años no llega al mar (curso efímero)"
+      },
+      "calidad": {
+        "level": "green",
+        "label": "Sin contaminación mayor",
+        "detail": "Baja densidad poblacional; sin industria pesada en la cuenca"
+      },
+      "glaciares": {
+        "level": "na",
+        "label": "Sin glaciares",
+        "detail": "Cuenca en meseta patagónica; fuera de la cordillera"
+      },
+      "legal": {
+        "level": "green",
+        "label": "Sin conflictos activos",
+        "detail": "Baja presión hídrica; reserva natural en desembocadura"
+      }
+    },
+    "facts": [
+      "El río Deseado es intermitente: en años secos no alcanza el océano Atlántico",
+      "La ría del Deseado es una reserva natural y sitio RAMSAR de importancia para aves marinas",
+      "La cuenca alberga la mayor explotación ovina de Santa Cruz",
+      "El lago Colhué Huapi (Chubut) se ha reducido drásticamente por extracción y sequía"
+    ],
+    "sources": [
+      "INA — Centro Regional Patagonia Sur",
+      "Gobierno de Santa Cruz — Dirección Provincial de Hidráulica",
+      "RAMSAR — Ría del Deseado"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -71.5,
+            -43.5
+          ],
+          [
+            -70.0,
+            -44.5
+          ],
+          [
+            -68.5,
+            -45.0
+          ],
+          [
+            -66.0,
+            -45.0
+          ],
+          [
+            -65.0,
+            -46.0
+          ],
+          [
+            -65.0,
+            -48.0
+          ],
+          [
+            -66.0,
+            -48.5
+          ],
+          [
+            -68.0,
+            -48.5
+          ],
+          [
+            -70.0,
+            -48.0
+          ],
+          [
+            -72.0,
+            -46.5
+          ],
+          [
+            -71.5,
+            -43.5
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "gallegos",
+    "name": "Río Gallegos — Coig",
+    "region": "Patagonia Austral — Tierra del Fuego",
+    "area_km2": 22000,
+    "length_km": 250,
+    "origin": "Cordillera Patagónica Sur",
+    "mouth": "Estrecho de Magallanes (Río Gallegos)",
+    "glaciers": [
+      {
+        "name": "Glaciares de Tierra del Fuego",
+        "detail": "Cordón Vinciguerra y otros · monitoreo CADIC-CONICET"
+      }
+    ],
+    "status": {
+      "overall": "green",
+      "caudal": {
+        "level": "green",
+        "label": "Sin estrés hídrico",
+        "detail": "Baja presión poblacional; régimen sostenido"
+      },
+      "calidad": {
+        "level": "green",
+        "label": "Muy buena",
+        "detail": "Mínima actividad industrial; agua de deshielo y lluvia"
+      },
+      "glaciares": {
+        "level": "yellow",
+        "label": "Retroceso en TDF",
+        "detail": "Glaciares de Tierra del Fuego en retroceso; CADIC-CONICET documenta reducción"
+      },
+      "legal": {
+        "level": "green",
+        "label": "Ley 26.639 + Parques",
+        "detail": "Parque Nacional Tierra del Fuego; glaciares protegidos por ley nacional"
+      }
+    },
+    "facts": [
+      "Río Gallegos abastece a la capital provincial (~100.000 hab.) directamente",
+      "Los glaciares de Tierra del Fuego (Vinciguerra, Martial) son accesibles y turísticos",
+      "La cuenca es parte del ecosistema de estepa magallánica más austral del planeta",
+      "Ushuaia es la ciudad más austral del mundo con abastecimiento de agua glaciaria"
+    ],
+    "sources": [
+      "CADIC — CONICET Ushuaia",
+      "Gobierno de Tierra del Fuego — Secretaría de Recursos Hídricos",
+      "IANIGLA — Glaciares del extremo sur"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -73.5,
+            -51.5
+          ],
+          [
+            -72.0,
+            -52.0
+          ],
+          [
+            -69.0,
+            -52.0
+          ],
+          [
+            -66.0,
+            -52.0
+          ],
+          [
+            -65.0,
+            -53.0
+          ],
+          [
+            -66.0,
+            -54.5
+          ],
+          [
+            -68.0,
+            -55.0
+          ],
+          [
+            -70.0,
+            -54.5
+          ],
+          [
+            -72.5,
+            -53.5
+          ],
+          [
+            -73.5,
+            -51.5
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "sierras_pampeanas",
+    "name": "Sierras Pampeanas y Cuencas Endorreicas Centrales",
+    "region": "Centro — Córdoba / San Luis / N La Pampa",
+    "area_km2": 345000,
+    "length_km": 0,
+    "origin": "Sierras de Córdoba (Champaquí, Achala) y Sierra de San Luis",
+    "mouth": "Sin salida al mar — sistemas endorreicos: Mar Chiquita / Ansenuza, Salinas del Bebedero, Bañados del Saladillo",
+    "glaciers": [],
+    "status": {
+      "overall": "yellow",
+      "caudal": {
+        "level": "yellow",
+        "label": "Cuencas cerradas con fluctuaciones extremas",
+        "detail": "Sistemas endorreicos: el agua entra (lluvia + ríos serranos) pero no tiene salida al mar — se acumula o evapora. Mar Chiquita registró fluctuaciones de 2 a 6 m de profundidad media en 50 años. Río Quinto perdió conexión con el sistema del Salado bonaerense."
+      },
+      "calidad": {
+        "level": "yellow",
+        "label": "Eutrofización en embalses serranos",
+        "detail": "Embalse San Roque (Córdoba) con eutrofización crónica por descargas urbanas y agroquímicos — afecta directamente a la fuente de agua de la ciudad de Córdoba. Mar Chiquita es naturalmente hipersalino."
+      },
+      "glaciares": {
+        "level": "na",
+        "label": "Sin glaciares",
+        "detail": "Sierras de baja altitud (<3.000 m); no hay glaciares relevantes."
+      },
+      "legal": {
+        "level": "yellow",
+        "label": "Gestión fragmentada · sitio Ramsar",
+        "detail": "Mar Chiquita / Bañados del Río Dulce: sitio Ramsar y P.N. Ansenuza desde 2022. Pero la cuenca de aporte está fragmentada entre 4 provincias sin un comité interjurisdiccional."
+      }
+    },
+    "facts": [
+      "Mar Chiquita / Ansenuza es el lago salado más grande de Argentina y uno de los más grandes del mundo",
+      "El sistema es endorreico: las cuencas no drenan al océano — el agua se evapora o acumula",
+      "Córdoba (1,65 M hab.) toma agua del Embalse San Roque (Río Suquía, sierras chicas), no de los grandes ríos",
+      "Río Quinto históricamente drenaba al Salado bonaerense — perdió conexión por sequía y manejo del suelo",
+      "El P.N. Quebrada del Condorito (Córdoba) protege las cabeceras de los ríos serranos en la Pampa de Achala"
+    ],
+    "sources": [
+      {
+        "label": "P.N. Ansenuza (APN)",
+        "url": "https://sib.gob.ar/area?ansenuza"
+      },
+      {
+        "label": "Comité de Cuenca Mar Chiquita",
+        "url": "https://www.argentina.gob.ar/ambiente/agua/humedales"
+      },
+      {
+        "label": "Aguas Cordobesas — Embalse San Roque",
+        "url": "https://www.aguascordobesas.com.ar/"
+      }
+    ]
+  }
+]

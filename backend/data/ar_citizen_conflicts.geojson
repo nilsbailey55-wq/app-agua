@@ -1,0 +1,170 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "title": "Conflictos ciudadanos por agua / movimientos socioambientales",
+    "approach": "Asambleas y movimientos NO indígenas con conflicto activo o histórico vinculado al agua. Casos paradigmáticos con documentación pública.",
+    "year_compiled": 2026
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "esquel_no_a_la_mina",
+        "name": "Asamblea de Vecinos Autoconvocados de Esquel — 'No a la Mina'",
+        "kind": "Movimiento ciudadano anti-minero",
+        "since": 2003,
+        "city": "Esquel",
+        "province": "Chubut",
+        "basin_id": "chubut",
+        "water_resource": "Cabeceras del Río Percey · Lago Willimanco",
+        "conflict_with": "Proyecto minero a cielo abierto (Meridian Gold)",
+        "current_status": "🟢 Triunfo histórico · Plebiscito 23-mar-2003: 81% NO · primera ley provincial anti-minería con cianuro (Ley 5001/2003)",
+        "outcome": "victoria_ciudadana",
+        "sources": [
+          {"label": "Wikipedia — Plebiscito de Esquel 2003", "url": "https://es.wikipedia.org/wiki/Plebiscito_de_Esquel_de_2003"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-71.317, -42.910]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "famatina",
+        "name": "Vecinos en Defensa del Famatina",
+        "kind": "Asamblea ciudadana anti-minera",
+        "since": 2007,
+        "city": "Famatina / Chilecito",
+        "province": "La Rioja",
+        "basin_id": "cuyo",
+        "water_resource": "Cabeceras del Cordón del Famatina · acuíferos Cuyo Andinos",
+        "conflict_with": "Sucesivos proyectos: Barrick Gold, Osisko, Yamana Gold",
+        "current_status": "🟡 Resistencia activa +18 años · cortes en Alto Carrizal · 'El Famatina no se toca' · expulsaron a 4 mineras",
+        "outcome": "resistencia_activa",
+        "sources": [
+          {"label": "Asamblea Vecinos Famatina (Wikipedia)", "url": "https://es.wikipedia.org/wiki/Famatina"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-67.520, -29.000]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "andalgala_algarrobo",
+        "name": "Asamblea El Algarrobo — Andalgalá",
+        "kind": "Asamblea ciudadana anti-minera",
+        "since": 2009,
+        "city": "Andalgalá",
+        "province": "Catamarca",
+        "basin_id": "cuyo",
+        "water_resource": "Río Andalgalá · acuíferos · vertientes Aconquija",
+        "conflict_with": "Proyecto MARA (Agua Rica + Filo del Sol, Glencore-Yamana)",
+        "current_status": "🔴 Conflicto activo +15 años · represión 2010, 2021 · 'Caminata por el Agua y la Vida' (mensual) · imputaciones a asambleístas",
+        "outcome": "conflicto_activo",
+        "sources": [
+          {"label": "Wikipedia — Asamblea El Algarrobo", "url": "https://es.wikipedia.org/wiki/Asamblea_El_Algarrobo"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-66.319, -27.585]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "mendoza_7722",
+        "name": "Asambleas Mendocinas por Agua Pura — Defensa Ley 7722",
+        "kind": "Movimiento ciudadano provincial",
+        "since": 2007,
+        "city": "Toda la provincia de Mendoza",
+        "province": "Mendoza",
+        "basin_id": "cuyo",
+        "water_resource": "Sistema del Desaguadero · ríos cordilleranos · acuíferos cuyanos",
+        "conflict_with": "Modificación de Ley 7722 (prohíbe minería con cianuro/mercurio)",
+        "current_status": "🟢 Defensa exitosa (2019) · histórica movilización ciudadana · 'el agua de los mendocinos vale más que el oro'",
+        "outcome": "victoria_ciudadana",
+        "sources": [
+          {"label": "Wikipedia — Ley 7722 de Mendoza", "url": "https://es.wikipedia.org/wiki/Ley_7722"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-68.845, -32.889]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "chubutazo",
+        "name": "Chubutazo — Rechazo a la Zonificación Minera",
+        "kind": "Movilización masiva provincial",
+        "since": 2021,
+        "city": "Toda la provincia de Chubut",
+        "province": "Chubut",
+        "basin_id": "chubut",
+        "water_resource": "Meseta Chubutense · cuenca del Río Chubut",
+        "conflict_with": "Ley de Zonificación Minera 5001/2021 · proyecto Navidad (Pan American Silver)",
+        "current_status": "🟢 Derogación de la ley a 6 días de su sanción (dic 2021) · récord de movilización en Chubut · 'No a la mina' replicado de Esquel",
+        "outcome": "victoria_ciudadana",
+        "sources": [
+          {"label": "Wikipedia — Chubutazo de 2021", "url": "https://es.wikipedia.org/wiki/Chubutazo"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-65.103, -43.300]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "asamblea_gualeguaychu",
+        "name": "Asamblea Ciudadana Ambiental de Gualeguaychú",
+        "kind": "Asamblea ciudadana ambiental",
+        "since": 2003,
+        "city": "Gualeguaychú",
+        "province": "Entre Ríos",
+        "basin_id": "uruguay",
+        "water_resource": "Río Uruguay · cuenca compartida ARG-URU",
+        "conflict_with": "Plantas de celulosa (Botnia/UPM, ENCE) en Fray Bentos",
+        "current_status": "🟡 Histórico bloqueo del puente Gral. San Martín (2006-2010) · fallo CIJ (La Haya, 2010) · monitoreo binacional CARU continúa",
+        "outcome": "fallo_internacional",
+        "sources": [
+          {"label": "Wikipedia — Conflicto entre Argentina y Uruguay por las plantas de celulosa", "url": "https://es.wikipedia.org/wiki/Conflicto_entre_Argentina_y_Uruguay_por_las_plantas_de_celulosa"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-58.511, -33.008]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "atuel_lapampa",
+        "name": "Comisión Provincial del Atuel — La Pampa",
+        "kind": "Conflicto interprovincial",
+        "since": 1947,
+        "city": "Toda La Pampa Oeste",
+        "province": "La Pampa vs Mendoza",
+        "basin_id": "colorado",
+        "water_resource": "Río Atuel · sistema Desaguadero",
+        "conflict_with": "Provincia de Mendoza · uso del Atuel para riego provincial",
+        "current_status": "🟡 Conflicto histórico +75 años · Fallo Corte Suprema 2017 a favor de La Pampa · obras de paso de caudal mínimo aún incompletas · ríos secos en NW pampeano",
+        "outcome": "fallo_pendiente_implementacion",
+        "sources": [
+          {"label": "Wikipedia — Río Atuel", "url": "https://es.wikipedia.org/wiki/R%C3%ADo_Atuel"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-67.500, -36.500]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "san_roque_carlospaz",
+        "name": "Asambleas por el Lago San Roque — Carlos Paz",
+        "kind": "Asambleas vecinales por contaminación",
+        "since": 2010,
+        "city": "Villa Carlos Paz",
+        "province": "Córdoba",
+        "basin_id": "sierras_pampeanas",
+        "water_resource": "Embalse San Roque (abastece a 70% de Córdoba)",
+        "conflict_with": "Eutrofización · descargas cloacales sin tratamiento · proyectos inmobiliarios en cuenca",
+        "current_status": "🔴 Crisis crónica de cianobacterias · alerta roja INA (ene 2026) · denuncias judiciales contra Schiaretti y Aguas Cordobesas (Roggio)",
+        "outcome": "conflicto_activo",
+        "sources": [
+          {"label": "elDiarioAR — Denuncia a Schiaretti y Roggio", "url": "https://www.eldiarioar.com/sociedad/denuncian-schiaretti-grupo-roggio-contaminacion-lago-san-roque_1_8972105.html"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-64.500, -31.420]}
+    }
+  ]
+}

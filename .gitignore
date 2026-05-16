@@ -1,0 +1,47 @@
+# ── macOS ──
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── Virtualenvs ──
+venv/
+.venv/
+env/
+.env
+
+# ── Node (por las dudas) ──
+node_modules/
+
+# ── Editores ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Logs / temporales ──
+*.log
+/tmp/
+uvicorn.log
+
+# ── Claude Code (local-only) ──
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/projects/
+
+# ── Datos crudos descargados (regenerables desde scripts) ──
+# (Si en algún momento agregás raw downloads pesados, sumalos acá)
+
+# ── Secretos ──
+*.key
+*.pem
+secrets.json

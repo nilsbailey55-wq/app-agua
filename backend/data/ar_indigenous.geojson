@@ -1,0 +1,214 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "title": "Territorios de pueblos originarios con conflictos hídricos documentados",
+    "approach": "Dataset CURADO de casos paradigmáticos donde el conflicto territorial está directamente vinculado al agua. NO es un mapa exhaustivo (Argentina tiene >1.800 comunidades indígenas registradas en el INAI). Incluye solo casos con documentación pública abundante.",
+    "ethical_note": "Los puntos son CENTROIDES REGIONALES APROXIMADOS, no ubicaciones exactas de núcleos comunitarios. Esta práctica es estándar en cartografía de derechos indígenas (Amnistía Internacional usa el mismo criterio) para evitar que mapas detallados puedan ser usados para operaciones de despojo, hostigamiento o violencia. Los datos exactos pertenecen a las comunidades y están en proceso oficial bajo Ley 26.160 (RETECI/INAI).",
+    "primary_sources": [
+      "INAI — Instituto Nacional de Asuntos Indígenas (RENACI/RETECI)",
+      "Ley 26.160 — Emergencia Territorial Indígena (2006, prorrogada)",
+      "Amnistía Internacional Argentina — territorioindigena.com.ar",
+      "ENOTPO — Encuentro Nacional de Organizaciones Territoriales de Pueblos Originarios",
+      "Mesa de Pueblos Originarios de la Cuenca de Guayatayoc y Salinas Grandes",
+      "INDEC 2022 — autoidentificación: 955.032 personas indígenas en Argentina"
+    ],
+    "year_compiled": 2026
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "lof_buenuleo",
+        "name": "Lof Che Buenuleo",
+        "people": "Mapuche",
+        "region": "Cerro Ventana, San Carlos de Bariloche",
+        "province": "Río Negro",
+        "basin_id": "negro_limay",
+        "communities_count": 1,
+        "territory_ha": 481,
+        "occupation_since": 1880,
+        "water_resource": "Nacientes del Arroyo Ñireco (abastece ~25% de Bariloche)",
+        "conflict_type": "Despojo / orden de desalojo / urbanización privada",
+        "ley_26160_status": "Reconocido por INAI 2020 (481 ha)",
+        "current_status": "🔴 Orden de desalojo confirmada feb 2025 · 92 ha disputadas por demandante particular con título considerado apócrifo",
+        "linked_city": "San Carlos de Bariloche",
+        "sources": [
+          {"label": "ANRed — Lof Buenuleo: el agua no es una mercancía", "url": "https://www.anred.org/lof-buenuleo-el-agua-es-para-los-pueblos-no-una-mercancia/"},
+          {"label": "ANCCOM UBA — Comunidades Buenuleo y Los Alerces", "url": "https://anccom.sociales.uba.ar/2024/12/04/las-comunidades-buenuleo-y-los-alerces-a-punto-de-ser-desalojadas/"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-71.31, -41.22]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "salinas_grandes",
+        "name": "Mesa de Pueblos Originarios de la Cuenca de Guayatayoc y Salinas Grandes",
+        "people": "Kolla y Atacama",
+        "region": "Salinas Grandes y Laguna de Guayatayoc",
+        "province": "Jujuy y Salta",
+        "basin_id": "puna",
+        "communities_count": 33,
+        "territory_ha": null,
+        "occupation_since": "ancestral",
+        "water_resource": "Cuenca endorreica de Guayatayoc-Salinas Grandes (acuífero salino + lagunas altoandinas)",
+        "conflict_type": "Minería de litio / extracción de salmuera / despojo de aguas",
+        "ley_26160_status": "Mayoría con relevamiento RETECI",
+        "current_status": "🔴 Conflicto activo +14 años · Reclamos ante Comisión IDH · Tercer Malón de la Paz 2023 · Reforma constitucional Jujuy 2023 · Lema 'El agua vale más que el litio' · Protocolo Kachi Yupi de consulta previa (2014-2015)",
+        "linked_city": "San Salvador de Jujuy",
+        "sources": [
+          {"label": "Territorio Salinas Grandes y Guayatayoc — sitio oficial", "url": "https://territoriosalinasgrandesylagunaguayatayoc.ar/"},
+          {"label": "FARN — Extracción de litio en Salinas Grandes y Guayatayoc", "url": "https://farn.org.ar/extraccion-de-litio-en-salinas-grandes-y-laguna-de-guayatayoc/"},
+          {"label": "Equator Initiative (PNUD) — Comunidades Kolla", "url": "https://www.equatorinitiative.org/2020/04/24/solution11260/"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-66.0, -23.57]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "vaca_muerta_mapuche",
+        "name": "Comunidades Mapuche de Vaca Muerta (Campo Maripe, Wirkaleo, Kaxipayiñ, Fvtaxayen, Newen Kvra)",
+        "people": "Mapuche",
+        "region": "Loma La Lata, Añelo, Tratayen, Puesto Hernández",
+        "province": "Neuquén",
+        "basin_id": "negro_limay",
+        "communities_count": 5,
+        "territory_ha": null,
+        "occupation_since": "ancestral",
+        "water_resource": "Acuíferos y arroyos de la meseta neuquina · agua subterránea en zona de fracking",
+        "conflict_type": "Fracking / contaminación de acuíferos / sismos inducidos / falta de relevamiento territorial",
+        "ley_26160_status": "Relevamiento RETECI demorado",
+        "current_status": "🔴 Conflicto activo · Bloqueos 2021-2022-2023 a yacimientos de Vaca Muerta · Demanda: 'Queremos relevamiento territorial y agua'",
+        "linked_city": "Neuquén",
+        "sources": [
+          {"label": "lavaca — Bloqueo a Vaca Muerta: derechos y agua", "url": "https://lavaca.org/notas/bloqueo-a-vaca-muerta-de-comunidades-mapuche-y-pobladores-de-anelo-que-buscan-dos-cosas-derechos-y-agua/"},
+          {"label": "ANRed — Mapuches bloquean Vaca Muerta por agua", "url": "https://www.anred.org/neuquen-comunidades-mapuche-bloquean-accesos-a-vaca-muerta-contra-el-fraking-y-en-defensa-de-la-vida-y-del-agua/"},
+          {"label": "SciELO — Resistencia mapuche contra el fracking en Vaca Muerta", "url": "https://www.scielo.org.mx/scielo.php?script=sci_arttext&pid=S2448-62212021000200179"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-68.85, -38.95]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "wichi_impenetrable",
+        "name": "Comunidades Wichí del Impenetrable Chaqueño",
+        "people": "Wichí (con Toba/Qom y Mocoví en zona limítrofe)",
+        "region": "Impenetrable Chaqueño · cuenca del Bermejo / Bermejito / Teuco",
+        "province": "Chaco y Salta (Rivadavia)",
+        "basin_id": "bermejo",
+        "communities_count": "~60",
+        "territory_ha": null,
+        "occupation_since": "ancestral",
+        "water_resource": "Ríos Bermejo, Teuco, Bermejito · pozos comunitarios · acuífero SAYTT",
+        "conflict_type": "Deforestación masiva / agronegocio / desnutrición infantil / falta de agua potable",
+        "ley_26160_status": "Relevamiento parcial · muchas comunidades sin titularización",
+        "current_status": "🔴 Crisis humanitaria documentada · 7.000+ niños wichí en riesgo nutricional (2022) · Pérdida de 30% del bosque chaqueño en 30 años · Desmonte ilegal duplica al legal · Sin acceso sistemático a agua potable",
+        "linked_city": "Resistencia",
+        "sources": [
+          {"label": "Infobae — Comunidad wichí: falta de agua potable y 7.000 niños en riesgo nutricional", "url": "https://www.infobae.com/sociedad/2022/01/18/la-desesperante-situacion-de-la-comunidad-wichi-falta-de-agua-potable-y-mas-de-7-mil-ninos-en-riesgo-nutricional/"},
+          {"label": "Greenpeace — Deforestación y desnutrición wichí", "url": "https://www.greenpeace.org/argentina/story/problemas/bosques/greenpeace-la-deforestacion-es-una-de-las-principales-causas-de-la-desnutricion-de-ninos-wichi-en-salta/"},
+          {"label": "Redalyc — Luchas socio-territoriales wichí del Bermejo", "url": "https://www.redalyc.org/journal/5519/551973881014/html/"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-61.50, -25.10]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "pilcomayo_pueblos",
+        "name": "Comunidades Wichí, Pilagá, Qom y Nivaclé del Pilcomayo",
+        "people": "Wichí, Pilagá, Qom (Toba), Nivaclé",
+        "region": "Cuenca media y baja del Pilcomayo",
+        "province": "Formosa",
+        "basin_id": "paraguay_pilcomayo",
+        "communities_count": "~80",
+        "territory_ha": null,
+        "occupation_since": "ancestral",
+        "water_resource": "Río Pilcomayo · aguadas / pozos / madrejones",
+        "conflict_type": "Sedimentación del Pilcomayo / pérdida de agua superficial / colmatación / contaminación minera transfronteriza (Bolivia)",
+        "ley_26160_status": "Parcial",
+        "current_status": "🟡 El Pilcomayo es uno de los ríos con mayor carga sedimentaria del mundo · El cauce se desplaza por colmatación dejando comunidades sin agua · Comisión Trinacional sin acción efectiva · Inundaciones recurrentes en TDF salteño",
+        "linked_city": "Formosa",
+        "sources": [
+          {"label": "Comisión Trinacional del Pilcomayo", "url": "https://www.pilcomayo.net/"},
+          {"label": "Enfant Terrible — Inundaciones Chaco salteño: Wichí, Qom y Toba", "url": "https://enfantterrible.com.ar/ambientalismo/inundaciones-chaco-salteno-wichi-qom-y-toba-riesgo/"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-60.50, -23.80]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "diaguita_calchaqui",
+        "name": "Unión de los Pueblos de la Nación Diaguita (UPND)",
+        "people": "Diaguita Calchaquí",
+        "region": "Valles Calchaquíes",
+        "province": "Tucumán, Salta, Catamarca, La Rioja, Santiago del Estero",
+        "basin_id": "salado_norte",
+        "communities_count": 20,
+        "territory_ha": null,
+        "occupation_since": "ancestral · Real Cédula 1716 (reconocimiento colonial)",
+        "water_resource": "Ríos Calchaquí, Santa María · acueductos prehispánicos · vertientes de montaña",
+        "conflict_type": "Megaminería (Bajo La Alumbrera Catamarca) / extractivismo turístico-espiritual / despojo histórico de tierras",
+        "ley_26160_status": "Algunas comunidades con relevamiento (Quilmes, Amaicha)",
+        "current_status": "🔴 Vertientes domiciliarias se secaron desde apertura de Minera Bajo La Alumbrera · 'Agua escasea en casi todas las comunidades del valle' · UPND organiza ~3.000 familias diaguitas",
+        "linked_city": "San Miguel de Tucumán",
+        "sources": [
+          {"label": "Carbono News — Megaminería Catamarca: extraer la vida", "url": "https://www.carbono.news/activismo/megamineria-en-catamarca-extraer-la-vida/"},
+          {"label": "Biodiversidad LA — Pueblos Amaichas y Quilmes", "url": "https://www.biodiversidadla.org/Articulos/Argentina_historia_de_los_pueblos_Amaichas_y_Quilmes"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-65.90, -26.50]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "atacama_susques",
+        "name": "Pueblo Atacama de Susques",
+        "people": "Atacama (Lickanantay)",
+        "region": "Departamento Susques · Salar de Olaroz-Cauchari",
+        "province": "Jujuy",
+        "basin_id": "puna",
+        "communities_count": "~12",
+        "territory_ha": null,
+        "occupation_since": "ancestral",
+        "water_resource": "Salares y vegas altoandinas · ojos de agua · vertientes",
+        "conflict_type": "Minería de litio (Olaroz, Cauchari) · evaporación masiva de salmuera",
+        "ley_26160_status": "Relevamiento parcial",
+        "current_status": "🟡 División comunitaria: algunas comunidades firmaron con mineras (Lipán, Sausalito, Quera, Agua Caliente) · Otras resisten · Olaroz-Sales de Jujuy: una de las principales operaciones de litio del país",
+        "linked_city": "San Salvador de Jujuy",
+        "sources": [
+          {"label": "ResearchGate — ¿Por qué algunas comunidades resisten y otras no? Olaroz-Cauchari", "url": "https://www.researchgate.net/publication/378208006"},
+          {"label": "lavaca — Proyecto Litio: cuando el agua empieza a desaparecer", "url": "https://lavaca.org/extractivismo/proyecto-litio-el-paisaje-territorial-animal-y-humano-cuando-el-agua-empieza-a-desaparecer-2"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-66.40, -23.42]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "cushamen_mapuche",
+        "name": "Comunidades Mapuche-Tehuelche de Cushamen",
+        "people": "Mapuche-Tehuelche",
+        "region": "Cushamen y zonas aledañas",
+        "province": "Chubut",
+        "basin_id": "chubut",
+        "communities_count": "~10",
+        "territory_ha": null,
+        "occupation_since": "ancestral",
+        "water_resource": "Río Chubut superior · Lago Puelo · Río Manso · arroyos cordilleranos",
+        "conflict_type": "Despojo histórico (Benetton) · militarización · privatización de tierras · estigmatización mediática",
+        "ley_26160_status": "Conflictos por aplicación de la ley",
+        "current_status": "🔴 Caso Santiago Maldonado (2017) · Caso Rafael Nahuel (2017) · Tensiones recurrentes con Gendarmería · Demanda histórica de aplicación efectiva de Ley 26.160",
+        "linked_city": null,
+        "sources": [
+          {"label": "Amnistía Internacional Argentina — Territorio Indígena", "url": "https://www.territorioindigena.com.ar/"},
+          {"label": "INAI — Mapa de pueblos originarios", "url": "https://www.argentina.gob.ar/derechoshumanos/inai/mapa"}
+        ]
+      },
+      "geometry": {"type": "Point", "coordinates": [-71.05, -42.20]}
+    }
+  ]
+}

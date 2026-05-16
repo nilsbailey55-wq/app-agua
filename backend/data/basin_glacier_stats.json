@@ -1,0 +1,120 @@
+{
+  "paraguay_pilcomayo": {
+    "count": 41,
+    "area_km2": 1.7,
+    "by_type": {
+      "GEA": 16,
+      "GEI": 25
+    }
+  },
+  "puna": {
+    "count": 224,
+    "area_km2": 10.3,
+    "by_type": {
+      "GEI": 129,
+      "GEA": 18,
+      "MN": 76,
+      "GD": 1
+    }
+  },
+  "salado_norte": {
+    "count": 662,
+    "area_km2": 41.1,
+    "by_type": {
+      "GEI": 357,
+      "GEA": 294,
+      "MN": 10,
+      "GD": 1
+    }
+  },
+  "cuyo": {
+    "count": 10998,
+    "area_km2": 1900.1,
+    "by_type": {
+      "MN": 2718,
+      "GD": 1444,
+      "GEI": 1342,
+      "GEA": 4713,
+      "GCGE": 371,
+      "GC": 410
+    }
+  },
+  "bermejo": {
+    "count": 258,
+    "area_km2": 8.0,
+    "by_type": {
+      "GEI": 162,
+      "GEA": 96
+    }
+  },
+  "colorado": {
+    "count": 664,
+    "area_km2": 80.4,
+    "by_type": {
+      "GCGE": 16,
+      "GEI": 190,
+      "GEA": 222,
+      "MN": 142,
+      "GC": 33,
+      "GD": 61
+    }
+  },
+  "negro_limay": {
+    "count": 935,
+    "area_km2": 159.3,
+    "by_type": {
+      "MN": 567,
+      "GD": 279,
+      "GC": 13,
+      "GEA": 26,
+      "GEI": 48,
+      "GCGE": 2
+    }
+  },
+  "chubut": {
+    "count": 1230,
+    "area_km2": 128.0,
+    "by_type": {
+      "GEA": 4,
+      "MN": 996,
+      "GEI": 11,
+      "GD": 215,
+      "GC": 4
+    }
+  },
+  "gallegos": {
+    "count": 454,
+    "area_km2": 21.2,
+    "by_type": {
+      "GD": 116,
+      "MN": 175,
+      "GEA": 79,
+      "GCGE": 1,
+      "GEI": 81,
+      "GC": 2
+    }
+  },
+  "deseado": {
+    "count": 226,
+    "area_km2": 27.6,
+    "by_type": {
+      "MN": 138,
+      "GEI": 17,
+      "GEA": 10,
+      "GD": 60,
+      "GC": 1
+    }
+  },
+  "santa_cruz": {
+    "count": 1328,
+    "area_km2": 455.4,
+    "by_type": {
+      "GEI": 77,
+      "GEA": 89,
+      "GD": 414,
+      "MN": 698,
+      "GCGE": 2,
+      "GC": 48
+    }
+  }
+}

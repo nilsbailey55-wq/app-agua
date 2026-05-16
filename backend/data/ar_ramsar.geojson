@@ -1,0 +1,39 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "title": "Sitios RAMSAR de Argentina",
+    "source": "Argentina.gob.ar — Red de Sitios Ramsar / Wikipedia (verificado 2025)",
+    "url": "https://www.argentina.gob.ar/ambiente/agua/humedales/sitiosramsar",
+    "total_sites": 23,
+    "total_hectares": 5625407,
+    "provinces_covered": "15 + CABA",
+    "convention": "Convención Ramsar (1971), aprobada por Ley 23.919 y Ley 25.335",
+    "note": "Coordenadas son centroides regionales aproximados. Algunos sitios coinciden con Parques Nacionales (linked_to_apn=true) y ya aparecen en la capa de áreas protegidas; este dataset es para verlos como red unificada del Convenio Ramsar.",
+    "year_compiled": 2026
+  },
+  "features": [
+    {"type":"Feature","properties":{"name":"Mon. Nat. Laguna de los Pozuelos","province":"Jujuy","year":1992,"area_ha":16224,"linked_to_apn":true,"description":"Laguna altoandina · hábitat de flamencos · sequía progresiva documentada"},"geometry":{"type":"Point","coordinates":[-66.0,-22.27]}},
+    {"type":"Feature","properties":{"name":"P.N. Laguna Blanca","province":"Neuquén","year":1992,"area_ha":11250,"linked_to_apn":true,"description":"Cuenca endorreica · cisne de cuello negro"},"geometry":{"type":"Point","coordinates":[-70.353,-39.026]}},
+    {"type":"Feature","properties":{"name":"P.N. Río Pilcomayo","province":"Formosa","year":1992,"area_ha":51889,"linked_to_apn":true,"description":"Esteros y bañados del Pilcomayo"},"geometry":{"type":"Point","coordinates":[-58.063,-25.087]}},
+    {"type":"Feature","properties":{"name":"Reserva Costa Atlántica TDF","province":"Tierra del Fuego","year":1995,"area_ha":28600,"linked_to_apn":false,"description":"Bahía San Sebastián · sitio crítico para aves migratorias playeras"},"geometry":{"type":"Point","coordinates":[-68.20,-53.05]}},
+    {"type":"Feature","properties":{"name":"Laguna de Llancanelo","province":"Mendoza","year":1995,"area_ha":65000,"linked_to_apn":false,"description":"Cuenca endorreica · sur mendocino · presión por hidrocarburos"},"geometry":{"type":"Point","coordinates":[-69.16,-35.40]}},
+    {"type":"Feature","properties":{"name":"Bahía de Samborombón","province":"Buenos Aires","year":1997,"area_ha":243965,"linked_to_apn":true,"description":"Costa atlántica · venado de las pampas · estuario Plata-Salado · linked P.N. Campos del Tuyú"},"geometry":{"type":"Point","coordinates":[-57.0,-36.40]}},
+    {"type":"Feature","properties":{"name":"Lagunas de Guanacache, Desaguadero y del Bebedero","province":"San Juan / San Luis / Mendoza","year":1999,"area_ha":962370,"linked_to_apn":false,"description":"Sistema endorreico cuyano · pueblos huarpes · severa retracción"},"geometry":{"type":"Point","coordinates":[-67.50,-32.50]}},
+    {"type":"Feature","properties":{"name":"Reserva Prov. Lagunas de Vilama","province":"Jujuy","year":2000,"area_ha":157000,"linked_to_apn":false,"description":"Lagunas altoandinas Puna · zona litio · flamencos andinos"},"geometry":{"type":"Point","coordinates":[-66.85,-22.55]}},
+    {"type":"Feature","properties":{"name":"Jaaukanigás","province":"Santa Fe","year":2001,"area_ha":492000,"linked_to_apn":false,"description":"Humedales del Chaco-Pampeano santafesino · Río Paraná norte"},"geometry":{"type":"Point","coordinates":[-59.50,-28.40]}},
+    {"type":"Feature","properties":{"name":"Lagunas y Esteros del Iberá","province":"Corrientes","year":2002,"area_ha":24550,"linked_to_apn":true,"description":"Esteros del Iberá · uno de los humedales más grandes de Sudamérica"},"geometry":{"type":"Point","coordinates":[-57.171,-28.547]}},
+    {"type":"Feature","properties":{"name":"Bañados del Río Dulce y Laguna de Mar Chiquita","province":"Córdoba","year":2002,"area_ha":996000,"linked_to_apn":true,"description":"Lago salado más grande de Argentina · linked P.N. Ansenuza · sitio Ramsar más extenso del país"},"geometry":{"type":"Point","coordinates":[-62.917,-30.683]}},
+    {"type":"Feature","properties":{"name":"Reserva Prov. Laguna Brava","province":"La Rioja","year":2003,"area_ha":405000,"linked_to_apn":false,"description":"Lagunas altoandinas · 4.300 m s.n.m. · vicuñas y flamencos"},"geometry":{"type":"Point","coordinates":[-69.00,-28.50]}},
+    {"type":"Feature","properties":{"name":"Humedales Chaco","province":"Chaco","year":2004,"area_ha":508000,"linked_to_apn":false,"description":"Bañados y madrejones del Río Paraguay · esteros del Negro"},"geometry":{"type":"Point","coordinates":[-58.50,-27.00]}},
+    {"type":"Feature","properties":{"name":"Reserva Ecológica Costanera Sur","province":"CABA","year":2005,"area_ha":353,"linked_to_apn":false,"description":"Humedal urbano único · Río de la Plata costa CABA · 350 especies de aves"},"geometry":{"type":"Point","coordinates":[-58.36,-34.61]}},
+    {"type":"Feature","properties":{"name":"Parque Prov. El Tromen","province":"Neuquén","year":2006,"area_ha":30000,"linked_to_apn":false,"description":"Volcán Tromen · lagunas altoandinas · cuencas Colorado superiores"},"geometry":{"type":"Point","coordinates":[-70.05,-37.10]}},
+    {"type":"Feature","properties":{"name":"Reserva Natural Otamendi","province":"Buenos Aires","year":2008,"area_ha":2600,"linked_to_apn":true,"description":"Bajo delta del Paraná · linked P.N. Ciervo de los Pantanos"},"geometry":{"type":"Point","coordinates":[-58.85,-34.32]}},
+    {"type":"Feature","properties":{"name":"Humedal Laguna Melincué","province":"Santa Fe","year":2008,"area_ha":92000,"linked_to_apn":false,"description":"Laguna salobre pampeana · agroquímicos en el entorno"},"geometry":{"type":"Point","coordinates":[-61.45,-33.65]}},
+    {"type":"Feature","properties":{"name":"Lagunas Altoandinas y Puneñas de Catamarca","province":"Catamarca","year":2009,"area_ha":1228175,"linked_to_apn":false,"description":"Sistema lacustre puneño · zona del Salar del Hombre Muerto · litio"},"geometry":{"type":"Point","coordinates":[-68.50,-27.00]}},
+    {"type":"Feature","properties":{"name":"Glaciar Vinciguerra y turberas","province":"Tierra del Fuego","year":2009,"area_ha":2760,"linked_to_apn":false,"description":"Glaciar costero más austral · turberas de Sphagnum · agua de Ushuaia"},"geometry":{"type":"Point","coordinates":[-68.36,-54.70]}},
+    {"type":"Feature","properties":{"name":"Palmar Yatay (P.N. El Palmar)","province":"Entre Ríos","year":2011,"area_ha":21450,"linked_to_apn":true,"description":"Palmares de Yatay sobre Río Uruguay · linked P.N. El Palmar"},"geometry":{"type":"Point","coordinates":[-58.276,-31.873]}},
+    {"type":"Feature","properties":{"name":"Humedales de Península Valdés","province":"Chubut","year":2012,"area_ha":42695,"linked_to_apn":false,"description":"Salinas Grande y Chica · Patrimonio UNESCO · ballena franca austral"},"geometry":{"type":"Point","coordinates":[-64.00,-42.50]}},
+    {"type":"Feature","properties":{"name":"Delta del Paraná","province":"Entre Ríos / Santa Fe","year":2015,"area_ha":243126,"linked_to_apn":true,"description":"Bajo delta · linked P.N. Pre-Delta + P.N. Islas de Santa Fe · incendios masivos 2020-2022"},"geometry":{"type":"Point","coordinates":[-59.50,-33.00]}},
+    {"type":"Feature","properties":{"name":"Reserva Natural Villavicencio","province":"Mendoza","year":2015,"area_ha":62244,"linked_to_apn":false,"description":"Vertiente oriental Cordón del Plata · vertientes / acuífero Cuyo · marca Villavicencio"},"geometry":{"type":"Point","coordinates":[-68.93,-32.55]}}
+  ]
+}

@@ -1,0 +1,2960 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agua Argentina — Cuencas Nacionales</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --panel-w: 390px;
+      --blue:       #1a6fa8;
+      --blue-dk:    #14527e;
+      --blue-light: #e8f4fb;
+      --green:      #2d9b5a;
+      --yellow:     #d4a017;
+      --red:        #c0392b;
+      --gray:       #5a6472;
+      --border:     #d0dce8;
+      --text:       #1c2b3a;
+      --text-muted: #5a6472;
+      --surface:    #f7fafd;
+    }
+
+    html, body { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; color: var(--text); }
+
+    /* layout */
+    #app { display: flex; height: 100vh; }
+    #panel {
+      width: var(--panel-w); min-width: var(--panel-w);
+      display: flex; flex-direction: column;
+      background: #fff; border-right: 1px solid var(--border);
+      overflow-y: auto; z-index: 1000;
+    }
+    #map { flex: 1; }
+
+    /* header */
+    .header { background: var(--blue); color: #fff; padding: 18px 22px 14px; flex-shrink: 0; }
+    .header-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .header h1 { font-size: 1.15rem; font-weight: 700; line-height: 1.2; }
+    .header p  { font-size: 0.78rem; opacity: 0.85; }
+    .badge {
+      display: inline-block; background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35); color: #fff;
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; padding: 2px 8px; border-radius: 99px; margin-top: 8px;
+    }
+
+    /* locate button */
+    .locate-btn {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35);
+      color: #fff; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+      padding: 8px 14px; border-radius: 6px; margin-top: 10px; width: 100%;
+      transition: background 0.15s;
+    }
+    .locate-btn:hover { background: rgba(255,255,255,0.25); }
+    .locate-btn svg { flex-shrink: 0; }
+
+    /* summary bar */
+    .summary-bar {
+      display: flex; gap: 0;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .sum-cell {
+      flex: 1; text-align: center; padding: 10px 6px;
+      border-right: 1px solid var(--border);
+      font-size: 0.7rem;
+    }
+    .sum-cell:last-child { border-right: none; }
+    .sum-val { font-size: 1.1rem; font-weight: 700; margin-bottom: 1px; }
+    .sum-lbl { color: var(--text-muted); }
+    .c-red    { color: var(--red); }
+    .c-yellow { color: var(--yellow); }
+    .c-green  { color: var(--green); }
+    .c-blue   { color: var(--blue); }
+
+    /* section */
+    .section { padding: 16px 22px; border-bottom: 1px solid var(--border); }
+    .section-title {
+      font-size: 0.63rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px;
+    }
+
+    /* default (welcome) state */
+    .welcome {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 32px 28px; color: var(--text-muted);
+    }
+    .welcome svg { margin-bottom: 16px; opacity: 0.25; }
+    .welcome h3 { font-size: 1rem; color: var(--text); margin-bottom: 6px; }
+    .welcome p  { font-size: 0.8rem; line-height: 1.6; }
+
+    /* basin detail */
+    #basin-detail { display: none; flex-direction: column; flex: 1; }
+
+    .basin-header { padding: 16px 22px 0; }
+    .basin-name { font-size: 1.1rem; font-weight: 700; margin-bottom: 2px; }
+    .basin-region { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px; }
+
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat { background: var(--blue-light); border-radius: 8px; padding: 9px 12px; }
+    .stat-val { font-size: 1rem; font-weight: 700; color: var(--blue); }
+    .stat-lbl { font-size: 0.7rem; color: var(--text-muted); margin-top: 1px; }
+
+    /* traffic lights */
+    .lights-grid { display: flex; flex-direction: column; gap: 8px; }
+    .light-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green  { background: var(--green); box-shadow: 0 0 5px rgba(45,155,90,.5); }
+    .dot-yellow { background: var(--yellow); box-shadow: 0 0 5px rgba(212,160,23,.5); }
+    .dot-red    { background: var(--red); box-shadow: 0 0 5px rgba(192,57,43,.5); }
+    .dot-na     { background: #ccc; }
+
+    .light-info { flex: 1; }
+    .light-label { font-size: 0.8rem; font-weight: 600; }
+    .light-desc  { font-size: 0.71rem; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+    .light-val { font-size: 0.72rem; font-weight: 700; flex-shrink: 0; }
+    .light-val.green  { color: var(--green); }
+    .light-val.yellow { color: var(--yellow); }
+    .light-val.red    { color: var(--red); }
+    .light-val.na     { color: #aaa; }
+
+    /* glaciers */
+    .glacier-list { display: flex; flex-direction: column; gap: 8px; }
+    .glacier-item { display: flex; gap: 10px; font-size: 0.79rem; }
+    .glacier-icon {
+      width: 26px; height: 26px; background: #dbeeff; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0;
+    }
+    .glacier-name   { font-weight: 600; margin-bottom: 1px; }
+    .glacier-detail { color: var(--text-muted); font-size: 0.71rem; line-height: 1.4; }
+    .no-glaciers    { font-size: 0.79rem; color: var(--text-muted); font-style: italic; }
+
+    /* facts */
+    .facts-list { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+    .facts-list li {
+      font-size: 0.78rem; color: var(--text); padding-left: 16px; position: relative; line-height: 1.5;
+    }
+    .facts-list li::before { content: '→'; position: absolute; left: 0; color: var(--blue); font-size: 0.75rem; }
+
+    /* sources */
+    .sources-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .sources-list li {
+      font-size: 0.73rem; color: var(--text-muted); padding-left: 12px; position: relative;
+    }
+    .sources-list li::before { content: '·'; position: absolute; left: 0; font-weight: 700; color: var(--blue); }
+    .sources-list a { color: var(--blue); text-decoration: none; }
+    .sources-list a:hover { text-decoration: underline; }
+
+    /* water supply chain */
+    .supply-chain { display: flex; flex-direction: column; gap: 0; }
+    .supply-step {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 8px 0; position: relative;
+    }
+    .supply-step:not(:last-child)::after {
+      content: ''; position: absolute; left: 11px; top: 28px;
+      width: 2px; height: calc(100% - 12px);
+      background: var(--border);
+    }
+    .supply-num {
+      width: 24px; height: 24px; border-radius: 50%; background: var(--blue);
+      color: #fff; font-size: 0.7rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 1;
+    }
+    .supply-text { font-size: 0.78rem; padding-top: 3px; line-height: 1.5; }
+    .supply-meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+
+    /* measurements table */
+    .meas-table { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
+    .meas-table th {
+      text-align: left; font-size: 0.62rem; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--text-muted); padding: 0 8px 6px 0; border-bottom: 1px solid var(--border);
+    }
+    .meas-table td {
+      padding: 7px 8px 7px 0; border-bottom: 1px solid var(--surface);
+      vertical-align: top; line-height: 1.4;
+    }
+    .meas-table tr:last-child td { border-bottom: none; }
+    .meas-val { font-weight: 600; color: var(--text); }
+    .meas-vs  { color: var(--red); font-size: 0.7rem; }
+    .meas-src a { color: var(--blue); font-size: 0.68rem; text-decoration: none; }
+    .meas-src a:hover { text-decoration: underline; }
+
+    /* collapsible sections */
+    details.section { padding: 0; }
+    details.section > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      user-select: none;
+      transition: background 0.1s;
+    }
+    details.section > summary::-webkit-details-marker { display: none; }
+    details.section > summary:hover { background: var(--surface); }
+    details.section > summary::after {
+      content: '▾';
+      margin-left: auto;
+      font-size: 0.85rem;
+      color: var(--blue);
+      transition: transform 0.2s;
+    }
+    details.section[open] > summary::after { transform: rotate(180deg); }
+    details.section > .section-body {
+      padding: 0 22px 16px;
+    }
+    .summary-preview {
+      font-weight: 600;
+      color: var(--text);
+      text-transform: none;
+      letter-spacing: 0;
+      font-size: 0.78rem;
+    }
+    .summary-preview .preview-meta {
+      font-weight: 400;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      margin-left: 4px;
+    }
+
+    /* compact chips for stats grid */
+    .stats-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .chip {
+      flex: 1 1 calc(50% - 3px);
+      min-width: 130px;
+      background: var(--blue-light);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 0.72rem;
+      line-height: 1.3;
+    }
+    .chip-val { font-weight: 700; color: var(--blue); font-size: 0.85rem; }
+    .chip-lbl { color: var(--text-muted); font-size: 0.66rem; margin-top: 1px; }
+
+    /* river-hover tooltip */
+    #riverHoverTip {
+      position: fixed;
+      background: rgba(13, 71, 161, 0.94);
+      color: #fff;
+      padding: 5px 9px;
+      border-radius: 5px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 9000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      display: none;
+    }
+    #riverHoverTip.show { display: block; }
+    #riverHoverTip .tip-meta {
+      font-weight: 400;
+      opacity: 0.85;
+      font-size: 0.68rem;
+    }
+
+    /* clean-mode (hide all overlays) */
+    body.clean-mode #panel,
+    body.clean-mode .app-layers-control,
+    body.clean-mode .app-legend,
+    body.clean-mode .panel-reopen-tab {
+      display: none !important;
+    }
+
+    /* panel collapse/expand */
+    .panel-close-btn {
+      background: transparent; border: none; cursor: pointer;
+      width: 18px; height: 18px;
+      border-radius: 50%; padding: 0;
+      font-size: 0.85rem; color: var(--text-muted); line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.1s, color 0.1s;
+    }
+    .panel-close-btn:hover { background: #fee; color: var(--red); }
+    .panel-header-row {
+      display: flex; align-items: center; justify-content: flex-end;
+      margin-bottom: 4px;
+    }
+    /* Collapsed state — hide all children except the body wrapper, which has only the tab visible */
+    .app-layers-control.collapsed > *:not(.panel-reopen-tab),
+    .app-legend.collapsed > *:not(.panel-reopen-tab) {
+      display: none !important;
+    }
+    .panel-reopen-tab {
+      display: none;
+      background: rgba(255,255,255,0.94);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.72rem; font-weight: 700;
+      color: var(--blue);
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      align-items: center; gap: 5px;
+      white-space: nowrap;
+    }
+    .panel-reopen-tab:hover { background: var(--blue-light); }
+    .app-layers-control.collapsed .panel-reopen-tab,
+    .app-legend.collapsed .panel-reopen-tab {
+      display: inline-flex !important;
+    }
+
+    /* clean-mode toggle button */
+    .clean-mode-btn {
+      position: absolute; bottom: 28px; left: 12px;
+      z-index: 600;
+      background: rgba(255, 255, 255, 0.94);
+      border: none;
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+      cursor: pointer; font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--blue);
+      transition: background 0.15s, color 0.15s;
+    }
+    .clean-mode-btn:hover { background: var(--blue); color: #fff; }
+    body.clean-mode .clean-mode-btn { background: var(--blue); color: #fff; }
+
+    /* basemap selector */
+    .basemap-selector {
+      position: absolute; top: 10px; right: 10px;
+      z-index: 600;
+      background: rgba(255, 255, 255, 0.94);
+      border-radius: 8px;
+      padding: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+      display: flex; flex-direction: column; gap: 4px;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-width: 245px;
+    }
+    .basemap-row { display: flex; gap: 2px; }
+    .basemap-btn {
+      background: transparent; border: none; cursor: pointer;
+      padding: 5px 10px; font-size: 0.72rem; font-weight: 600;
+      color: var(--text-muted); border-radius: 5px;
+      transition: background 0.1s, color 0.1s;
+      white-space: nowrap; flex: 1;
+    }
+    .basemap-btn:hover { background: var(--blue-light); color: var(--blue); }
+    .basemap-btn.active { background: var(--blue); color: #fff; }
+    .basemap-intensity {
+      display: flex; align-items: center; gap: 6px;
+      padding: 2px 6px 4px; font-size: 0.62rem; color: var(--text-muted);
+    }
+    .basemap-intensity input[type="range"] {
+      flex: 1; height: 4px; cursor: pointer; accent-color: var(--blue);
+    }
+
+    /* water trace modal */
+    #traceModal {
+      position: fixed; right: 16px; top: 16px;
+      width: 380px; max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 32px);
+      background: #fff; border-radius: 10px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.22);
+      z-index: 5000; display: none; flex-direction: column;
+      overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    #traceModal.active { display: flex; }
+    .trace-head {
+      background: linear-gradient(135deg, #00838f, #006064);
+      color: #fff; padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .trace-head h3 { font-size: 1rem; font-weight: 700; line-height: 1.2; }
+    .trace-head .close-btn {
+      background: rgba(255,255,255,0.2); border: none; color: #fff;
+      width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+      font-size: 1rem; display: flex; align-items: center; justify-content: center;
+    }
+    .trace-head .close-btn:hover { background: rgba(255,255,255,0.35); }
+    .trace-body { padding: 14px 16px; overflow-y: auto; }
+    .trace-step {
+      display: flex; align-items: center; gap: 10px;
+      padding: 6px 0; position: relative;
+    }
+    .trace-step:not(:last-child)::after {
+      content: ''; position: absolute; left: 13px; top: 28px;
+      width: 2px; height: calc(100% - 4px);
+      background: #80deea;
+    }
+    .trace-num {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: #00838f; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 700; flex-shrink: 0; z-index: 1;
+    }
+    .trace-step-info { flex: 1; font-size: 0.78rem; line-height: 1.4; }
+    .trace-meta { color: #5a6472; font-size: 0.7rem; }
+    .trace-glacier {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; margin-top: 5px;
+      background: #e0f7fa; border-left: 3px solid #00838f;
+      border-radius: 0 6px 6px 0; font-size: 0.78rem;
+    }
+    #traceMode-banner {
+      position: fixed; top: 16px; left: 50%;
+      transform: translateX(-50%);
+      background: #00838f; color: #fff;
+      padding: 9px 18px; border-radius: 99px;
+      font-size: 0.82rem; font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 4500; display: none;
+    }
+    #traceMode-banner.active { display: block; }
+    .trace-cancel {
+      margin-left: 12px; background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.4);
+      color: #fff; padding: 2px 9px; border-radius: 99px;
+      font-size: 0.72rem; cursor: pointer;
+    }
+
+    /* alert banner */
+    .alert-banner {
+      background: #fef2f2; border-left: 3px solid var(--red); border-radius: 0 6px 6px 0;
+      padding: 9px 12px; font-size: 0.76rem; color: #7f1d1d;
+    }
+    .alert-banner strong { display: block; margin-bottom: 2px; font-size: 0.78rem; }
+    .alert-banner.yellow { background: #fffbeb; border-color: var(--yellow); color: #78350f; }
+
+    /* intake source cards */
+    .intake-grid { display: flex; flex-direction: column; gap: 10px; }
+    .intake-card {
+      border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    .intake-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 12px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .intake-name { font-size: 0.85rem; font-weight: 700; }
+    .intake-share {
+      font-size: 0.72rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 99px; border: 1px solid;
+    }
+    .intake-share.green  { color: var(--green);  background: #edf7f1; border-color: #a7f3c8; }
+    .intake-share.yellow { color: var(--yellow); background: #fffbeb; border-color: #fde68a; }
+    .intake-share.red    { color: var(--red);    background: #fef2f2; border-color: #fca5a5; }
+    .intake-body { padding: 10px 12px; font-size: 0.76rem; }
+    .intake-row { display: flex; gap: 6px; margin-bottom: 5px; color: var(--text-muted); line-height: 1.4; }
+    .intake-row strong { color: var(--text); flex-shrink: 0; }
+    .intake-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .intake-tag {
+      font-size: 0.66rem; background: var(--blue-light); color: var(--blue);
+      padding: 2px 7px; border-radius: 99px; border: 1px solid #bcd9ef;
+    }
+    .intake-note {
+      margin-top: 8px; padding: 7px 9px; border-radius: 6px;
+      font-size: 0.72rem; line-height: 1.5;
+    }
+    .intake-note.red    { background: #fef2f2; color: #7f1d1d; border-left: 2px solid var(--red); }
+    .intake-note.yellow { background: #fffbeb; color: #78350f; border-left: 2px solid var(--yellow); }
+    .intake-conflict-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.65rem; font-weight: 700; color: var(--red);
+      background: #fef2f2; border: 1px solid #fca5a5;
+      padding: 2px 7px; border-radius: 99px; margin-left: 6px;
+    }
+
+    /* local alerts */
+    .local-alert {
+      border-radius: 8px; padding: 11px 13px; margin-bottom: 10px;
+      font-size: 0.76rem; line-height: 1.55;
+    }
+    .local-alert:last-child { margin-bottom: 0; }
+    .local-alert.red    { background: #fef2f2; border-left: 3px solid var(--red); color: #7f1d1d; }
+    .local-alert.yellow { background: #fffbeb; border-left: 3px solid var(--yellow); color: #78350f; }
+    .local-alert-title { font-weight: 700; margin-bottom: 5px; font-size: 0.79rem; }
+    .local-alert-sources { margin-top: 7px; display: flex; flex-direction: column; gap: 3px; }
+    .local-alert-sources a { font-size: 0.69rem; color: var(--blue); text-decoration: none; }
+    .local-alert-sources a:hover { text-decoration: underline; }
+
+    /* basin list (in welcome state) */
+    .basin-list { display: flex; flex-direction: column; gap: 4px; }
+    .basin-list-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border-radius: 6px; cursor: pointer;
+      font-size: 0.8rem; transition: background 0.1s;
+      border: 1px solid transparent;
+    }
+    .basin-list-item:hover { background: var(--blue-light); border-color: var(--border); }
+    .basin-list-item .bli-name  { font-weight: 600; flex: 1; }
+    .basin-list-item .bli-region { font-size: 0.7rem; color: var(--text-muted); }
+
+    /* status dot small */
+    .dot-sm { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+    /* loading spinner */
+    .spinner {
+      border: 3px solid var(--border); border-top-color: var(--blue);
+      border-radius: 50%; width: 28px; height: 28px;
+      animation: spin 0.7s linear infinite; margin: 40px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* error */
+    .error-box {
+      background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px;
+      padding: 12px 14px; font-size: 0.8rem; color: #991b1b; margin: 16px;
+    }
+
+    /* law note */
+    .law-note {
+      background: #edf7f1; border-left: 3px solid var(--green); border-radius: 0 6px 6px 0;
+      padding: 9px 12px; font-size: 0.74rem; color: #1e5a35;
+    }
+    .law-note strong { display: block; margin-bottom: 2px; font-size: 0.76rem; }
+
+    /* footer */
+    .panel-footer {
+      padding: 12px 22px; font-size: 0.68rem; color: var(--text-muted);
+      border-top: 1px solid var(--border); margin-top: auto; flex-shrink: 0;
+    }
+
+    /* map popups */
+    .leaflet-popup-content-wrapper { border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+    .leaflet-popup-content { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 0.82rem; min-width: 160px; }
+    .popup-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; color: var(--blue); }
+    .popup-body  { color: var(--text-muted); line-height: 1.5; }
+    .popup-status { font-weight: 700; margin-top: 6px; font-size: 0.78rem; }
+
+    /* toast */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #1c2b3a; color: #fff; padding: 10px 18px; border-radius: 8px;
+      font-size: 0.8rem; opacity: 0; pointer-events: none;
+      transition: opacity 0.25s; z-index: 9999; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; }
+
+    /* responsive */
+    @media (max-width: 700px) {
+      #app { flex-direction: column; }
+      #panel { width: 100%; min-width: unset; max-height: 55vh; border-right: none; border-bottom: 1px solid var(--border); }
+      #map { height: 45vh; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══════ PANEL ═══════ -->
+  <aside id="panel">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-row">
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="16" fill="rgba(255,255,255,0.15)"/>
+          <path d="M16 6C16 6 9 14 9 19a7 7 0 0014 0c0-5-7-13-7-13z" fill="white" opacity="0.9"/>
+          <path d="M16 19c0 2.2-1.3 4-3 4" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <h1>¿De dónde viene<br>tu agua?</h1>
+      </div>
+      <p>Cuencas hídricas y glaciares — cobertura nacional</p>
+      <span class="badge">Prototipo MVP · Argentina</span>
+      <button class="locate-btn" id="locateBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="12" x2="16" y2="12"/>
+        </svg>
+        Detectar mi ubicación
+      </button>
+    </div>
+
+    <!-- Summary bar (loaded from API) -->
+    <div class="summary-bar" id="summaryBar">
+      <div class="sum-cell"><div class="spinner" style="width:20px;height:20px;margin:8px auto 4px;border-width:2px;"></div><div class="sum-lbl">cargando…</div></div>
+    </div>
+
+    <!-- Basin list + detail container -->
+    <div id="panelContent" style="display:flex;flex-direction:column;flex:1;overflow-y:auto;">
+      <div class="spinner" id="loadingSpinner"></div>
+    </div>
+
+    <div class="panel-footer">
+      <details>
+        <summary style="cursor:pointer;font-weight:700;color:#1e5a35;font-size:0.7rem;">
+          ⚖ Ley 26.639 — Glaciares y ambiente periglacial
+        </summary>
+        <div style="margin-top:6px;color:#1e5a35;font-size:0.7rem;line-height:1.5;">
+          Protege los glaciares como reservas estratégicas de agua dulce.
+          Prohíbe actividades que puedan afectarlos directa o indirectamente.
+          IANIGLA es la autoridad de aplicación del Inventario Nacional de Glaciares.
+        </div>
+      </details>
+      <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">
+        Backend: <code>localhost:8000</code><br>
+        Cuencas HydroBASINS L5 (divisorias topográficas, no áreas de servicio) · Hidrografía Natural Earth · Humedales OSM · Glaciares IANIGLA · Represas CAMMESA · Áreas APN · Ciudades INDEC 2022 · Acuíferos SEGEMAR/INA/SAG (aproximación 2D)
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══════ MAP ═══════ -->
+  <div id="map">
+    <button class="clean-mode-btn" id="cleanModeBtn"
+            title="Modo mapa limpio: oculta panel, capas y referencias">👁</button>
+    <div class="basemap-selector" id="basemapSelector">
+      <div class="basemap-row">
+        <button class="basemap-btn active" data-basemap="carto" title="Mapa limpio: ideal para ver datos sin ruido visual">🗺️ Limpio</button>
+        <button class="basemap-btn" data-basemap="topo" title="Topográfico: muestra relieve y montañas">⛰️ Topográfico</button>
+        <button class="basemap-btn" data-basemap="sat" title="Imagen satelital">🛰️ Satélite</button>
+      </div>
+      <div class="basemap-intensity">
+        <span>Intensidad</span>
+        <input type="range" id="basemapIntensity" min="0" max="1.4" step="0.05" value="1" />
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="riverHoverTip"></div>
+
+<!-- Water-origin trace mode UI -->
+<div id="traceMode-banner">
+  🔍 Hacé clic en cualquier punto del mapa para trazar el origen del agua
+  <button class="trace-cancel" onclick="exitTraceMode()">Cancelar</button>
+</div>
+
+<div id="traceModal">
+  <div class="trace-head">
+    <h3 id="traceModalTitle">Origen del agua</h3>
+    <button class="close-btn" onclick="document.getElementById('traceModal').classList.remove('active'); clearTraceLayer();">×</button>
+  </div>
+  <div class="trace-body" id="traceBody"></div>
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+
+// ── status helpers ────────────────────────────────────────────────────────
+const STATUS_COLOR = { red: '#c0392b', yellow: '#d4a017', green: '#2d9b5a', na: '#aaa' };
+const STATUS_LABEL = { red: 'Crítico', yellow: 'Alerta', green: 'Estable', na: 'N/A' };
+const STATUS_FILL  = { red: 'rgba(192,57,43,0.15)', yellow: 'rgba(212,160,23,0.12)', green: 'rgba(45,155,90,0.12)', na: 'rgba(150,150,150,0.1)' };
+
+function dot(cls) {
+  return `<span class="dot dot-${cls}"></span>`;
+}
+function dotSm(status) {
+  return `<span class="dot-sm" style="background:${STATUS_COLOR[status] || '#ccc'}"></span>`;
+}
+
+// ── toast ─────────────────────────────────────────────────────────────────
+let _toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── map setup ─────────────────────────────────────────────────────────────
+const map = L.map('map', { center: [-38, -65], zoom: 4, zoomControl: true });
+
+// ── BASEMAPS — switchable ───────────────────────────────────────────────
+const cartoLand = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+  attribution: '© <a href="https://carto.com/">CARTO</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  subdomains: 'abcd', maxZoom: 19
+});
+
+const cartoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+  attribution: '', subdomains: 'abcd', maxZoom: 19, pane: 'shadowPane'
+});
+
+const openTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA) · datos © <a href="https://www.openstreetmap.org/copyright">OSM</a>, SRTM',
+  subdomains: 'abc', maxZoom: 17
+});
+
+const esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  attribution: '© <a href="https://www.esri.com">Esri</a> · Source: Esri, Maxar, Earthstar Geographics',
+  maxZoom: 19
+});
+
+// Satellite needs labels overlay (otherwise no place names)
+const esriLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+  attribution: '', maxZoom: 19, pane: 'shadowPane'
+});
+
+const BASEMAPS = {
+  carto: { name: '🗺️ Limpio',       layers: [cartoLand, cartoLabels], filter: 'saturate(0.35) brightness(1.08)' },
+  topo:  { name: '⛰️ Topográfico',  layers: [openTopo],                filter: 'saturate(0.55) brightness(1.12) contrast(0.94)' },
+  sat:   { name: '🛰️ Satélite',     layers: [esriImagery, esriLabels], filter: '' },
+};
+let activeBasemap = 'carto';
+// Per-basemap intensity multiplier (0..1.5), persisted in memory only
+const intensity = { carto: 1.0, topo: 0.7, sat: 1.0 };
+
+function applyBasemapFilter() {
+  const b = BASEMAPS[activeBasemap];
+  const mult = intensity[activeBasemap] ?? 1;
+  if (!b.filter) {
+    // No native filter — only allow the user to dim/desaturate satellite if they want
+    map.getPanes().tilePane.style.filter = mult !== 1
+      ? `saturate(${mult}) brightness(${0.95 + 0.1 * (1 - Math.abs(1 - mult))})`
+      : '';
+    return;
+  }
+  // For CARTO/topo we have a baseline filter — modulate the saturate component by intensity
+  // (the brightness/contrast components stay fixed)
+  const baseSat = activeBasemap === 'carto' ? 0.35 : 0.55;
+  const baseBri = activeBasemap === 'carto' ? 1.08 : 1.12;
+  const baseCon = activeBasemap === 'topo'  ? 0.94 : 1.00;
+  // intensity 0 -> nearly grayscale, 1 -> baseline, 1.5 -> more vivid
+  const sat = Math.max(0, baseSat * mult);
+  const bri = baseBri + (1 - mult) * 0.05;  // slightly brighter when desaturated
+  map.getPanes().tilePane.style.filter = `saturate(${sat.toFixed(2)}) brightness(${bri.toFixed(2)}) contrast(${baseCon})`;
+}
+
+// Argentina border line — loaded async, shown only on "limpio" basemap
+let argentinaBorderLayer = null;
+fetch(`${API}/api/argentina-border`)
+  .then(r => r.ok ? r.json() : null)
+  .then(geojson => {
+    if (!geojson) return;
+    argentinaBorderLayer = L.geoJSON(geojson, {
+      style: {
+        color: '#5a6472',
+        weight: 1.4,
+        opacity: 0.7,
+        fill: false,
+        lineJoin: 'round',
+        lineCap: 'round',
+      },
+      interactive: false,
+    });
+    if (activeBasemap === 'carto') argentinaBorderLayer.addTo(map);
+  })
+  .catch(() => {});
+
+function setBasemap(key) {
+  Object.values(BASEMAPS).forEach(b => b.layers.forEach(l => map.hasLayer(l) && map.removeLayer(l)));
+  BASEMAPS[key].layers.forEach(l => l.addTo(map));
+  activeBasemap = key;
+  applyBasemapFilter();
+  // Argentina border: only on "limpio" — topo+sat already show borders
+  if (argentinaBorderLayer) {
+    if (key === 'carto') argentinaBorderLayer.addTo(map);
+    else map.removeLayer(argentinaBorderLayer);
+  }
+  // Show intensity slider only on topo
+  const slider = document.getElementById('basemapIntensity');
+  const intensityRow = document.querySelector('.basemap-intensity');
+  if (slider && intensityRow) {
+    slider.value = intensity[key] ?? 1;
+    intensityRow.style.display = (key === 'topo') ? 'flex' : 'none';
+  }
+}
+setBasemap('carto');  // default
+
+// Stop Leaflet from grabbing drag/click on the basemap selector
+const _basemapSelEl = document.getElementById('basemapSelector');
+if (_basemapSelEl) {
+  L.DomEvent.disableClickPropagation(_basemapSelEl);
+  L.DomEvent.disableScrollPropagation(_basemapSelEl);
+}
+
+// Clean-mode toggle
+const _cleanModeBtn = document.getElementById('cleanModeBtn');
+if (_cleanModeBtn) {
+  L.DomEvent.disableClickPropagation(_cleanModeBtn);
+  _cleanModeBtn.addEventListener('click', () => {
+    const on = document.body.classList.toggle('clean-mode');
+    _cleanModeBtn.textContent = on ? '↩' : '👁';
+    _cleanModeBtn.title = on
+      ? 'Salir del modo mapa limpio · mostrar panel, capas y referencias'
+      : 'Modo mapa limpio: oculta panel, capas y referencias';
+    // Tell Leaflet the map size changed so it redraws correctly
+    setTimeout(() => map.invalidateSize(), 320);
+  });
+}
+
+// Wire up selector buttons
+document.querySelectorAll('#basemapSelector .basemap-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.basemap;
+    setBasemap(key);
+    document.querySelectorAll('#basemapSelector .basemap-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// Wire up intensity slider
+document.getElementById('basemapIntensity').addEventListener('input', (e) => {
+  intensity[activeBasemap] = parseFloat(e.target.value);
+  applyBasemapFilter();
+});
+
+// ── state ─────────────────────────────────────────────────────────────────
+let allBasins = [];          // GeoJSON features
+let basinLayers = {};        // id → leaflet layer
+let basinsLayerGroup = null; // overall L.geoJSON for show/hide
+let selectedId = null;
+
+// ── fetch all basins ──────────────────────────────────────────────────────
+async function loadAll() {
+  try {
+    const [geojsonRes, summaryRes] = await Promise.all([
+      fetch(`${API}/api/basins`),
+      fetch(`${API}/api/summary`),
+    ]);
+
+    if (!geojsonRes.ok) throw new Error('API no disponible');
+
+    const geojson = await geojsonRes.json();
+    const summary = summaryRes.ok ? await summaryRes.json() : null;
+
+    allBasins = geojson.features;
+    renderSummary(summary);
+    renderBasinList();
+    renderMap(geojson);
+    buildWaterLayers();  // water on top of basins, under labels
+
+  } catch (err) {
+    document.getElementById('loadingSpinner').remove();
+    document.getElementById('summaryBar').innerHTML =
+      `<div style="padding:10px 16px;font-size:0.78rem;color:#991b1b;flex:1">
+        ⚠ No se puede conectar al backend. ¿Está corriendo <code>uvicorn main:app</code> en el puerto 8000?
+       </div>`;
+    document.getElementById('panelContent').innerHTML =
+      `<div class="error-box">
+        <strong>Backend no disponible</strong><br>
+        Iniciá el servidor con:<br><code>cd backend && uvicorn main:app --reload</code>
+       </div>`;
+  }
+}
+
+// ── render summary bar ────────────────────────────────────────────────────
+function renderSummary(s) {
+  if (!s) { document.getElementById('summaryBar').innerHTML = ''; return; }
+  document.getElementById('summaryBar').innerHTML = `
+    <div class="sum-cell">
+      <div class="sum-val c-blue">${s.basins_total}</div>
+      <div class="sum-lbl">Cuencas</div>
+    </div>
+    <div class="sum-cell">
+      <div class="sum-val c-red">${s.status_breakdown.red}</div>
+      <div class="sum-lbl">Críticas</div>
+    </div>
+    <div class="sum-cell">
+      <div class="sum-val c-yellow">${s.status_breakdown.yellow}</div>
+      <div class="sum-lbl">En alerta</div>
+    </div>
+    <div class="sum-cell">
+      <div class="sum-val c-green">${s.status_breakdown.green}</div>
+      <div class="sum-lbl">Estables</div>
+    </div>
+    <div class="sum-cell">
+      <div class="sum-val c-blue">${s.glaciers_indexed}</div>
+      <div class="sum-lbl">Glaciares</div>
+    </div>
+  `;
+}
+
+// ── render basin list (welcome state) ─────────────────────────────────────
+function renderBasinList() {
+  const spinner = document.getElementById('loadingSpinner');
+  if (spinner) spinner.remove();
+
+  const sorted = [...allBasins].sort((a, b) => {
+    const order = { red: 0, yellow: 1, green: 2 };
+    return (order[a.properties.status_overall] ?? 3) - (order[b.properties.status_overall] ?? 3);
+  });
+
+  const items = sorted.map(f => `
+    <div class="basin-list-item" data-id="${f.id}" onclick="selectBasin('${f.id}', true)">
+      ${dotSm(f.properties.status_overall)}
+      <div>
+        <div class="bli-name">${f.properties.name}</div>
+        <div class="bli-region">${f.properties.region}</div>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </div>
+  `).join('');
+
+  document.getElementById('panelContent').innerHTML = `
+    <div class="welcome" id="welcomeMsg">
+      <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+        <circle cx="26" cy="26" r="26" fill="#1a6fa8"/>
+        <path d="M26 10C26 10 14 24 14 32a12 12 0 0024 0c0-8-12-22-12-22z" fill="white" opacity="0.9"/>
+      </svg>
+      <h3>Seleccioná una cuenca</h3>
+      <p>Hacé clic en el mapa o usá el botón de ubicación para ver de dónde viene tu agua.</p>
+    </div>
+    <div class="section">
+      <p class="section-title">Todas las cuencas</p>
+      <div class="basin-list">${items}</div>
+    </div>
+    <div id="basin-detail"></div>
+  `;
+}
+
+// ── render map layers ─────────────────────────────────────────────────────
+function renderMap(geojson) {
+  basinsLayerGroup = L.geoJSON(geojson, {
+    style: feature => basinStyle(feature.properties.status_overall, false),
+    onEachFeature: (feature, layer) => {
+      const p = feature.properties;
+      basinLayers[feature.id] = layer;
+
+      layer.bindPopup(`
+        <div class="popup-title">${p.name}</div>
+        <div class="popup-body">
+          ${p.region}<br>
+          ${(p.area_km2 || 0).toLocaleString('es-AR')} km²
+          <div class="popup-status" style="color:${STATUS_COLOR[p.status_overall]}">
+            ${STATUS_LABEL[p.status_overall] ?? '—'}
+          </div>
+        </div>
+      `);
+
+      layer.on('click', () => selectBasin(feature.id));
+      layer.on('mouseover', () => { if (feature.id !== selectedId) layer.setStyle(basinStyle(p.status_overall, true)); });
+      layer.on('mouseout',  () => { if (feature.id !== selectedId) layer.setStyle(basinStyle(p.status_overall, false)); });
+    }
+  });
+  if (basinsVisible) basinsLayerGroup.addTo(map);
+
+  renderLegend();
+}
+
+function basinStyle(status, hover) {
+  const color = STATUS_COLOR[status] || '#888';
+  // When aquifers are also visible, fade basin fills so subsurface is readable
+  const baseFill = aquifersVisible ? 0.07 : 0.15;
+  const hoverFill = aquifersVisible ? 0.18 : 0.28;
+  return {
+    color, weight: hover ? 2.5 : 1.5,
+    opacity: aquifersVisible ? 0.55 : 0.8,
+    fillColor: color,
+    fillOpacity: hover ? hoverFill : baseFill,
+    dashArray: '5 4',
+  };
+}
+
+// Re-apply styling to all basin polygons (e.g. after aquifer toggle)
+function refreshBasinStyles() {
+  Object.entries(basinLayers).forEach(([bid, layer]) => {
+    const feat = allBasins.find(f => f.id === bid);
+    if (!feat) return;
+    layer.setStyle(basinStyle(feat.properties.status_overall, bid === selectedId));
+  });
+}
+
+function highlightBasin(id) {
+  Object.entries(basinLayers).forEach(([bid, layer]) => {
+    const feat = allBasins.find(f => f.id === bid);
+    if (!feat) return;
+    const status = feat.properties.status_overall;
+    layer.setStyle(basinStyle(status, bid === id));
+    // Selected basin sits on top of OTHER basins, small features stay above it
+    if (bid === id) layer.bringToFront();
+  });
+  // Re-elevate the small features after any basin re-styling
+  [waterLayerGroup, wetlandsLayer, glaciersLayer, damsLayer, protectedLayer, citiesLayer, ramsarLayer].forEach(grp => {
+    if (grp && grp.eachLayer) grp.eachLayer(l => l.bringToFront && l.bringToFront());
+  });
+}
+
+// ── select basin (loads detail from API) ──────────────────────────────────
+// `panTo`: only true when user explicitly chooses (list / geolocate). Direct
+// map clicks pass false so the view stays where it is.
+async function selectBasin(id, panTo = false) {
+  selectedId = id;
+  highlightBasin(id);
+
+  if (panTo) {
+    const layer = basinLayers[id];
+    if (layer) map.fitBounds(layer.getBounds(), { padding: [40, 40] });
+  }
+
+  // highlight list item
+  document.querySelectorAll('.basin-list-item').forEach(el => {
+    el.style.background = el.dataset.id === id ? 'var(--blue-light)' : '';
+    el.style.borderColor = el.dataset.id === id ? 'var(--border)' : 'transparent';
+  });
+
+  // hide welcome
+  const wm = document.getElementById('welcomeMsg');
+  if (wm) wm.style.display = 'none';
+
+  // show loading in detail
+  let detailEl = document.getElementById('basin-detail');
+  detailEl.style.display = 'flex';
+  detailEl.style.flexDirection = 'column';
+  detailEl.innerHTML = '<div class="spinner"></div>';
+
+  try {
+    const res = await fetch(`${API}/api/basins/${id}`);
+    if (!res.ok) throw new Error('Not found');
+    const b = await res.json();
+    renderDetail(b);
+  } catch {
+    detailEl.innerHTML = '<div class="error-box">No se pudo cargar el detalle.</div>';
+  }
+}
+
+// ── render basin detail panel ─────────────────────────────────────────────
+function renderDetail(b) {
+  const s = b.status;
+
+  const indicators = [
+    { key: 'caudal',    label: 'Caudal hídrico' },
+    { key: 'calidad',   label: 'Calidad del agua' },
+    { key: 'glaciares', label: 'Glaciares' },
+    { key: 'legal',     label: 'Marco legal' },
+  ];
+
+  const lightsHtml = indicators.map(ind => {
+    const v = s[ind.key];
+    if (!v) return '';
+    return `
+      <div class="light-row">
+        <div class="dot dot-${v.level}"></div>
+        <div class="light-info">
+          <div class="light-label">${ind.label}</div>
+          <div class="light-desc">${v.detail}</div>
+        </div>
+        <div class="light-val ${v.level}">${v.label}</div>
+      </div>`;
+  }).join('');
+
+  const glaciersHtml = b.glaciers && b.glaciers.length
+    ? b.glaciers.map(g => `
+        <div class="glacier-item">
+          <div class="glacier-icon">🧊</div>
+          <div>
+            <div class="glacier-name">${g.name}</div>
+            <div class="glacier-detail">${g.detail}</div>
+          </div>
+        </div>`).join('')
+    : '<p class="no-glaciers">Sin glaciares relevantes en esta cuenca.</p>';
+
+  const factsHtml = (b.facts || []).map(f => `<li>${f}</li>`).join('');
+
+  // sources — support both string[] and {label,url}[]
+  const sourcesHtml = (b.sources || []).map(src => {
+    if (typeof src === 'string') return `<li>${src}</li>`;
+    return `<li><a href="${src.url}" target="_blank" rel="noopener">${src.label}</a></li>`;
+  }).join('');
+
+  const overallColor = STATUS_COLOR[s.overall] || '#888';
+  const overallLabel = STATUS_LABEL[s.overall] || '—';
+
+  // ── water supply section (optional, Bariloche-enriched) ──
+  const ws = b.water_supply;
+  const supplyAlertCount = ws?.local_alerts?.length || 0;
+  const supplyRedCount = ws?.local_alerts?.filter(a => a.severity === 'red').length || 0;
+  const supplyAlertBadge = supplyRedCount > 0
+    ? ` <span style="color:#c0392b;font-weight:700">⚠ ${supplyRedCount} crítica${supplyRedCount===1?'':'s'}</span>`
+    : (supplyAlertCount ? ` <span style="color:#d4a017">${supplyAlertCount} alerta${supplyAlertCount===1?'':'s'}</span>` : '');
+
+  const supplySection = ws ? `
+    <details class="section"${supplyRedCount > 0 ? ' open' : ''}>
+      <summary>
+        📡 Fuentes de agua potable
+        <span class="summary-preview">
+          <span class="preview-meta">${ws.city} · ${ws.utility}${supplyAlertBadge}</span>
+        </span>
+      </summary>
+      <div class="section-body">
+        ${ws.alert_jan2026 ? `
+          <div class="alert-banner" style="margin-bottom:12px">
+            <strong>⚠ Alerta hídrica activa (enero 2026)</strong>
+            ${ws.alert_jan2026}
+          </div>` : ''}
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+          <div class="chip">
+            <div class="chip-val">${ws.utility}</div>
+            <div class="chip-lbl">Prestadora</div>
+          </div>
+          <div class="chip">
+            <div class="chip-val">${(ws.production_lpd / 1e6).toFixed(0)} M L/día</div>
+            <div class="chip-lbl">Producción total</div>
+          </div>
+        </div>
+
+        ${ws.intake_sources ? `
+          <div class="intake-grid">
+            ${ws.intake_sources.map(src => `
+              <div class="intake-card">
+                <div class="intake-header">
+                  <div style="display:flex;align-items:center">
+                    <span class="intake-name">${src.name}</span>
+                    ${src.active_conflict ? `<span class="intake-conflict-badge">⚠ Conflicto activo</span>` : ''}
+                  </div>
+                  <span class="intake-share ${src.status}">${src.share_pct}% del suministro</span>
+                </div>
+                <div class="intake-body">
+                  <div class="intake-row"><strong>Ubicación:</strong> ${src.location}</div>
+                  <div class="intake-row"><strong>Método:</strong> ${src.method}</div>
+                  ${src.neighborhoods ? `
+                    <div class="intake-row" style="margin-top:4px"><strong>Barrios:</strong></div>
+                    <div class="intake-tags">${src.neighborhoods.map(n => `<span class="intake-tag">${n}</span>`).join('')}</div>
+                  ` : ''}
+                  ${src.infrastructure_cost ? `
+                    <div class="intake-row" style="margin-top:6px"><strong>Inversión:</strong> ${src.infrastructure_cost}</div>` : ''}
+                  ${src.risk_segemar ? `
+                    <div class="intake-note yellow">⚠ ${src.risk_segemar}</div>` : ''}
+                  ${src.note ? `
+                    <div class="intake-note ${src.status}">${src.note}</div>` : ''}
+                </div>
+              </div>`).join('')}
+          </div>` : ''}
+
+        <div style="margin-top:10px;font-size:0.71rem;color:var(--text-muted)">
+          🔬 ${ws.quality_monitoring}
+        </div>
+
+        ${ws.local_alerts && ws.local_alerts.length ? `
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+            <div style="font-size:0.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">
+              Alertas locales activas
+            </div>
+            ${ws.local_alerts.map(a => `
+              <div class="local-alert ${a.severity}">
+                <div class="local-alert-title">${a.severity === 'red' ? '🔴' : '🟡'} ${a.title}</div>
+                <div>${a.body}</div>
+                ${a.sources && a.sources.length ? `
+                  <div class="local-alert-sources">
+                    ${a.sources.map(s => `<a href="${s.url}" target="_blank" rel="noopener">↗ ${s.label}</a>`).join('')}
+                  </div>` : ''}
+              </div>`).join('')}
+          </div>` : ''}
+      </div>
+    </details>
+  ` : '';
+
+  // ── measurements section (optional) ──
+  const measSection = b.measurements && b.measurements.length ? `
+    <details class="section">
+      <summary>
+        📊 Mediciones con fuente
+        <span class="summary-preview"><span class="preview-meta">${b.measurements.length} indicador${b.measurements.length===1?'':'es'}</span></span>
+      </summary>
+      <div class="section-body">
+        <table class="meas-table">
+          <thead>
+            <tr>
+              <th>Indicador</th>
+              <th>Valor</th>
+              <th>Fuente</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${b.measurements.map(m => `
+              <tr>
+                <td>
+                  <div style="font-size:0.72rem;color:var(--text-muted)">${m.date}</div>
+                  <div style="font-weight:600;font-size:0.76rem">${m.metric}</div>
+                  ${m.vs_historical ? `<div class="meas-vs">${m.vs_historical}</div>` : ''}
+                </td>
+                <td class="meas-val">${m.value}</td>
+                <td class="meas-src">
+                  ${m.url
+                    ? `<a href="${m.url}" target="_blank" rel="noopener">${m.source}</a>`
+                    : `<span style="font-size:0.68rem;color:var(--text-muted)">${m.source}</span>`}
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </details>` : '';
+
+  // ── cities Tier-1 alert summary ──
+  const cityTier1Count = (b.cities?.list || []).filter(c => c.tier === 1).length;
+  const cityRedAlerts = (b.cities?.list || []).reduce((acc, c) =>
+    acc + (c.alerts || []).filter(a => a.severity === 'red').length, 0);
+  const citiesPreview = b.cities
+    ? `${b.cities.count} ciudad${b.cities.count===1?'':'es'} · ${(b.cities.total_population / 1e6).toFixed(2)} M hab.${cityRedAlerts > 0 ? ` <span style="color:#c0392b;font-weight:700">⚠ ${cityRedAlerts} alerta${cityRedAlerts===1?'':'s'} crítica${cityRedAlerts===1?'':'s'}</span>` : ''}`
+    : '';
+
+  document.getElementById('basin-detail').innerHTML = `
+    <div class="section">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div>
+          <div class="basin-name">${b.name}</div>
+          <div class="basin-region">${b.region}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:0.72rem;font-weight:700;color:${overallColor};background:${overallColor}18;padding:3px 9px;border-radius:99px;border:1px solid ${overallColor}44">${overallLabel}</div>
+        </div>
+      </div>
+      <div class="stats-chips" style="margin-top:12px">
+        <div class="chip">
+          <div class="chip-val">${b.area_km2 ? b.area_km2.toLocaleString('es-AR') + ' km²' : '—'}</div>
+          <div class="chip-lbl">Superficie</div>
+        </div>
+        <div class="chip">
+          <div class="chip-val">${b.length_km ? b.length_km.toLocaleString('es-AR') + ' km' : '—'}</div>
+          <div class="chip-lbl">Longitud del río</div>
+        </div>
+        <div class="chip">
+          <div class="chip-val" style="font-size:0.74rem">${b.origin || '—'}</div>
+          <div class="chip-lbl">Naciente</div>
+        </div>
+        <div class="chip">
+          <div class="chip-val" style="font-size:0.74rem">${b.mouth || '—'}</div>
+          <div class="chip-lbl">Desembocadura</div>
+        </div>
+      </div>
+    </div>
+
+    <details class="section" open>
+      <summary>🚦 Estado actual</summary>
+      <div class="section-body">
+        <div class="lights-grid">${lightsHtml}</div>
+      </div>
+    </details>
+
+    ${b.cities ? `
+      <details class="section" open>
+        <summary>
+          🏙️ Localidades ≥ 100k
+          <span class="summary-preview"><span class="preview-meta">${citiesPreview}</span></span>
+        </summary>
+        <div class="section-body">
+          <div style="display:flex;flex-direction:column;gap:5px;max-height:340px;overflow-y:auto;">
+            ${b.cities.list.map(c => {
+              const isTier1 = c.tier === 1;
+              const alertCount = (c.alerts || []).length;
+              const redAlerts = (c.alerts || []).filter(a => a.severity === 'red').length;
+              return `
+              <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;border:1px solid ${isTier1 ? '#fca5a5' : 'var(--border)'};border-radius:6px;font-size:0.78rem;background:${isTier1 ? '#fef9f9' : 'transparent'};">
+                <span style="font-size:0.95rem">🏙️</span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-weight:600;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+                    ${c.name}
+                    ${isTier1 ? `<span style="font-size:0.6rem;color:#c0392b;font-weight:700;background:#fef2f2;padding:1px 5px;border-radius:99px;border:1px solid #fca5a5;">⚠ ${alertCount} alerta${alertCount===1?'':'s'}${redAlerts ? ` · ${redAlerts} crítica${redAlerts===1?'':'s'}` : ''}</span>` : ''}
+                  </div>
+                  <div style="color:var(--text-muted);font-size:0.7rem;line-height:1.4">
+                    ${c.population.toLocaleString('es-AR')} hab. · ${c.province}<br>
+                    💧 ${c.water_source}<br>
+                    🏛️ ${c.utility}
+                  </div>
+                  ${isTier1 && c.alerts?.length ? `
+                    <details style="margin-top:5px;font-size:0.7rem;">
+                      <summary style="cursor:pointer;color:#c0392b;font-weight:600;">Ver alertas y fuentes</summary>
+                      <div style="margin-top:5px;display:flex;flex-direction:column;gap:5px;">
+                        ${c.alerts.map(a => `
+                          <div style="padding:5px 7px;border-left:2px solid ${a.severity==='red'?'#c0392b':'#d4a017'};background:${a.severity==='red'?'#fef2f2':'#fffbeb'};border-radius:0 4px 4px 0;">
+                            <div style="font-weight:700;color:${a.severity==='red'?'#7f1d1d':'#78350f'};font-size:0.7rem;">${a.severity==='red'?'🔴':'🟡'} ${a.title}</div>
+                            <div style="color:#444;font-size:0.68rem;line-height:1.4;margin-top:2px;">${a.body}</div>
+                            ${(a.sources||[]).map(s => `<a href="${s.url}" target="_blank" rel="noopener" style="font-size:0.65rem;color:#0d47a1;text-decoration:none;display:block;margin-top:2px;">↗ ${s.label}</a>`).join('')}
+                          </div>`).join('')}
+                      </div>
+                    </details>` : ''}
+                </div>
+              </div>`}).join('')}
+          </div>
+        </div>
+      </details>` : ''}
+
+    ${supplySection}
+
+    ${measSection}
+
+    ${b.dams ? `
+      <details class="section">
+        <summary>
+          ⚡ Hidroeléctricas
+          <span class="summary-preview"><span class="preview-meta">${b.dams.count} represa${b.dams.count===1?'':'s'} · ${b.dams.total_mw.toLocaleString('es-AR')} MW</span></span>
+        </summary>
+        <div class="section-body">
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            ${b.dams.list.map(d => `
+              <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.78rem;">
+                <span style="color:#4a148c;font-size:1rem">⚡</span>
+                <div style="flex:1">
+                  <div style="font-weight:600">${d.name}${d.binacional ? ' <span style="font-size:0.65rem;color:#7b1fa2">⚐ binacional</span>' : ''}</div>
+                  <div style="color:var(--text-muted);font-size:0.7rem">Río ${d.river} · ${d.year}</div>
+                </div>
+                <div style="font-weight:700;color:#4a148c">${d.mw.toLocaleString('es-AR')} MW</div>
+              </div>`).join('')}
+          </div>
+        </div>
+      </details>` : ''}
+
+    ${b.protected_areas ? `
+      <details class="section">
+        <summary>
+          🌳 Áreas protegidas
+          <span class="summary-preview"><span class="preview-meta">${b.protected_areas.count} área${b.protected_areas.count===1?'':'s'} · ${b.protected_areas.total_area_km2.toLocaleString('es-AR')} km²${b.protected_areas.unesco_count ? ` · <span style="color:#bf360c">★${b.protected_areas.unesco_count}</span>` : ''}${b.protected_areas.ramsar_count ? ` · <span style="color:#1565c0">💧${b.protected_areas.ramsar_count}</span>` : ''}</span></span>
+        </summary>
+        <div class="section-body">
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            ${b.protected_areas.list.map(p => `
+              <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.78rem;">
+                <span style="font-size:0.95rem">🌳</span>
+                <div style="flex:1">
+                  <div style="font-weight:600">${p.name}
+                    ${p.unesco ? '<span style="font-size:0.6rem;color:#bf360c;font-weight:700">★UNESCO</span>' : ''}
+                    ${p.ramsar ? '<span style="font-size:0.6rem;color:#1565c0;font-weight:700">💧RAMSAR</span>' : ''}
+                  </div>
+                  <div style="color:var(--text-muted);font-size:0.7rem">${p.province} · ${p.area_km2.toLocaleString('es-AR')} km² · ${p.year}</div>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>
+      </details>` : ''}
+
+    ${(b.iangla_stats || (b.glaciers && b.glaciers.length)) ? `
+      <details class="section">
+        <summary>
+          🧊 Glaciares
+          <span class="summary-preview"><span class="preview-meta">${b.iangla_stats ? `${b.iangla_stats.count.toLocaleString('es-AR')} inventariados · ${b.iangla_stats.area_km2.toLocaleString('es-AR')} km² hielo` : 'Sin glaciares relevantes'}</span></span>
+        </summary>
+        <div class="section-body">
+          ${b.iangla_stats ? `
+            <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:10px;line-height:1.5">
+              Tipos: ${Object.entries(b.iangla_stats.by_type).map(([t,n])=>`<b>${t}</b> ${n}`).join(' · ')}
+              <br><span style="font-size:0.66rem">GD: descubierto · GC: cubierto · GEA/GEI: glaciar de escombros · MN: manchón nieve</span>
+            </div>` : ''}
+          <div class="glacier-list">${glaciersHtml}</div>
+        </div>
+      </details>` : ''}
+
+    ${(b.facts || []).length ? `
+      <details class="section">
+        <summary>
+          ℹ️ Datos clave
+          <span class="summary-preview"><span class="preview-meta">${b.facts.length} punto${b.facts.length===1?'':'s'}</span></span>
+        </summary>
+        <div class="section-body">
+          <ul class="facts-list">${factsHtml}</ul>
+        </div>
+      </details>` : ''}
+
+    ${(b.sources || []).length ? `
+      <details class="section">
+        <summary>
+          📚 Fuentes
+          <span class="summary-preview"><span class="preview-meta">${b.sources.length} referencia${b.sources.length===1?'':'s'}</span></span>
+        </summary>
+        <div class="section-body">
+          <ul class="sources-list">${sourcesHtml}</ul>
+        </div>
+      </details>` : ''}
+  `;
+}
+
+// ── extra/local water features (not in Natural Earth at this scale) ──────
+//   Rivers and lakes come from the API (Natural Earth 1:10m).
+//   This block only adds features Natural Earth misses — Arroyo Ñireco
+//   (too small) and the major glaciers (no extent data in NE).
+const EXTRA_WATER = {
+  rivers: [
+    // Local-detail-only: small but important Bariloche stream
+    ['Arroyo Ñireco', 3,
+      [[-71.3910,-41.2544],[-71.3713,-41.2512],[-71.3686,-41.2316],
+       [-71.3597,-41.2204],[-71.3559,-41.2170],[-71.3465,-41.2099],
+       [-71.3365,-41.1976],[-71.3261,-41.1978],[-71.3187,-41.1950],
+       [-71.3235,-41.1898],[-71.3170,-41.1810],[-71.3104,-41.1755],
+       [-71.3063,-41.1719],[-71.2959,-41.1647],[-71.2876,-41.1588],
+       [-71.2837,-41.1498],[-71.2825,-41.1389],[-71.2899,-41.1296]],
+      '⚠ Abastece ~25% de Bariloche (10 barrios altos). Nacientes en Cerro Ventana — territorio Lof Buenuleo. Trazado: OpenStreetMap.'],
+  ],
+
+  lakes: [],  // Natural Earth covers all major lakes
+
+  glaciers: [
+    ['Campo de Hielo Patagónico Sur', 'major',
+      [[-73.4,-48.6],[-72.5,-48.4],[-71.5,-49.0],[-71.0,-50.0],
+       [-71.5,-51.5],[-73.0,-51.5],[-73.5,-50.2],[-73.4,-48.6]],
+      '13.000 km² · Tercer reservorio de agua dulce no polar del mundo · Upsala perdió >25 km² (1990-2020)'],
+    ['Campo de Hielo Patagónico Norte', 'major',
+      [[-73.5,-46.5],[-72.5,-46.3],[-72.0,-46.5],[-72.0,-47.5],
+       [-73.0,-47.5],[-73.5,-47.0],[-73.5,-46.5]],
+      '4.200 km² · Incluye glaciares San Quintín, Steffen y otros · En retroceso documentado'],
+    ['Monte Tronador — glaciares', 'local',
+      [[-72.05,-41.05],[-71.80,-41.05],[-71.80,-41.28],[-72.05,-41.28],[-72.05,-41.05]],
+      '~60 km² de hielo total · 4.800 Hm³ · Balance: -0,17 m w.e./año · Ventisquero Negro: laguna 70 m profundidad · Fuente: IANIGLA-CONICET'],
+  ]
+};
+
+// ── build water layers ─────────────────────────────────────────────────────
+let waterLayerGroup = null;
+let wetlandsLayer   = null;
+let glaciersLayer   = null;
+let damsLayer       = null;
+let protectedLayer  = null;
+let citiesLayer     = null;
+let aquifersLayer   = null;
+let conflictsLayer  = null;   // unified: indigenous territories + citizen movements
+let ramsarLayer     = null;
+let iceFieldsLayer  = null;
+let otherAreasExpanded = false;
+// Initial visibility: clean view = water (with names, hover, click) + animated flow.
+// Everything else is off by default — user opts in.
+let basinsVisible    = false;
+let waterVisible     = true;
+let wetlandsVisible  = false;
+let glaciersVisible  = false;
+let damsVisible      = false;
+let protectedVisible = false;
+let citiesVisible    = false;
+let aquifersVisible  = false;
+let conflictsVisible = false;
+let ramsarVisible    = false;
+let iceFieldsVisible = false;
+
+async function buildWaterLayers() {
+  waterLayerGroup = L.layerGroup();
+
+  // ── 1. fetch real water data from API ──
+  let rivers    = { features: [] };
+  let lakes     = { features: [] };
+  let wetlands  = { features: [] };
+  let glaciers  = { features: [] };
+  let dams      = { features: [] };
+  let protected_ = { features: [] };
+  let cities    = { features: [] };
+  let aquifers  = { features: [] };
+  let indigenous = { features: [] };
+  let citizenConflicts = { features: [] };
+  let iceFields = { features: [] };
+  let ramsar = { features: [] };
+  try {
+    const [rRes, lRes, wRes, gRes, dRes, pRes, cRes, aRes, iRes, rsRes, ccRes, ifRes] = await Promise.all([
+      fetch(`${API}/api/water/rivers`),
+      fetch(`${API}/api/water/lakes`),
+      fetch(`${API}/api/water/wetlands`),
+      fetch(`${API}/api/water/glaciers`),
+      fetch(`${API}/api/dams`),
+      fetch(`${API}/api/protected`),
+      fetch(`${API}/api/cities`),
+      fetch(`${API}/api/aquifers`),
+      fetch(`${API}/api/indigenous`),
+      fetch(`${API}/api/ramsar`),
+      fetch(`${API}/api/citizen-conflicts`),
+      fetch(`${API}/api/ice-fields`),
+    ]);
+    if (rRes.ok) rivers    = await rRes.json();
+    if (lRes.ok) lakes     = await lRes.json();
+    if (wRes.ok) wetlands  = await wRes.json();
+    if (gRes.ok) glaciers  = await gRes.json();
+    if (dRes.ok) dams      = await dRes.json();
+    if (pRes.ok) protected_ = await pRes.json();
+    if (cRes.ok) cities    = await cRes.json();
+    if (aRes.ok) aquifers  = await aRes.json();
+    if (iRes.ok) indigenous = await iRes.json();
+    if (rsRes.ok) ramsar   = await rsRes.json();
+    if (ccRes.ok) citizenConflicts = await ccRes.json();
+    if (ifRes.ok) iceFields = await ifRes.json();
+  } catch (e) {
+    console.warn('Water API failed, falling back to extras only:', e);
+  }
+
+  // Lazy-load HydroRIVERS Strahler≥4 for the animated flow layer
+  fetch(`${API}/api/water/rivers_graph_geom`)
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      if (!d) return;
+      WaterFlow.init(d);
+
+      // Auto-start the flow animation on page load (clean default view)
+      WaterFlow.start();
+      // Update the flow toggle button label to reflect "active" state
+      setTimeout(() => {
+        const fb = document.getElementById('flowToggleBtn');
+        const fl = document.getElementById('flowToggleLabel');
+        if (fb && fl) {
+          fb.style.background = '#0d47a1';
+          fb.style.color = '#fff';
+          fl.textContent = 'Detener flujo';
+        }
+      }, 100);
+
+      // Hover tooltip — works ALWAYS (the static water layer also uses HydroRIVERS)
+      const tip = document.getElementById('riverHoverTip');
+      const mapEl = map.getContainer();
+      mapEl.addEventListener('mousemove', (e) => {
+        // Tip only when water layer is visible (rebuild populates visibleRivers either way)
+        if (!waterVisible || !WaterFlow.visibleRivers || !WaterFlow.visibleRivers.length) {
+          tip.classList.remove('show'); return;
+        }
+        const rect = mapEl.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const r = WaterFlow.findNearest(x, y, 10);
+        if (r && (r.name || r.q > 5)) {
+          const label = r.name || `Tramo S${r.s}`;
+          tip.innerHTML = `${label}<div class="tip-meta">caudal medio: ${r.q} m³/s · Strahler ${r.s}</div>`;
+          tip.style.left = (e.clientX + 12) + 'px';
+          tip.style.top  = (e.clientY + 12) + 'px';
+          tip.classList.add('show');
+          mapEl.style.cursor = 'pointer';
+        } else {
+          tip.classList.remove('show');
+          if (mapEl.style.cursor === 'pointer') mapEl.style.cursor = '';
+        }
+      });
+      mapEl.addEventListener('mouseleave', () => tip.classList.remove('show'));
+    })
+    .catch(() => {});
+
+  // styling helpers — HydroRIVERS Strahler order drives visual prominence
+  const riverStyleByStrahler = (s, q) => {
+    // Strahler 9 = Paraná in lower reaches; 4 = significant minor river
+    if (s >= 8) return { color: '#0d47a1', weight: 3.0, opacity: 0.85 };
+    if (s >= 6) return { color: '#1565c0', weight: 2.2, opacity: 0.80 };
+    if (s >= 5) return { color: '#1976d2', weight: 1.6, opacity: 0.75 };
+    return            { color: '#1e88e5', weight: 1.0, opacity: 0.70 };
+  };
+
+  // Use canvas renderer for the 29k+ river polylines (SVG would be slow)
+  const _riverCanvasRenderer = L.canvas({ padding: 0.5 });
+
+  // Render HydroRIVERS Strahler ≥ 4 — replaces the old Natural Earth subset.
+  // The same data feeds the WaterFlow animation, so they stay in sync.
+  // Note: WaterFlow.rivers is loaded async; if not ready yet, we'll wire later.
+  const _addStaticRivers = (riversData) => {
+    L.geoJSON(riversData, {
+      renderer: _riverCanvasRenderer,
+      bubblingMouseEvents: false,
+      style: (f) => ({
+        ...riverStyleByStrahler(f.properties?.s || 4, f.properties?.q || 0),
+        lineJoin: 'round',
+        lineCap: 'round',
+      }),
+      // No onEachFeature popup: with 16k features that's heavy. The hover
+      // tooltip + click-to-trace handle interaction.
+    }).addTo(waterLayerGroup);
+  };
+
+  if (WaterFlow.rivers) {
+    _addStaticRivers(WaterFlow.rivers);
+  } else {
+    // Wait for the lazy-load to finish, then add
+    const _checkInterval = setInterval(() => {
+      if (WaterFlow.rivers) {
+        _addStaticRivers(WaterFlow.rivers);
+        clearInterval(_checkInterval);
+      }
+    }, 100);
+    setTimeout(() => clearInterval(_checkInterval), 30000); // give up after 30s
+  }
+
+
+  // Water bodies — OSM (lakes, lagoons, reservoirs, ponds, oxbows, ≥ 0.05 km²)
+  // Style by area + type. Reservoirs distinguished from natural water.
+  const lakeStyle = (f) => {
+    const p = f.properties;
+    const wt = p.water_type || 'water';
+    const area = p.area_km2 || 0;
+    const isReservoir = (wt === 'reservoir');
+    const isSalt = (wt === 'salt_pool' || wt === 'salt_pond');
+    // Color: reservoirs more purple-blue (man-made), salt slightly yellow,
+    // natural water = blue
+    let color, fillColor;
+    if (isReservoir) {
+      color = '#4527a0'; fillColor = '#7e57c2';
+    } else if (isSalt) {
+      color = '#a07020'; fillColor = '#ffe082';
+    } else {
+      color = area >= 50 ? '#0d47a1' : '#1565c0';
+      fillColor = area >= 50 ? '#1e88e5' : '#42a5f5';
+    }
+    // Weight by size — bigger water bodies have more visible borders
+    const weight = area >= 100 ? 1.4 : area >= 10 ? 1.0 : 0.7;
+    const fillOpacity = area >= 50 ? 0.6 : 0.5;
+    return { color, weight, opacity: 0.9, fillColor, fillOpacity };
+  };
+
+  L.geoJSON(lakes, {
+    renderer: _riverCanvasRenderer,  // share canvas with rivers for performance
+    bubblingMouseEvents: false,
+    style: lakeStyle,
+    onEachFeature: (f, layer) => {
+      const p = f.properties;
+      const wt = p.water_type || 'water';
+      const icon = (wt === 'reservoir') ? '🏞️' :
+                   (wt === 'salt_pool' || wt === 'salt_pond') ? '🧂' :
+                   (wt === 'lagoon') ? '🌊' :
+                   (wt === 'oxbow') ? '〰️' :
+                   '💧';
+      const titleColor = (wt === 'reservoir') ? '#4527a0' : '#0d47a1';
+      layer.bindPopup(
+        `<div class="popup-title" style="color:${titleColor}">${icon} ${p.name}</div>
+         <div class="popup-body">
+           Tipo: <b>${wt}</b><br>
+           Superficie: <b>${p.area_km2.toLocaleString('es-AR')} km²</b><br>
+           <em>Fuente: OpenStreetMap (${p.osm_id})</em>
+         </div>`
+      );
+    }
+  }).addTo(waterLayerGroup);
+
+  // ── OSM wetlands — separate sub-layer with type-specific styling ──
+  const WETLAND_STYLE = {
+    // Patagonian/Andean wet meadows — ecological/cultural significance
+    wet_meadow:        { fill: '#7cb342', stroke: '#33691e', label: 'Mallín / pradera húmeda' },
+    fen:               { fill: '#7cb342', stroke: '#33691e', label: 'Mallín / fen' },
+    // Salt flats — Puna lithium triangle
+    saltern:           { fill: '#fff8e1', stroke: '#bf8f3a', label: 'Salar' },
+    salt_desert:       { fill: '#fff8e1', stroke: '#bf8f3a', label: 'Salar' },
+    saltmarsh:         { fill: '#f3e5ab', stroke: '#a07020', label: 'Salitral' },
+    // Coastal
+    tidalflat:         { fill: '#d7ccc8', stroke: '#5d4037', label: 'Planicie de marea' },
+    mangrove:          { fill: '#558b2f', stroke: '#1b5e20', label: 'Manglar' },
+    // Inland freshwater
+    marsh:             { fill: '#4db6ac', stroke: '#00695c', label: 'Pantano / marsh' },
+    swamp:             { fill: '#26a69a', stroke: '#004d40', label: 'Pantano / swamp' },
+    bog:               { fill: '#80cbc4', stroke: '#00695c', label: 'Turbera' },
+    reedbed:           { fill: '#9ccc65', stroke: '#558b2f', label: 'Juncal' },
+    mud:               { fill: '#a1887f', stroke: '#4e342e', label: 'Bañado / fango' },
+    estero_yaguá_cuá:  { fill: '#4db6ac', stroke: '#00695c', label: 'Estero' },
+    unknown:           { fill: '#80deea', stroke: '#006064', label: 'Humedal' },
+  };
+
+  wetlandsLayer = L.geoJSON(wetlands, {
+    bubblingMouseEvents: false,  // clic en humedal NO selecciona la cuenca
+    style: (f) => {
+      const t = f.properties?.wetland_type || 'unknown';
+      const s = WETLAND_STYLE[t] || WETLAND_STYLE.unknown;
+      const isMallin = f.properties?.is_mallin;
+      return {
+        color:       isMallin ? '#1b5e20' : s.stroke,
+        weight:      isMallin ? 1.8 : 1.0,
+        opacity:     0.9,
+        fillColor:   s.fill,
+        fillOpacity: isMallin ? 0.65 : 0.55,
+        dashArray:   isMallin ? null : '2 3',
+      };
+    },
+    onEachFeature: (f, layer) => {
+      const p = f.properties || {};
+      const t = p.wetland_type || 'unknown';
+      const s = WETLAND_STYLE[t] || WETLAND_STYLE.unknown;
+      const icon = p.is_mallin ? '🌾' : (t === 'saltern' || t === 'salt_desert' ? '🧂' : '🪷');
+      const flag = p.is_mallin ? ' <span style="color:#1b5e20;font-weight:700">· MALLÍN</span>' : '';
+      layer.bindPopup(
+        `<div class="popup-title" style="color:#33691e">${icon} ${p.name || 'Humedal sin nombre'}</div>
+         <div class="popup-body">
+           ${s.label}${flag}<br>
+           Superficie: ${p.area_km2?.toLocaleString('es-AR') ?? '?'} km²<br>
+           <em>Fuente: OpenStreetMap (${p.osm_id})</em>
+         </div>`
+      );
+    }
+  });
+
+  // Wetlands get their own toggle — they're conceptually distinct from rivers/lakes
+  if (wetlandsVisible) wetlandsLayer.addTo(map);
+
+  // ── IANIGLA glaciers — circle markers scaled by area ──
+  const GLACIER_TYPE_LABEL = {
+    GD: 'Glaciar descubierto',
+    GC: 'Glaciar cubierto',
+    GEA: 'Glaciar de escombros activo',
+    GEI: 'Glaciar de escombros inactivo',
+    MN: 'Manchón de nieve / hielo',
+    GCGE: 'Glaciar cubierto + escombros',
+  };
+
+  glaciersLayer = L.layerGroup();
+  glaciers.features.forEach(f => {
+    const p = f.properties;
+    const [lng, lat] = f.geometry.coordinates;
+    const r = Math.max(2.2, Math.min(11, Math.sqrt(p.area_km2) * 1.4));
+    const isMajor = p.is_major;
+    L.circleMarker([lat, lng], {
+      radius: r,
+      color: isMajor ? '#0277bd' : '#4fc3f7',
+      weight: isMajor ? 1.6 : 0.8,
+      fillColor: isMajor ? '#81d4fa' : '#b3e5fc',
+      fillOpacity: 0.75,
+      bubblingMouseEvents: false,
+    })
+    .bindPopup(
+      `<div class="popup-title" style="color:#01579b">🧊 ${p.name}</div>
+       <div class="popup-body">
+         ${GLACIER_TYPE_LABEL[p.tipo] || p.tipo}<br>
+         Superficie: <b>${p.area_km2} km²</b><br>
+         <em>Fuente: IANIGLA — Inventario Nacional de Glaciares 2018 (Ley 26.639)</em>
+       </div>`
+    )
+    .addTo(glaciersLayer);
+  });
+  if (glaciersVisible) glaciersLayer.addTo(map);
+
+  // ── DAMS — diamond markers scaled by MW ──
+  damsLayer = L.layerGroup();
+  dams.features.forEach(f => {
+    const p = f.properties;
+    const [lng, lat] = f.geometry.coordinates;
+    const r = Math.max(5, Math.min(14, Math.sqrt(p.mw / 50)));
+    L.circleMarker([lat, lng], {
+      radius: r,
+      color: '#5d2e8c',
+      weight: 1.8,
+      fillColor: p.binacional ? '#ce93d8' : '#b39ddb',
+      fillOpacity: 0.9,
+      bubblingMouseEvents: false,
+    })
+    .bindPopup(
+      `<div class="popup-title" style="color:#4a148c">⚡ ${p.name}</div>
+       <div class="popup-body">
+         <b>${p.mw.toLocaleString('es-AR')} MW</b> · ${p.year || 's/d'}<br>
+         Río ${p.river} · ${p.province}<br>
+         ${p.reservoir ? `Embalse: ${p.reservoir}<br>` : ''}
+         ${p.binacional ? '<span style="color:#7b1fa2;font-weight:700">⚐ Binacional</span><br>' : ''}
+         ${p.note ? `<em>${p.note}</em><br>` : ''}
+         <em style="color:#999">Fuente: CAMMESA / Wikipedia</em>
+       </div>`
+    )
+    .addTo(damsLayer);
+  });
+  if (damsVisible) damsLayer.addTo(map);
+
+  // ── PROTECTED AREAS — green tree markers ──
+  protectedLayer = L.layerGroup();
+  protected_.features.forEach(f => {
+    const p = f.properties;
+    const [lng, lat] = f.geometry.coordinates;
+    const r = Math.max(4, Math.min(12, Math.sqrt(p.area_km2) / 4));
+    const isUnesco = p.unesco;
+    const isRamsar = p.ramsar;
+    L.circleMarker([lat, lng], {
+      radius: r,
+      color: isUnesco ? '#bf360c' : '#1b5e20',
+      weight: isUnesco ? 2.5 : 1.5,
+      fillColor: '#66bb6a',
+      fillOpacity: 0.7,
+      dashArray: isRamsar ? '3 2' : null,
+      bubblingMouseEvents: false,
+    })
+    .bindPopup(
+      `<div class="popup-title" style="color:#1b5e20">🌳 ${p.name}</div>
+       <div class="popup-body">
+         <b>${p.area_km2.toLocaleString('es-AR')} km²</b> · ${p.cat}<br>
+         ${p.province} · creado en ${p.year}<br>
+         ${isUnesco ? '<span style="color:#bf360c;font-weight:700">★ Patrimonio UNESCO</span><br>' : ''}
+         ${isRamsar ? '<span style="color:#1565c0;font-weight:700">💧 Sitio RAMSAR</span><br>' : ''}
+         ${p.note ? `<em>${p.note}</em><br>` : ''}
+         <em style="color:#999">Fuente: APN / SIB</em>
+       </div>`
+    )
+    .addTo(protectedLayer);
+  });
+  if (protectedVisible) protectedLayer.addTo(map);
+
+  // ── CITIES — population-scaled markers, Tier-1 cities with red ring ──
+  citiesLayer = L.layerGroup();
+  cities.features.forEach(f => {
+    const p = f.properties;
+    const [lng, lat] = f.geometry.coordinates;
+    const r = Math.max(3, Math.min(12, Math.log10(p.population) * 2.0));
+    const isMega = p.population >= 1000000;
+    const isTier1 = p.tier === 1;
+
+    // Tier-1: red border (documented conflict). Otherwise black/dark.
+    const ringColor = isTier1 ? '#c0392b' : '#1a1a2e';
+    const ringWeight = isTier1 ? 2.4 : (isMega ? 2.2 : 1.4);
+
+    // Build alert summary inside popup
+    const alertHtml = (p.alerts || []).map(a => `
+      <div style="margin-top:6px;padding:6px 8px;border-left:3px solid ${a.severity==='red'?'#c0392b':'#d4a017'};background:${a.severity==='red'?'#fef2f2':'#fffbeb'};border-radius:0 4px 4px 0;font-size:0.74rem;line-height:1.4;">
+        <div style="font-weight:700;color:${a.severity==='red'?'#7f1d1d':'#78350f'};margin-bottom:2px;">
+          ${a.severity==='red'?'🔴':'🟡'} ${a.title}
+        </div>
+        <div style="color:#444;">${a.body}</div>
+        ${(a.sources||[]).length ? `<div style="margin-top:4px;font-size:0.68rem;">
+          ${a.sources.map(s => `<a href="${s.url}" target="_blank" rel="noopener" style="color:#0d47a1;text-decoration:none;display:block;">↗ ${s.label}</a>`).join('')}
+        </div>` : ''}
+      </div>`).join('');
+
+    const infraHtml = p.infrastructure ? `
+      <div style="margin-top:8px;padding:6px 8px;background:#f5f5f5;border-radius:4px;font-size:0.74rem;line-height:1.4;">
+        <b>📡 ${p.infrastructure.system_name}</b><br>
+        ${p.infrastructure.distance_km ? `<b>Distancia:</b> ${p.infrastructure.distance_km} km<br>` : ''}
+        ${p.infrastructure.flow_m3s ? `<b>Caudal:</b> ${p.infrastructure.flow_m3s} m³/s<br>` : ''}
+        ${p.infrastructure.cities_supplied?.length > 1 ? `<b>Abastece:</b> ${p.infrastructure.cities_supplied.join(', ')}<br>` : ''}
+        ${p.infrastructure.note ? `<em style="color:#555;">${p.infrastructure.note}</em>` : ''}
+      </div>` : '';
+
+    L.circleMarker([lat, lng], {
+      radius: r,
+      color: ringColor,
+      weight: ringWeight,
+      fillColor: isMega ? '#fbc02d' : (isTier1 ? '#ffab91' : '#fff59d'),
+      fillOpacity: 0.95,
+      bubblingMouseEvents: false,
+    })
+    .bindPopup(
+      `<div class="popup-title" style="color:#1a1a2e">🏙️ ${p.name}${isTier1 ? ' <span style="color:#c0392b;font-size:0.7rem;font-weight:700;background:#fef2f2;padding:1px 5px;border-radius:99px;border:1px solid #fca5a5;">conflicto activo</span>' : ''}</div>
+       <div class="popup-body" style="max-width:340px;">
+         <b>${p.population.toLocaleString('es-AR')}</b> hab. · ${p.province}<br>
+         <b>💧 Fuente:</b> ${p.water_source}<br>
+         <b>🏛️ Prestadora:</b> ${p.utility}
+         ${infraHtml}
+         ${alertHtml}
+         <div style="margin-top:6px;font-size:0.66rem;color:#999;">
+           Pob.: INDEC 2022 · OSM ${isTier1 ? '· Investigación Tier-1' : ''}
+         </div>
+       </div>`,
+      { maxWidth: 360 }
+    )
+    .addTo(citiesLayer);
+  });
+  if (citiesVisible) citiesLayer.addTo(map);
+
+  // ── ACTIVE CONFLICTS — indigenous territories + citizen movements unified ──
+  conflictsLayer = L.layerGroup();
+
+  // Indigenous (earth-tone markers, feather icon)
+  indigenous.features.forEach(f => {
+    const p = f.properties;
+    const [lng, lat] = f.geometry.coordinates;
+    const cc = typeof p.communities_count === 'number' ? p.communities_count : 5;
+    const r = Math.max(7, Math.min(13, 6 + Math.log2(Math.max(2, cc))));
+    const sourcesHtml = (p.sources || []).map(s =>
+      `<a href="${s.url}" target="_blank" rel="noopener" style="color:#0d47a1;text-decoration:none;display:block;font-size:0.68rem;margin-top:2px;">↗ ${s.label}</a>`
+    ).join('');
+    L.circleMarker([lat, lng], {
+      radius: r,
+      color: '#5d2e0e',
+      weight: 2.5,
+      fillColor: '#d4a574',
+      fillOpacity: 0.9,
+      bubblingMouseEvents: false,
+    })
+    .bindPopup(`
+      <div class="popup-title" style="color:#5d2e0e">🪶 ${p.name}</div>
+      <div class="popup-body" style="max-width:340px;">
+        <b>Pueblo:</b> ${p.people}<br>
+        <b>Región:</b> ${p.region}<br>
+        <b>Provincia${p.province.includes(',') || p.province.includes('y') ? 's' : ''}:</b> ${p.province}<br>
+        <b>Comunidades:</b> ${p.communities_count}${p.territory_ha ? ` · <b>${p.territory_ha} ha</b>` : ''}<br>
+        <b>Recurso defendido:</b> ${p.water_resource}<br>
+        <b>Conflicto:</b> ${p.conflict_type}<br>
+        <div style="margin-top:8px;padding:7px 9px;background:#fef9f0;border-left:3px solid #5d2e0e;border-radius:0 4px 4px 0;font-size:0.74rem;line-height:1.5;">
+          ${p.current_status}
+        </div>
+        <div style="margin-top:6px;font-size:0.7rem;color:#444;">
+          <b>Ley 26.160:</b> ${p.ley_26160_status}
+        </div>
+        ${sourcesHtml ? `<div style="margin-top:8px;border-top:1px solid #eee;padding-top:6px;"><b style="font-size:0.7rem;">Fuentes:</b>${sourcesHtml}</div>` : ''}
+        <div style="margin-top:6px;font-size:0.62rem;color:#999;font-style:italic;line-height:1.4;">
+          Coordenada centroide regional aproximada · datos exactos pertenecen a las comunidades (RETECI/INAI)
+        </div>
+      </div>
+    `, { maxWidth: 360 })
+    .addTo(conflictsLayer);
+  });
+
+  // Citizen conflicts (red/orange markers, fist icon)
+  const OUTCOME_COLOR = {
+    victoria_ciudadana: '#2e7d32',           // green: ya ganaron
+    resistencia_activa: '#c62828',           // red: en lucha
+    conflicto_activo:   '#c62828',
+    fallo_pendiente_implementacion: '#ef6c00', // orange
+    fallo_internacional: '#1565c0',          // blue: pasó a corte
+  };
+  citizenConflicts.features.forEach(f => {
+    const p = f.properties;
+    const [lng, lat] = f.geometry.coordinates;
+    const color = OUTCOME_COLOR[p.outcome] || '#c62828';
+    const sourcesHtml = (p.sources || []).map(s =>
+      `<a href="${s.url}" target="_blank" rel="noopener" style="color:#0d47a1;text-decoration:none;display:block;font-size:0.68rem;margin-top:2px;">↗ ${s.label}</a>`
+    ).join('');
+    L.circleMarker([lat, lng], {
+      radius: 8,
+      color: color,
+      weight: 2.5,
+      fillColor: color,
+      fillOpacity: 0.65,
+      bubblingMouseEvents: false,
+    })
+    .bindPopup(`
+      <div class="popup-title" style="color:${color}">✊ ${p.name}</div>
+      <div class="popup-body" style="max-width:340px;">
+        <b>Tipo:</b> ${p.kind}<br>
+        <b>Activo desde:</b> ${p.since}<br>
+        <b>Localidad:</b> ${p.city} · ${p.province}<br>
+        <b>Recurso defendido:</b> ${p.water_resource}<br>
+        <b>Contra:</b> ${p.conflict_with}<br>
+        <div style="margin-top:8px;padding:7px 9px;background:${color}15;border-left:3px solid ${color};border-radius:0 4px 4px 0;font-size:0.74rem;line-height:1.5;">
+          ${p.current_status}
+        </div>
+        ${sourcesHtml ? `<div style="margin-top:8px;border-top:1px solid #eee;padding-top:6px;"><b style="font-size:0.7rem;">Fuentes:</b>${sourcesHtml}</div>` : ''}
+      </div>
+    `, { maxWidth: 360 })
+    .addTo(conflictsLayer);
+  });
+
+  if (conflictsVisible) conflictsLayer.addTo(map);
+
+  // ── RAMSAR sites — distinctive cyan/teal star-like markers ──
+  ramsarLayer = L.layerGroup();
+  ramsar.features.forEach(f => {
+    const p = f.properties;
+    const [lng, lat] = f.geometry.coordinates;
+    // Marker size scaled by area (huge sites → bigger marker)
+    const r = Math.max(6, Math.min(13, 4 + Math.log10(Math.max(100, p.area_ha)) * 1.4));
+    L.circleMarker([lat, lng], {
+      radius: r,
+      color: '#006064',
+      weight: 2.5,
+      fillColor: '#4dd0e1',
+      fillOpacity: 0.85,
+      bubblingMouseEvents: false,
+    })
+    .bindPopup(`
+      <div class="popup-title" style="color:#006064">💧 ${p.name}</div>
+      <div class="popup-body" style="max-width:340px;">
+        <b>Provincia${p.province.includes(' / ') ? 's' : ''}:</b> ${p.province}<br>
+        <b>Designado:</b> ${p.year} (Convención Ramsar)<br>
+        <b>Superficie:</b> ${p.area_ha.toLocaleString('es-AR')} ha
+        ${p.linked_to_apn ? '<br><span style="color:#1b5e20;font-weight:700">★ Coincide con Parque Nacional</span>' : ''}
+        <div style="margin-top:8px;padding:6px 9px;background:#e0f7fa;border-left:3px solid #006064;border-radius:0 4px 4px 0;font-size:0.74rem;line-height:1.5;">
+          ${p.description}
+        </div>
+        <div style="margin-top:8px;font-size:0.62rem;color:#999;font-style:italic;">
+          Convención Ramsar (1971) · Ley 23.919 + 25.335 · centroide regional aprox.
+        </div>
+      </div>
+    `, { maxWidth: 360 })
+    .addTo(ramsarLayer);
+  });
+  if (ramsarVisible) ramsarLayer.addTo(map);
+
+  // ── AQUIFERS — sepia/brown polygons with hatch pattern (subsurface layer) ──
+  // Off by default. Conceptually distinct from basins: subsurface, 3D, approximate.
+  const AQUIFER_STATUS_COLOR = {
+    red: '#8b1a0e',
+    yellow: '#b8860b',
+    green: '#6d4c41',
+  };
+
+  aquifersLayer = L.layerGroup();
+  aquifers.features.forEach(f => {
+    const p = f.properties;
+    const color = AQUIFER_STATUS_COLOR[p.status] || '#6d4c41';
+    L.geoJSON(f, {
+      style: {
+        color: color,
+        weight: 2,
+        opacity: 0.8,
+        fillColor: color,
+        fillOpacity: 0.18,
+        dashArray: '8 4 2 4',
+      },
+      bubblingMouseEvents: false,
+      onEachFeature: (_, layer) => {
+        const sourcesHtml = (p.sources || []).map(s =>
+          `<a href="${s.url}" target="_blank" rel="noopener" style="color:#0d47a1;text-decoration:none;display:block;font-size:0.68rem;margin-top:2px;">↗ ${s.label}</a>`
+        ).join('');
+        layer.bindPopup(`
+          <div class="popup-title" style="color:#5d4037">⛏️ ${p.name}</div>
+          <div class="popup-body" style="max-width:340px;">
+            <b>Tipo:</b> ${p.type}<br>
+            <b>Profundidad:</b> ${p.depth_m} m<br>
+            ${p.area_km2_arg ? `<b>Superficie en Argentina:</b> ${p.area_km2_arg.toLocaleString('es-AR')} km²<br>` : ''}
+            ${p.countries?.length > 1 ? `<b>Transfronterizo:</b> ${p.countries.join(', ')}<br>` : ''}
+            <b>Provincias:</b> ${(p.provinces || []).join(', ')}<br>
+            <b>Usos:</b> ${p.uses}
+            <div style="margin-top:6px;padding:6px 8px;border-left:3px solid ${color};background:${color}15;border-radius:0 4px 4px 0;font-size:0.74rem;">
+              <div style="font-weight:700;color:${color}">${p.status==='red'?'🔴':p.status==='yellow'?'🟡':'🟢'} ${p.status_label}</div>
+              <div style="color:#444;margin-top:2px;">${p.status_detail}</div>
+            </div>
+            ${p.cities_dependent?.length ? `<div style="margin-top:6px;font-size:0.74rem;"><b>🏙️ Ciudades que dependen:</b> ${p.cities_dependent.join(', ')}</div>` : ''}
+            ${sourcesHtml ? `<div style="margin-top:6px;border-top:1px solid #eee;padding-top:5px;"><b style="font-size:0.7rem;">Fuentes:</b>${sourcesHtml}</div>` : ''}
+            <div style="margin-top:6px;font-size:0.65rem;color:#999;font-style:italic;">
+              Polígono aproximado · la hidrogeología real es 3D
+            </div>
+          </div>
+        `, { maxWidth: 360 });
+      }
+    }).addTo(aquifersLayer);
+  });
+  // NOT added to map by default — opt-in via toggle
+
+  // ── 2. extras: small streams (Ñireco) and glacier extents (not in NE) ──
+  const RIVER_STYLE_LOCAL = {
+    1: { color: '#0d47a1', weight: 3.5, opacity: 0.85 },
+    2: { color: '#1565c0', weight: 2.2, opacity: 0.80 },
+    3: { color: '#1976d2', weight: 1.5, opacity: 0.85 },
+  };
+
+  EXTRA_WATER.rivers.forEach(([name, importance, coords, note]) => {
+    L.polyline(coords.map(([lng, lat]) => [lat, lng]), {
+      ...RIVER_STYLE_LOCAL[importance],
+      lineJoin: 'round', lineCap: 'round',
+      bubblingMouseEvents: false,
+    })
+    .bindPopup(
+      `<div class="popup-title" style="color:#0d47a1">🌊 ${name}</div>
+       <div class="popup-body">${note}</div>`
+    )
+    .addTo(waterLayerGroup);
+  });
+
+  // Continental ice fields — built from OSM glacier polygons aggregated by region.
+  // More precise than hardcoded coordinates.
+  iceFieldsLayer = L.layerGroup();
+  L.geoJSON(iceFields, {
+    renderer: _riverCanvasRenderer,
+    bubblingMouseEvents: false,
+    style: {
+      color: '#00838f',
+      weight: 1.4,
+      opacity: 0.9,
+      fillColor: '#e0f7fa',
+      fillOpacity: 0.65,
+    },
+    onEachFeature: (f, layer) => {
+      const p = f.properties;
+      layer.bindPopup(
+        `<div class="popup-title" style="color:#00838f">🧊 ${p.name}</div>
+         <div class="popup-body">
+           ${p.glaciers_count > 1 ? `<b>${p.glaciers_count}</b> glaciares unidos<br>` : ''}
+           Superficie: <b>${p.area_km2.toLocaleString('es-AR')} km²</b><br>
+           ${p.note ? `<em>${p.note}</em><br>` : ''}
+           <em style="color:#999;font-size:0.68rem;">Fuente: OpenStreetMap (natural=glacier)</em>
+         </div>`
+      );
+    }
+  }).addTo(iceFieldsLayer);
+
+  // Add layers to map only if their initial visibility flag is on
+  if (waterVisible) waterLayerGroup.addTo(map);
+  if (iceFieldsVisible) iceFieldsLayer.addTo(map);
+
+  // ── garantir z-order: features chicas SIEMPRE encima de las cuencas ──
+  // Sin esto, al recargar/hover/click la capa de basins puede quedar por
+  // encima de glaciares y áreas protegidas en zonas como Lago Viedma.
+  setTimeout(() => {
+    if (waterLayerGroup) waterLayerGroup.eachLayer(l => l.bringToFront && l.bringToFront());
+    if (wetlandsLayer)   wetlandsLayer.eachLayer(l => l.bringToFront && l.bringToFront());
+    if (glaciersLayer)   glaciersLayer.eachLayer(l => l.bringToFront && l.bringToFront());
+    if (damsLayer)       damsLayer.eachLayer(l => l.bringToFront && l.bringToFront());
+    if (protectedLayer)  protectedLayer.eachLayer(l => l.bringToFront && l.bringToFront());
+    if (citiesLayer)     citiesLayer.eachLayer(l => l.bringToFront && l.bringToFront());
+  }, 0);
+
+  // ── grouped toggle controls with section separators ──
+  const toggleCtrl = L.control({ position: 'topleft' });
+  toggleCtrl.onAdd = () => {
+    const d = L.DomUtil.create('div', 'app-layers-control');
+    d.style.cssText = 'background:rgba(255,255,255,0.94);border-radius:8px;padding:6px;box-shadow:0 2px 8px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:3px;min-width:155px;';
+    // The reopen-tab is always rendered — CSS shows it only when .collapsed
+    const reopenTab = '<button class="panel-reopen-tab" id="layersReopen" title="Mostrar capas">▣ Capas</button>';
+    const closeRow = '<div class="panel-header-row"><button class="panel-close-btn" id="layersClose" title="Ocultar panel de capas">×</button></div>';
+
+    const btn = (id, color, icon, label, bgOff) => `
+      <button id="${id}Toggle" title="Mostrar/ocultar ${label.toLowerCase()}" data-bg-off="${bgOff}" style="
+        background:#fff;border:1.6px solid ${color};border-radius:5px;
+        padding:4px 8px;font-size:0.7rem;font-weight:700;
+        color:${color};cursor:pointer;display:flex;align-items:center;gap:5px;
+        white-space:nowrap;width:100%;
+      ">
+        <span style="font-size:0.85rem;">${icon}</span>
+        <span id="${id}ToggleLabel">Ocultar ${label}</span>
+      </button>`;
+
+    const section = (title) =>
+      `<div style="font-size:0.58rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#999;padding:5px 4px 1px;">${title}</div>`;
+
+    d.innerHTML = reopenTab + closeRow +
+      `<button id="traceModeBtn" title="Trazar el origen del agua de cualquier punto" style="
+        background:#00838f;border:1.6px solid #00838f;border-radius:5px;
+        padding:6px 8px;font-size:0.72rem;font-weight:700;
+        color:#fff;cursor:pointer;display:flex;align-items:center;gap:5px;
+        white-space:nowrap;width:100%;margin-bottom:4px;
+      ">
+        <span style="font-size:0.85rem;">🔍</span>
+        <span>Trazar origen del agua</span>
+      </button>
+      <button id="flowToggleBtn" title="Animar el flujo de los ríos (estilo Windy)" style="
+        background:#fff;border:1.6px solid #0d47a1;border-radius:5px;
+        padding:6px 8px;font-size:0.72rem;font-weight:700;
+        color:#0d47a1;cursor:pointer;display:flex;align-items:center;gap:5px;
+        white-space:nowrap;width:100%;margin-bottom:4px;
+      ">
+        <span style="font-size:0.85rem;">💨</span>
+        <span id="flowToggleLabel">Animar flujo de ríos</span>
+      </button>` +
+      section('Marcos') +
+        btn('basins',   '#1a6fa8', '📐', 'cuencas',     '#e8f4fb') +
+      section('Hidrografía') +
+        btn('water',    '#0d47a1', '💧', 'agua',        '#e8f4fb') +
+        btn('wetlands', '#33691e', '🌾', 'humedales',   '#f1f8e9') +
+        btn('glaciers', '#01579b', '🧊', 'glaciares',   '#e1f5fe') +
+      section('Subsuelo') +
+        `<button id="aquifersToggle" title="Mostrar/ocultar acuíferos (subsuelo)" data-bg-off="#efebe9" style="
+          background:#efebe9;border:1.6px solid #5d4037;border-radius:5px;
+          padding:4px 8px;font-size:0.7rem;font-weight:700;
+          color:#5d4037;cursor:pointer;display:flex;align-items:center;gap:5px;
+          white-space:nowrap;width:100%;">
+          <span style="font-size:0.85rem;">⛏️</span>
+          <span id="aquifersToggleLabel">Mostrar acuíferos</span>
+        </button>` +
+      section('Infraestructura humana') +
+        btn('dams',      '#4a148c', '⚡', 'represas',     '#f3e5f5') +
+        btn('cities',    '#1a1a2e', '🏙️', 'ciudades',     '#f5f5f5') +
+      section('Otras Áreas') +
+        `<button id="otherAreasExpander" title="Mostrar/ocultar áreas y conflictos" style="
+          background:#fff;border:1.6px dashed #4a4a4a;border-radius:5px;
+          padding:4px 8px;font-size:0.7rem;font-weight:700;
+          color:#4a4a4a;cursor:pointer;display:flex;align-items:center;gap:5px;
+          white-space:nowrap;width:100%;
+        ">
+          <span style="font-size:0.85rem;">🗂️</span>
+          <span>Otras áreas</span>
+          <span id="otherAreasCaret" style="margin-left:auto;font-size:0.7rem;">▾</span>
+        </button>` +
+        `<div id="otherAreasGroup" style="display:none;padding-left:8px;border-left:2px solid #ddd;margin-left:4px;flex-direction:column;gap:3px;">
+          ${btn('iceFields',  '#00838f', '🧊', 'hielos contin.', '#e0f7fa')}
+          ${btn('protected',  '#1b5e20', '🌳', 'áreas prot.',    '#e8f5e9')}
+          ${btn('ramsar',     '#006064', '💧', 'sitios Ramsar',  '#e0f7fa')}
+          ${btn('conflicts',  '#c62828', '✊', 'conflictos act.','#fef2f2')}
+        </div>`;
+
+    L.DomEvent.disableClickPropagation(d);
+    L.DomEvent.disableScrollPropagation(d);
+
+    // Close + reopen handlers
+    d.querySelector('#layersClose').addEventListener('click', () => d.classList.add('collapsed'));
+    d.querySelector('#layersReopen').addEventListener('click', () => d.classList.remove('collapsed'));
+
+    // Trace mode button
+    d.querySelector('#traceModeBtn').addEventListener('click', () => enterTraceMode());
+
+    // Flow animation toggle
+    d.querySelector('#flowToggleBtn').addEventListener('click', () => {
+      const btn = d.querySelector('#flowToggleBtn');
+      const lbl = d.querySelector('#flowToggleLabel');
+      if (WaterFlow.active) {
+        WaterFlow.stop();
+        btn.style.background = '#fff';
+        btn.style.color = '#0d47a1';
+        lbl.textContent = 'Animar flujo de ríos';
+      } else {
+        if (!WaterFlow.rivers) {
+          toast('Cargando datos de ríos…');
+          return;
+        }
+        WaterFlow.start();
+        btn.style.background = '#0d47a1';
+        btn.style.color = '#fff';
+        lbl.textContent = 'Detener flujo';
+      }
+    });
+
+    // Helper to wire a generic toggle (visibility-tracked layers)
+    const wire = (id, getLayer, getVis, setVis, labelOn, labelOff, extraOn) => {
+      const btn = d.querySelector(`#${id}Toggle`);
+      const label = d.querySelector(`#${id}ToggleLabel`);
+      const bgOff = btn.dataset.bgOff;
+      btn.addEventListener('click', () => {
+        const next = !getVis();
+        setVis(next);
+        if (next) {
+          getLayer().addTo(map);
+          label.textContent = labelOn;
+          btn.style.background = '#fff';
+          if (extraOn) extraOn();
+        } else {
+          getLayer().remove();
+          label.textContent = labelOff;
+          btn.style.background = bgOff;
+        }
+      });
+    };
+
+    wire('basins',    () => basinsLayerGroup, () => basinsVisible,   v => basinsVisible = v,
+         'Ocultar cuencas',     'Mostrar cuencas');
+    wire('water',     () => waterLayerGroup,  () => waterVisible,    v => waterVisible = v,
+         'Ocultar agua',        'Mostrar agua');
+    wire('wetlands',  () => wetlandsLayer,    () => wetlandsVisible, v => wetlandsVisible = v,
+         'Ocultar humedales',   'Mostrar humedales');
+    wire('glaciers',  () => glaciersLayer,    () => glaciersVisible, v => glaciersVisible = v,
+         'Ocultar glaciares',   'Mostrar glaciares');
+    wire('dams',      () => damsLayer,        () => damsVisible,     v => damsVisible = v,
+         'Ocultar represas',    'Mostrar represas');
+    wire('cities',    () => citiesLayer,      () => citiesVisible,   v => citiesVisible = v,
+         'Ocultar ciudades',    'Mostrar ciudades');
+    wire('conflicts', () => conflictsLayer,   () => conflictsVisible, v => conflictsVisible = v,
+         'Ocultar conflictos act.','Mostrar conflictos act.');
+    wire('iceFields', () => iceFieldsLayer,   () => iceFieldsVisible, v => iceFieldsVisible = v,
+         'Ocultar hielos contin.','Mostrar hielos contin.');
+    wire('protected', () => protectedLayer,   () => protectedVisible, v => protectedVisible = v,
+         'Ocultar áreas prot.', 'Mostrar áreas prot.');
+    wire('ramsar',    () => ramsarLayer,      () => ramsarVisible,   v => ramsarVisible = v,
+         'Ocultar sitios Ramsar','Mostrar sitios Ramsar');
+
+    // "Otras áreas" group expander
+    const expBtn = d.querySelector('#otherAreasExpander');
+    const expGroup = d.querySelector('#otherAreasGroup');
+    const expCaret = d.querySelector('#otherAreasCaret');
+    expBtn.addEventListener('click', () => {
+      otherAreasExpanded = !otherAreasExpanded;
+      expGroup.style.display = otherAreasExpanded ? 'flex' : 'none';
+      expCaret.textContent = otherAreasExpanded ? '▴' : '▾';
+      expBtn.style.background = otherAreasExpanded ? '#f5f5f5' : '#fff';
+    });
+
+    // Set initial label/state of each wire'd button to match initial visibility
+    const _initState = (id, vis, onLabel, offLabel, bgOff) => {
+      const b = d.querySelector(`#${id}Toggle`);
+      const lbl = d.querySelector(`#${id}ToggleLabel`);
+      if (!b || !lbl) return;
+      lbl.textContent = vis ? onLabel : offLabel;
+      b.style.background = vis ? '#fff' : bgOff;
+    };
+    _initState('basins',     basinsVisible,    'Ocultar cuencas','Mostrar cuencas','#e8f4fb');
+    _initState('water',      waterVisible,     'Ocultar agua','Mostrar agua','#e8f4fb');
+    _initState('wetlands',   wetlandsVisible,  'Ocultar humedales','Mostrar humedales','#f1f8e9');
+    _initState('glaciers',   glaciersVisible,  'Ocultar glaciares','Mostrar glaciares','#e1f5fe');
+    _initState('dams',       damsVisible,      'Ocultar represas','Mostrar represas','#f3e5f5');
+    _initState('cities',     citiesVisible,    'Ocultar ciudades','Mostrar ciudades','#f5f5f5');
+    _initState('conflicts',  conflictsVisible, 'Ocultar conflictos act.','Mostrar conflictos act.','#fef2f2');
+    _initState('iceFields',  iceFieldsVisible, 'Ocultar hielos contin.','Mostrar hielos contin.','#e0f7fa');
+    _initState('protected',  protectedVisible, 'Ocultar áreas prot.','Mostrar áreas prot.','#e8f5e9');
+    _initState('ramsar',     ramsarVisible,    'Ocultar sitios Ramsar','Mostrar sitios Ramsar','#e0f7fa');
+
+    // Aquifers: special — when shown, also fade basins for legibility
+    d.querySelector('#aquifersToggle').addEventListener('click', () => {
+      aquifersVisible = !aquifersVisible;
+      const lbl = d.querySelector('#aquifersToggleLabel');
+      const btn = d.querySelector('#aquifersToggle');
+      if (aquifersVisible) {
+        aquifersLayer.addTo(map);
+        lbl.textContent = 'Ocultar acuíferos';
+        btn.style.background = '#fff';
+      } else {
+        aquifersLayer.remove();
+        lbl.textContent = 'Mostrar acuíferos';
+        btn.style.background = '#efebe9';
+      }
+      // Adapt basin opacity (more transparent when aquifers visible)
+      refreshBasinStyles();
+      // Re-elevate small features above any new polygon layers
+      [waterLayerGroup, wetlandsLayer, glaciersLayer, damsLayer, protectedLayer, citiesLayer, ramsarLayer].forEach(grp => {
+        if (grp && grp.eachLayer) grp.eachLayer(l => l.bringToFront && l.bringToFront());
+      });
+    });
+
+    return d;
+  };
+  toggleCtrl.addTo(map);
+}
+
+// ── legend ────────────────────────────────────────────────────────────────
+function renderLegend() {
+  const legend = L.control({ position: 'bottomright' });
+  legend.onAdd = () => {
+    const d = L.DomUtil.create('div', 'app-legend');
+    d.innerHTML = `
+      <button class="panel-reopen-tab" id="legendReopen" title="Mostrar referencias">📖 Referencias</button>
+      <div style="background:#fff;border:1px solid #d0dce8;border-radius:8px;padding:11px 13px;font-family:'Segoe UI',system-ui,sans-serif;font-size:0.73rem;box-shadow:0 2px 8px rgba(0,0,0,0.1);min-width:145px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-weight:700;color:#1c2b3a">Referencias</div>
+          <button class="panel-close-btn" id="legendClose" title="Ocultar referencias">×</button>
+        </div>
+
+        <div style="font-size:0.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#aaa;margin-bottom:5px;">Cuencas</div>
+        ${[['red','Crítico'],['yellow','Alerta'],['green','Estable']].map(([c,l])=>`
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+            <div style="width:11px;height:11px;border-radius:50%;background:${STATUS_COLOR[c]};"></div>
+            <span style="color:#5a6472">${l}</span>
+          </div>`).join('')}
+
+        <div style="font-size:0.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#aaa;margin:8px 0 5px;">Cuerpos de agua</div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+          <div style="width:20px;height:3px;background:#0d47a1;border-radius:2px;"></div>
+          <span style="color:#5a6472">Ríos principales</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+          <div style="width:20px;height:3px;background:#1565c0;border-radius:2px;opacity:0.7"></div>
+          <span style="color:#5a6472">Ríos secundarios</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+          <div style="width:14px;height:10px;background:#1e88e5;opacity:0.55;border:1px solid #0d47a1;border-radius:2px;"></div>
+          <span style="color:#5a6472">Lagos</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+          <div style="width:11px;height:11px;border-radius:50%;background:#81d4fa;border:1.5px solid #0277bd;"></div>
+          <span style="color:#5a6472">Glaciar IANIGLA</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+          <div style="width:11px;height:11px;border-radius:50%;background:#b39ddb;border:1.8px solid #5d2e8c;"></div>
+          <span style="color:#5a6472">Hidroeléctrica</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+          <div style="width:11px;height:11px;border-radius:50%;background:#66bb6a;border:1.5px solid #1b5e20;"></div>
+          <span style="color:#5a6472">Área protegida</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+          <div style="width:11px;height:11px;border-radius:50%;background:#fbc02d;border:1.5px solid #1a1a2e;"></div>
+          <span style="color:#5a6472">Ciudad ≥100k</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+          <div style="width:11px;height:11px;border-radius:50%;background:#4dd0e1;border:1.5px solid #006064;"></div>
+          <span style="color:#5a6472">Sitio Ramsar</span>
+        </div>
+        <div style="font-size:0.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#aaa;margin:8px 0 5px;">Subsuelo</div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+          <div style="width:14px;height:10px;background:#6d4c41;opacity:0.3;border:1.2px dashed #5d4037;border-radius:2px;"></div>
+          <span style="color:#5a6472">Acuífero (aprox.)</span>
+        </div>
+
+        <div style="font-size:0.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#aaa;margin:8px 0 5px;">Humedales</div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+          <div style="width:14px;height:10px;background:#7cb342;opacity:0.7;border:1.5px solid #33691e;border-radius:2px;"></div>
+          <span style="color:#5a6472">Mallín / pradera</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+          <div style="width:14px;height:10px;background:#fff8e1;opacity:0.8;border:1px solid #bf8f3a;border-radius:2px;"></div>
+          <span style="color:#5a6472">Salar</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+          <div style="width:14px;height:10px;background:#4db6ac;opacity:0.6;border:1px dashed #00695c;border-radius:2px;"></div>
+          <span style="color:#5a6472">Pantano / estero</span>
+        </div>
+
+        <div style="margin-top:8px;padding-top:7px;border-top:1px solid #d0dce8;color:#bbb;font-size:0.63rem;line-height:1.4;">
+          Cuencas: HydroBASINS L5<br>Hidrografía: Natural Earth 1:10m<br>Humedales: OSM<br>Glaciares: IANIGLA 2018<br>Represas/Áreas: APN+Wikipedia<br>Acuíferos: SEGEMAR/INA/SAG (aprox.)
+        </div>
+      </div>`;
+    L.DomEvent.disableClickPropagation(d);
+    // Wire close + reopen
+    setTimeout(() => {
+      const closeBtn = d.querySelector('#legendClose');
+      const reopenBtn = d.querySelector('#legendReopen');
+      if (closeBtn) closeBtn.addEventListener('click', () => d.classList.add('collapsed'));
+      if (reopenBtn) reopenBtn.addEventListener('click', () => d.classList.remove('collapsed'));
+    }, 0);
+    return d;
+  };
+  legend.addTo(map);
+}
+
+// ── Animated water flow layer (windy.com-style) ──────────────────────────
+const WaterFlow = {
+  active: false,
+  rivers: null,        // GeoJSON FeatureCollection of HydroRIVERS Strahler ≥ 4
+  canvas: null,
+  ctx: null,
+  particles: [],
+  visibleRivers: [],   // Per-river data for hover detection
+  animId: null,
+  trailLength: 6,
+
+  init(rivers) {
+    this.rivers = rivers;
+    this.canvas = document.createElement('canvas');
+    // Place ABOVE basin polygons (overlayPane=400) but BELOW markers (markerPane=600)
+    this.canvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:450;transition:opacity 0.09s;';
+    map.getContainer().appendChild(this.canvas);
+    this.ctx = this.canvas.getContext('2d');
+
+    // Pan: rebuild continuously (fast, preserves fractions, looks smooth)
+    map.on('move resize', () => this.rebuild());
+    // Zoom: hide canvas during animation, rebuild + reveal on zoomend
+    map.on('zoomstart', () => { if (this.canvas && this.active) this.canvas.style.opacity = '0'; });
+    map.on('zoomend', () => {
+      this.rebuild();
+      if (this.canvas && !this._popupOpen) this.canvas.style.opacity = '1';
+    });
+    // Hide flow while a popup is open — prevents particles from "leaking through"
+    // the popup card visually (canvas z-index sits below popupPane but stacking
+    // can be inconsistent depending on the OS/browser).
+    map.on('popupopen', () => {
+      this._popupOpen = true;
+      if (this.canvas) this.canvas.style.opacity = '0';
+    });
+    map.on('popupclose', () => {
+      this._popupOpen = false;
+      if (this.canvas && this.active) this.canvas.style.opacity = '1';
+    });
+    // Initial build so visibleRivers is populated for hover even when flow off
+    this.rebuild();
+  },
+
+  start() {
+    if (!this.canvas) return;
+    this.active = true;
+    this.rebuild();
+    this.animate();
+  },
+
+  stop() {
+    this.active = false;
+    if (this.animId) cancelAnimationFrame(this.animId);
+    if (this.ctx) this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  },
+
+  rebuild() {
+    if (!this.canvas || !this.rivers) return;
+    const size = map.getSize();
+    this.canvas.width = size.x;
+    this.canvas.height = size.y;
+
+    // Capture existing progress FRACTIONS per river so particles keep their
+    // relative position along the river when zoom/pan changes
+    const oldFractions = {};
+    for (const p of this.particles) {
+      if (p.total > 0 && p.riverId !== undefined) {
+        if (!oldFractions[p.riverId]) oldFractions[p.riverId] = [];
+        oldFractions[p.riverId].push(p.progress / p.total);
+      }
+    }
+
+    const bounds = map.getBounds();
+    const newParticles = [];
+    const newVisibleRivers = [];
+
+    // Density tuning by zoom — at low zoom, render only the big rivers and
+    // cap particles so the country-wide view doesn't feel hectic.
+    const z = map.getZoom();
+    let minStrahler = 2;
+    let maxNParts   = 6;
+    if (z <= 4)      { minStrahler = 7; maxNParts = 1; }   // continental: only the giants
+    else if (z <= 5) { minStrahler = 7; maxNParts = 1; }
+    else if (z <= 6) { minStrahler = 6; maxNParts = 2; }   // regional
+    else if (z <= 7) { minStrahler = 5; maxNParts = 3; }   // provincial
+    else if (z <= 8) { minStrahler = 4; maxNParts = 4; }   // departmental
+    else if (z <= 9) { minStrahler = 3; maxNParts = 5; }   // sub-departmental — show streams
+    // z >= 10: all rivers (minStrahler=2), full density
+
+    for (const f of this.rivers.features) {
+      if (f.geometry.type !== 'LineString') continue;
+      const coords = f.geometry.coordinates;
+      if (!coords || coords.length < 2) continue;
+      const riverId = f.properties.id;
+      // Strahler-based filter for low zoom (animation only — visibleRivers
+      // for hover still gets ALL features so tooltip works at any zoom)
+      const sFeat = f.properties.s || 4;
+
+      // Quick bbox cull
+      let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+      for (const c of coords) {
+        if (c[1] < minLat) minLat = c[1];
+        if (c[1] > maxLat) maxLat = c[1];
+        if (c[0] < minLng) minLng = c[0];
+        if (c[0] > maxLng) maxLng = c[0];
+      }
+      if (maxLat < bounds.getSouth() || minLat > bounds.getNorth() ||
+          maxLng < bounds.getWest()  || minLng > bounds.getEast()) continue;
+
+      const screenPts = coords.map(c => map.latLngToContainerPoint([c[1], c[0]]));
+      const segLengths = [];
+      let total = 0;
+      for (let i = 1; i < screenPts.length; i++) {
+        const dx = screenPts[i].x - screenPts[i-1].x;
+        const dy = screenPts[i].y - screenPts[i-1].y;
+        const L = Math.sqrt(dx*dx + dy*dy);
+        segLengths.push(L);
+        total += L;
+      }
+      if (total < 8) continue;
+
+      const q = f.properties.q || 0.5;
+      const s = f.properties.s || 4;
+      const speed = Math.max(0.1, Math.min(0.6, 0.125 + Math.log10(Math.max(1, q)) * 0.15));
+
+      // Always track for hover, regardless of zoom
+      newVisibleRivers.push({
+        id: riverId,
+        name: f.properties.name || null,
+        q, s,
+        pts: screenPts,
+      });
+
+      // Skip particle generation for small rivers at low zoom
+      if (s < minStrahler) continue;
+
+      // Density-aware particle count
+      const baseNParts = Math.round(Math.log10(Math.max(1, q)) * 2 + (s-3) * 0.4);
+      const nParts = Math.max(1, Math.min(maxNParts, baseNParts));
+
+      const oldFracs = oldFractions[riverId];
+      for (let i = 0; i < nParts; i++) {
+        const frac = (oldFracs && i < oldFracs.length)
+          ? oldFracs[i]
+          : ((i / nParts) + Math.random() / nParts);
+        newParticles.push({
+          riverId,
+          pts: screenPts,
+          segs: segLengths,
+          total,
+          progress: frac * total,
+          speed,
+          q,
+          s,
+        });
+      }
+    }
+    this.particles = newParticles;
+    this.visibleRivers = newVisibleRivers;
+  },
+
+  // Find nearest river within `maxPx` from a screen position. O(N) brute-force,
+  // OK for the 1k-3k visible rivers in viewport.
+  findNearest(x, y, maxPx = 8) {
+    let best = null;
+    let bestDist = maxPx;
+    for (const r of this.visibleRivers) {
+      const pts = r.pts;
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i-1], b = pts[i];
+        // Distance from point (x,y) to segment a-b
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const len2 = dx*dx + dy*dy;
+        if (len2 < 1) continue;
+        let t = ((x - a.x) * dx + (y - a.y) * dy) / len2;
+        t = Math.max(0, Math.min(1, t));
+        const px = a.x + t * dx, py = a.y + t * dy;
+        const d = Math.hypot(x - px, y - py);
+        if (d < bestDist) { bestDist = d; best = r; }
+      }
+    }
+    return best;
+  },
+
+  animate() {
+    if (!this.active) return;
+    const ctx = this.ctx;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // Slow particles down at low/mid zoom so wide views feel calm.
+    const z = map.getZoom();
+    const speedMult =
+      z >= 9 ? 1.0 :
+      z >= 8 ? 0.7 :
+      z >= 7 ? 0.5 :
+      z >= 6 ? 0.3 :
+                0.15;  // z ≤ 5 — country / continental view
+
+    for (const p of this.particles) {
+      p.progress += p.speed * speedMult;
+      if (p.progress >= p.total) p.progress = 0;
+
+      // For each particle, draw a trail of N dots BEHIND the head
+      for (let t = 0; t < this.trailLength; t++) {
+        const dist = p.progress - t * p.speed * speedMult * 0.9;
+        if (dist < 0) continue;
+        // Find segment containing this distance
+        let remaining = dist;
+        for (let i = 0; i < p.segs.length; i++) {
+          if (remaining <= p.segs[i]) {
+            const ratio = p.segs[i] > 0 ? remaining / p.segs[i] : 0;
+            const a = p.pts[i];
+            const b = p.pts[i+1];
+            const x = a.x + (b.x - a.x) * ratio;
+            const y = a.y + (b.y - a.y) * ratio;
+            // Color shift by discharge: low=dark blue, high=cyan
+            const intensity = Math.min(1, Math.log10(Math.max(1, p.q)) / 3.5);
+            const r0 = 13 + Math.round(intensity * 90);
+            const g0 = 71 + Math.round(intensity * 130);
+            const b0 = 161 + Math.round(intensity * 70);
+            const alpha = (1 - t / this.trailLength) * 0.85;
+            ctx.fillStyle = `rgba(${r0},${g0},${b0},${alpha})`;
+            // Scale particle size by Strahler order — bigger rivers, bigger dots
+            const s = p.s || 4;
+            const headR = Math.max(1.4, Math.min(3.2, 0.5 + s * 0.3));
+            const tailR = headR * 0.65;
+            const radius = (t === 0 ? headR : tailR) * (1 - t * 0.1);
+            ctx.beginPath();
+            ctx.arc(x, y, Math.max(0.6, radius), 0, Math.PI * 2);
+            ctx.fill();
+            break;
+          }
+          remaining -= p.segs[i];
+        }
+      }
+    }
+    this.animId = requestAnimationFrame(() => this.animate());
+  }
+};
+
+// ── Water-origin trace mode ───────────────────────────────────────────────
+let traceModeActive = false;
+let traceLayer = null;
+
+function enterTraceMode() {
+  traceModeActive = true;
+  document.getElementById('traceMode-banner').classList.add('active');
+  map.getContainer().style.cursor = 'crosshair';
+}
+function exitTraceMode() {
+  traceModeActive = false;
+  document.getElementById('traceMode-banner').classList.remove('active');
+  map.getContainer().style.cursor = '';
+}
+function clearTraceLayer() {
+  if (traceLayer) { map.removeLayer(traceLayer); traceLayer = null; }
+}
+
+map.on('click', async (e) => {
+  const { lat, lng } = e.latlng;
+
+  // 1. Trace mode: explicit "trace water origin" mode → always trace
+  if (traceModeActive) {
+    exitTraceMode();
+    toast('Trazando origen del agua…');
+    try {
+      const res = await fetch(`${API}/api/water/origin?lat=${lat}&lng=${lng}`);
+      const data = await res.json();
+      renderTraceResult(lat, lng, data);
+    } catch (err) {
+      toast('No se pudo consultar el backend');
+    }
+    return;
+  }
+
+  // 2. Otherwise: if water layer is visible AND user clicked near a river,
+  // auto-trace from there. Lets the static water layer feel "interactive"
+  // without forcing trace mode.
+  if (waterVisible && WaterFlow.visibleRivers && WaterFlow.visibleRivers.length) {
+    const rect = map.getContainer().getBoundingClientRect();
+    const x = e.originalEvent.clientX - rect.left;
+    const y = e.originalEvent.clientY - rect.top;
+    const r = WaterFlow.findNearest(x, y, 6);  // tighter than hover (more deliberate)
+    if (r) {
+      toast(`Trazando ${r.name || `tramo S${r.s}`}…`);
+      try {
+        const res = await fetch(`${API}/api/water/origin?lat=${lat}&lng=${lng}`);
+        const data = await res.json();
+        renderTraceResult(lat, lng, data);
+      } catch (err) {
+        toast('No se pudo consultar el backend');
+      }
+      return;
+    }
+  }
+  // 3. Otherwise: fall through to normal map click (basin selection, etc.)
+});
+
+function renderTraceResult(lat, lng, d) {
+  clearTraceLayer();
+  if (!d.found) {
+    document.getElementById('traceModal').classList.add('active');
+    document.getElementById('traceBody').innerHTML = `
+      <div style="color:#7f1d1d;background:#fef2f2;padding:12px;border-radius:6px;font-size:0.85rem;">
+        ⚠ ${d.message || 'No se encontró un río cercano a este punto.'}
+      </div>`;
+    return;
+  }
+
+  // Special case: click landed inside a known lake
+  if (d.is_lake) {
+    renderLakeResult(lat, lng, d);
+    return;
+  }
+
+  // Draw chain on map
+  traceLayer = L.layerGroup().addTo(map);
+  const chain = d.main_chain || [];
+  // Highlight chain segments as a polyline through their centroids
+  const chainPts = chain.map(s => [s.lat, s.lng]);
+  if (chainPts.length > 1) {
+    L.polyline(chainPts, {
+      color: '#00838f', weight: 4, opacity: 0.85,
+      dashArray: '6 4', lineCap: 'round', bubblingMouseEvents: false,
+    }).addTo(traceLayer);
+  }
+  // Marker at click point
+  L.circleMarker([lat, lng], {
+    radius: 8, color: '#fff', weight: 2.5,
+    fillColor: '#00838f', fillOpacity: 1, bubblingMouseEvents: false,
+  }).bindTooltip('Tu punto', { permanent: false }).addTo(traceLayer);
+  // Markers at headwaters
+  (d.headwaters || []).forEach(h => {
+    L.circleMarker([h.lat, h.lng], {
+      radius: 5, color: '#006064', weight: 1.5,
+      fillColor: '#80deea', fillOpacity: 0.9, bubblingMouseEvents: false,
+    }).bindTooltip(`Cabecera S${h.s} · ${h.q} m³/s`).addTo(traceLayer);
+  });
+  // Highlight glaciers at source
+  (d.glaciers_at_source || []).forEach(g => {
+    if (g.lat && g.lng) {
+      L.circleMarker([g.lat, g.lng], {
+        radius: 9, color: '#00838f', weight: 3,
+        fillColor: '#fff', fillOpacity: 0.9,
+        dashArray: '2 2', bubblingMouseEvents: false,
+      }).bindTooltip(`🧊 ${g.name} · ${g.area_km2} km²`, { permanent: true, direction: 'top', className: 'glacier-trace-tooltip' }).addTo(traceLayer);
+    }
+  });
+
+  // Render modal
+  document.getElementById('traceModal').classList.add('active');
+  if (d.main_river_name) {
+    document.getElementById('traceModalTitle').textContent = `Origen del agua · ${d.main_river_name}`;
+  } else {
+    document.getElementById('traceModalTitle').textContent = 'Origen del agua';
+  }
+
+  const start = d.starting_segment;
+  const dischargeFlow = chain.length > 0
+    ? chain[0].q + ' → ' + chain[chain.length-1].q + ' m³/s'
+    : `${start.discharge_m3s} m³/s`;
+
+  const chainHtml = chain.map((s, i) => `
+    <div class="trace-step">
+      <div class="trace-num">${i + 1}</div>
+      <div class="trace-step-info">
+        <div>${s.name ? `<b>${s.name}</b>` : '<i style="color:#666">tramo sin nombre</i>'} · Strahler ${s.s}${s.e ? ' · endorreico' : ''}</div>
+        <div class="trace-meta">
+          ${s.q} m³/s · longitud ${s.lk} km · ${s.uk} km desde cabecera
+        </div>
+      </div>
+    </div>`).join('');
+
+  const glaciersHtml = (d.glaciers_at_source || []).length ? `
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #e0e0e0;">
+      <div style="font-size:0.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5a6472;margin-bottom:8px;">
+        🧊 Glaciares en cabecera (IANIGLA)
+      </div>
+      ${d.glaciers_at_source.map(g => `
+        <div class="trace-glacier">
+          <span style="font-size:1.1rem">🧊</span>
+          <div>
+            <div style="font-weight:600;">${g.name}</div>
+            <div class="trace-meta">${g.area_km2} km² · tipo ${g.tipo} · ${g.distance_to_headwater_km} km de cabecera</div>
+          </div>
+        </div>`).join('')}
+    </div>` : '<div style="margin-top:14px;color:#5a6472;font-size:0.78rem;font-style:italic;">No se detectaron glaciares dentro de 10 km de las cabeceras (origen probable: lluvia / nieve estacional).</div>';
+
+  document.getElementById('traceBody').innerHTML = `
+    <div style="background:#e0f7fa;border-radius:6px;padding:10px 12px;margin-bottom:14px;font-size:0.78rem;line-height:1.5;">
+      <div style="font-weight:700;color:#006064;margin-bottom:4px;">📍 ${lat.toFixed(4)}°S, ${Math.abs(lng).toFixed(4)}°W</div>
+      ${d.main_river_name ? `Río principal: <b>${d.main_river_name}</b><br>` : ''}
+      ${start.name && start.name !== d.main_river_name ? `Tramo de captura: <b>${start.name}</b><br>` : ''}
+      Río más cercano: <b>${d.distance_to_river_km} km</b><br>
+      Caudal de cadena: <b>${dischargeFlow}</b><br>
+      Cabeceras detectadas: <b>${d.headwaters_total}</b> · Tramos upstream: <b>${d.upstream_segments_total}</b>
+      ${d.basin_id ? `<br>Cuenca: <a href="#" onclick="document.getElementById('traceModal').classList.remove('active'); clearTraceLayer(); selectBasin('${d.basin_id}', true); return false;" style="color:#0d47a1;font-weight:600;">${d.basin_id}</a>` : ''}
+    </div>
+    <div style="font-size:0.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5a6472;margin-bottom:8px;">
+      💧 Cadena upstream (rama principal)
+    </div>
+    ${chainHtml || '<div style="color:#5a6472;font-size:0.78rem;">Sin cadena upstream — punto en cabecera.</div>'}
+    ${glaciersHtml}
+    <div style="margin-top:14px;font-size:0.7rem;color:#999;border-top:1px solid #e0e0e0;padding-top:10px;">
+      Trace basado en HydroRIVERS v10 (HydroSHEDS, Strahler ≥ 2). Glaciares: IANIGLA 2018.
+    </div>
+  `;
+}
+
+// ── Render result when click landed inside a known lake ──────────────────
+function renderLakeResult(lat, lng, d) {
+  document.getElementById('traceModal').classList.add('active');
+  const lake = d.lake;
+  document.getElementById('traceModalTitle').textContent = `💧 ${lake.name}`;
+
+  // Map highlights: lake icon at click + markers for each affluent
+  traceLayer = L.layerGroup().addTo(map);
+  L.circleMarker([lat, lng], {
+    radius: 9, color: '#fff', weight: 3,
+    fillColor: '#0277bd', fillOpacity: 1, bubblingMouseEvents: false,
+  }).bindTooltip(lake.name, { permanent: false }).addTo(traceLayer);
+
+  // Affluent markers
+  (lake.affluents || []).forEach((a, i) => {
+    if (!a.lat || !a.lng) return;
+    const isMain = i === 0;
+    L.circleMarker([a.lat, a.lng], {
+      radius: isMain ? 7 : 5,
+      color: '#01579b',
+      weight: isMain ? 2.5 : 1.5,
+      fillColor: '#4fc3f7',
+      fillOpacity: 0.9,
+      bubblingMouseEvents: false,
+    })
+    .bindTooltip(`${a.name || 'sin nombre'} · Q=${a.q} m³/s`, { permanent: false })
+    .addTo(traceLayer);
+    // Line from affluent centroid towards lake
+    L.polyline([[a.lat, a.lng], [lat, lng]], {
+      color: '#0277bd', weight: 2, opacity: 0.5,
+      dashArray: '4 4', bubblingMouseEvents: false,
+    }).addTo(traceLayer);
+  });
+
+  // Outflow marker
+  if (lake.outflow && lake.outflow.lat && lake.outflow.lng) {
+    L.circleMarker([lake.outflow.lat, lake.outflow.lng], {
+      radius: 8,
+      color: '#bf360c',
+      weight: 2.5,
+      fillColor: '#ffab91',
+      fillOpacity: 0.9,
+      bubblingMouseEvents: false,
+    }).bindTooltip(`Desagüe: ${lake.outflow.name || 'sin nombre'} · Q=${lake.outflow.q} m³/s`, { permanent: false }).addTo(traceLayer);
+    L.polyline([[lat, lng], [lake.outflow.lat, lake.outflow.lng]], {
+      color: '#bf360c', weight: 2.5, opacity: 0.7,
+      lineCap: 'round', bubblingMouseEvents: false,
+    }).addTo(traceLayer);
+  }
+
+  // Glacier highlights
+  (d.glaciers_at_source || []).forEach(g => {
+    if (g.lat && g.lng) {
+      L.circleMarker([g.lat, g.lng], {
+        radius: 9, color: '#00838f', weight: 3,
+        fillColor: '#fff', fillOpacity: 0.9,
+        dashArray: '2 2', bubblingMouseEvents: false,
+      }).bindTooltip(`🧊 ${g.name} · ${g.area_km2} km²`, { permanent: true, direction: 'top' }).addTo(traceLayer);
+    }
+  });
+
+  const affluentsHtml = (lake.affluents || []).map((a, i) => `
+    <div class="trace-step">
+      <div class="trace-num" style="background:${i === 0 ? '#01579b' : '#4fc3f7'};">${i+1}</div>
+      <div class="trace-step-info">
+        <div>${a.name ? `<b>${a.name}</b>` : '<i style="color:#666">tramo sin nombre</i>'} · Strahler ${a.s}</div>
+        <div class="trace-meta">Caudal medio: <b>${a.q}</b> m³/s</div>
+      </div>
+    </div>`).join('');
+
+  const glaciersHtml = (d.glaciers_at_source || []).length ? `
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #e0e0e0;">
+      <div style="font-size:0.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5a6472;margin-bottom:8px;">
+        🧊 Glaciares en cabecera del afluente principal
+      </div>
+      ${d.glaciers_at_source.map(g => `
+        <div class="trace-glacier">
+          <span style="font-size:1.1rem">🧊</span>
+          <div>
+            <div style="font-weight:600;">${g.name}</div>
+            <div class="trace-meta">${g.area_km2} km² · tipo ${g.tipo} · ${g.distance_to_headwater_km} km de cabecera</div>
+          </div>
+        </div>`).join('')}
+    </div>` : '<div style="margin-top:14px;color:#5a6472;font-size:0.78rem;font-style:italic;">No se detectaron glaciares dentro de 10 km de las cabeceras.</div>';
+
+  const outflowHtml = lake.outflow ? `
+    <div style="margin-top:14px;padding:10px 12px;background:#fef2f2;border-left:3px solid #bf360c;border-radius:0 6px 6px 0;font-size:0.8rem;line-height:1.5;">
+      <div style="font-weight:700;color:#bf360c;margin-bottom:3px;">↘ Desagüe del lago</div>
+      ${lake.outflow.name ? `<b>${lake.outflow.name}</b> · ` : '<i>tramo sin nombre · </i>'}Q=${lake.outflow.q} m³/s · Strahler ${lake.outflow.s}
+      ${lake.outflow_inferred ? '<div style="font-size:0.7rem;color:#777;margin-top:3px;">(inferido por ser el afluente con mayor caudal)</div>' : ''}
+    </div>` : '';
+
+  document.getElementById('traceBody').innerHTML = `
+    <div style="background:#e0f7fa;border-radius:6px;padding:10px 12px;margin-bottom:14px;font-size:0.78rem;line-height:1.5;">
+      <div style="font-weight:700;color:#006064;margin-bottom:4px;">📍 ${lat.toFixed(4)}°S, ${Math.abs(lng).toFixed(4)}°W</div>
+      💧 Punto dentro de <b>${lake.name}</b><br>
+      Afluentes detectados: <b>${lake.affluents_total}</b>
+      ${d.basin_id ? `<br>Cuenca: <a href="#" onclick="document.getElementById('traceModal').classList.remove('active'); clearTraceLayer(); selectBasin('${d.basin_id}', true); return false;" style="color:#0d47a1;font-weight:600;">${d.basin_id}</a>` : ''}
+    </div>
+    ${outflowHtml}
+    <div style="margin-top:14px;font-size:0.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5a6472;margin-bottom:8px;">
+      💧 Afluentes (ordenados por caudal)
+    </div>
+    ${affluentsHtml || '<div style="color:#5a6472;font-size:0.78rem;">No se detectaron afluentes en HydroRIVERS Strahler ≥ 4.</div>'}
+    ${glaciersHtml}
+    <div style="margin-top:14px;font-size:0.7rem;color:#999;border-top:1px solid #e0e0e0;padding-top:10px;">
+      Lakes: Natural Earth 1:10m. Trace upstream desde el afluente con mayor caudal · HydroRIVERS v10.
+    </div>
+  `;
+}
+
+// ── Islas Malvinas: etiqueta soberana en español ─────────────────────────
+// El basemap (CARTO/OSM) las nombra "Falkland Islands"; superponemos la
+// denominación oficial argentina conforme a la Constitución Nacional (2da
+// disposición transitoria) y la Ley 26.552.
+(function addMalvinasLabel() {
+  const malvinasIcon = L.divIcon({
+    className: 'malvinas-label',
+    html: `
+      <div style="
+        display:inline-block;
+        background:rgba(117,170,214,.94);
+        color:#0d2d5a;
+        border:1.5px solid #0d47a1;
+        border-radius:6px;
+        padding:5px 14px;
+        font-size:0.74rem;
+        font-weight:700;
+        letter-spacing:0.02em;
+        white-space:nowrap;
+        box-shadow:0 2px 6px rgba(0,0,0,.25);
+        font-family:'Segoe UI',system-ui,sans-serif;
+        text-align:center;
+        line-height:1.25;
+        transform:translate(-50%,-50%);
+      ">
+        <div style="font-size:0.64rem;font-weight:700;color:#2c3e6e;letter-spacing:0.08em;">PROVINCIA ARGENTINA</div>
+        <div style="font-size:0.78rem;">Islas Malvinas</div>
+      </div>`,
+    iconSize: [0, 0],   // let CSS size it; transform centers it on coord
+    iconAnchor: [0, 0],
+  });
+  L.marker([-51.55, -59.20], { icon: malvinasIcon, interactive: true })
+    .bindPopup(
+      `<div class="popup-title" style="color:#0d47a1">🇦🇷 Islas Malvinas</div>
+       <div class="popup-body">
+         Territorio argentino bajo ocupación británica desde 1833.<br>
+         Forma parte de la <b>Provincia de Tierra del Fuego, Antártida e Islas del Atlántico Sur</b>.<br>
+         <em>Constitución Nacional, 2da disp. transitoria · Ley 26.552 (2009)</em>
+       </div>`
+    )
+    .addTo(map);
+})();
+
+// ── geolocation ───────────────────────────────────────────────────────────
+document.getElementById('locateBtn').addEventListener('click', () => {
+  if (!navigator.geolocation) { toast('Tu navegador no soporta geolocalización'); return; }
+  toast('Detectando ubicación…');
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const { latitude: lat, longitude: lng } = pos.coords;
+
+    // drop a marker
+    L.circleMarker([lat, lng], {
+      radius: 7, color: '#1a6fa8', fillColor: '#1a6fa8', fillOpacity: 0.9, weight: 2
+    }).addTo(map).bindPopup('Tu ubicación').openPopup();
+    map.setView([lat, lng], 7);
+
+    // call locate endpoint
+    try {
+      const res = await fetch(`${API}/api/locate?lat=${lat}&lng=${lng}`);
+      const data = await res.json();
+      if (data.found) {
+        toast(`Tu cuenca: ${data.basin_name}`);
+        selectBasin(data.basin_id, true);
+      } else {
+        toast('Ubicación fuera del área cubierta');
+      }
+    } catch {
+      toast('No se pudo consultar el backend');
+    }
+  }, () => toast('No se pudo obtener tu ubicación'));
+});
+
+// ── init ──────────────────────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>
