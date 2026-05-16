@@ -674,7 +674,9 @@
 </div>
 
 <script>
-const API = 'http://localhost:8000';
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:8000'
+  : 'https://app-agua-production.up.railway.app';
 
 // ── status helpers ────────────────────────────────────────────────────────
 const STATUS_COLOR = { red: '#c0392b', yellow: '#d4a017', green: '#2d9b5a', na: '#aaa' };
@@ -1261,6 +1263,7 @@ function renderDetail(b) {
         <div id="flow-chart-container" class="flow-chart-wrap">
           <div class="flow-chart-loading">Cargando serie histórica…</div>
         </div>
+        <div id="precip-chart-container" class="flow-chart-wrap" style="display:none;margin-top:8px"></div>
       </div>
     </details>
 
@@ -2971,7 +2974,8 @@ document.getElementById('locateBtn').addEventListener('click', () => {
       const data = await res.json();
       if (data.found) {
         toast(`Tu cuenca: ${data.basin_name}`);
-        selectBasin(data.basin_id, true);
+        await selectBasin(data.basin_id, true);
+        loadPrecipChart(lat, lng, 'precip-chart-container');
       } else {
         toast('Ubicación fuera del área cubierta');
       }
@@ -3067,6 +3071,34 @@ function buildFlowChartSVG(metric) {
     ${yTicks}
     ${xAxisTicks}
   </svg>`;
+}
+
+async function loadPrecipChart(lat, lng, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.style.display = 'block';
+  el.innerHTML = '<div class="flow-chart-loading">Cargando precipitaciones históricas…</div>';
+  try {
+    const res = await fetch(`${API}/api/climate/precip?lat=${lat}&lng=${lng}`);
+    if (!res.ok) { el.style.display = 'none'; return; }
+    const d = await res.json();
+    const metric = d.metrics[0];
+    const lastVal = metric.data.at(-1)?.value;
+    const diff    = lastVal != null ? (lastVal - metric.historical_mean).toFixed(0) : null;
+    const diffStr = diff != null
+      ? `<span style="color:${diff >= 0 ? '#2e7d32' : '#c0392b'};font-weight:700">${diff >= 0 ? '+' : ''}${diff} mm vs media</span>`
+      : '';
+    el.innerHTML = `
+      <div class="flow-chart-title">🌧 Precipitación en tu ubicación ${diffStr}</div>
+      ${buildFlowChartSVG(metric)}
+      <div class="flow-chart-note">
+        Media 1990-2025: <b>${metric.historical_mean} mm/año</b> ·
+        ${d.lat.toFixed(2)}°S, ${Math.abs(d.lng).toFixed(2)}°O ·
+        Fuente: ${metric.source}
+      </div>`;
+  } catch(e) {
+    el.style.display = 'none';
+  }
 }
 
 async function loadFlowChart(basinId, containerId) {
