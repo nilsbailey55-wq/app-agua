@@ -14,9 +14,8 @@ import ssl
 import urllib.request
 import urllib.parse
 
-# SSL: usar certificados del sistema macOS (/etc/ssl/cert.pem)
+# SSL: create_default_context() carga los certificados del sistema automáticamente en todas las plataformas
 _SSL_CTX = ssl.create_default_context()
-_SSL_CTX.load_verify_locations("/etc/ssl/cert.pem")
 
 # ── load data ──────────────────────────────────────────────────────────────
 DATA_DIR  = os.path.join(os.path.dirname(__file__), "data")
@@ -375,14 +374,16 @@ def get_ramsar():
 # ── precipitation cache (in-memory, keyed by 0.5° grid cell) ──────────────
 _PRECIP_CACHE: dict = {}
 
-def _grid_key(lat: float, lng: float, res: float = 0.5) -> tuple:
-    """Redondea a la celda de grilla más cercana para caching."""
-    return (round(lat / res) * res, round(lng / res) * res)
+_GRID_RES = 1.0   # debe coincidir con GRID_RES en build_precip_grid.py
 
-def _grid_str_key(lat: float, lng: float, res: float = 0.5) -> str:
+def _grid_key(lat: float, lng: float) -> tuple:
+    """Redondea a la celda de grilla más cercana para caching."""
+    return (round(lat / _GRID_RES) * _GRID_RES, round(lng / _GRID_RES) * _GRID_RES)
+
+def _grid_str_key(lat: float, lng: float) -> str:
     """Clave string para el grid pre-computado (formato del JSON)."""
-    glat = round(round(lat / res) * res, 1)
-    glng = round(round(lng / res) * res, 1)
+    glat = round(round(lat / _GRID_RES) * _GRID_RES, 1)
+    glng = round(round(lng / _GRID_RES) * _GRID_RES, 1)
     return f"{glat:.1f}_{glng:.1f}"
 
 def _build_response_from_grid(cell: dict) -> dict:
