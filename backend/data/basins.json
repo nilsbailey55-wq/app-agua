@@ -1,12 +1,12 @@
 [
   {
     "id": "salado_bonaerense",
-    "name": "Salado Bonaerense — Río de la Plata",
+    "name": "Río Salado Bonaerense",
     "region": "Región Pampeana — Buenos Aires",
     "area_km2": 175000,
     "length_km": 700,
     "origin": "Lagunas encadenadas del noroeste bonaerense (Junín, Bragado)",
-    "mouth": "Bahía de Samborombón / Río de la Plata",
+    "mouth": "Bahía de Samborombón",
     "glaciers": [],
     "status": {
       "overall": "yellow",
@@ -85,6 +85,99 @@
           [
             -60.5,
             -33.0
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "id": "rio_de_la_plata",
+    "name": "Río de la Plata",
+    "region": "Región Metropolitana — Buenos Aires / Entre Ríos / Uruguay",
+    "area_km2": 35000,
+    "length_km": 290,
+    "origin": "Confluencia de los ríos Paraná y Uruguay (Punta Gorda)",
+    "mouth": "Océano Atlántico (entre Punta del Este, Uruguay y Punta Rasa, Argentina)",
+    "glaciers": [],
+    "status": {
+      "overall": "red",
+      "caudal": {
+        "level": "green",
+        "label": "Caudal abundante",
+        "detail": "Recibe el aporte combinado del Paraná (~17.000 m³/s) y el Uruguay (~6.000 m³/s); uno de los estuarios de mayor caudal del mundo"
+      },
+      "calidad": {
+        "level": "red",
+        "label": "Contaminación crítica",
+        "detail": "Carga de nutrientes, metales pesados y patógenos del AMBA (12 millones de hab.). La cuenca Matanza-Riachuelo es una de las más contaminadas de América del Sur (Fallo Mendoza, CSJN 2008)"
+      },
+      "glaciares": {
+        "level": "na",
+        "label": "Sin glaciares",
+        "detail": "Estuario de llanura; el aporte glaciario llega indirectamente vía el Paraná (cuenca del Plata)"
+      },
+      "legal": {
+        "level": "yellow",
+        "label": "Gestión binacional",
+        "detail": "Administrado por la CARP (Comisión Administradora del Río de la Plata, AR-UY, 1973). Saneamiento Riachuelo a cargo de ACUMAR bajo mandato judicial; avances lentos"
+      }
+    },
+    "facts": [
+      "AySA extrae agua del Río de la Plata para abastecer a ~9 millones de personas en el Área Metropolitana de Buenos Aires",
+      "Es el estuario más ancho del mundo: hasta 220 km entre las costas argentina y uruguaya",
+      "La cuenca del Plata (Paraná + Uruguay + Paraguay) drena 3,1 millones de km² — la segunda más grande de Sudamérica",
+      "Floraciones de cianobacterias (algas verde-azules) se intensificaron en la última década por exceso de nutrientes agrícolas",
+      "El Riachuelo fue declarado en emergencia sanitaria en 1993 y sigue siendo uno de los ríos más contaminados del mundo"
+    ],
+    "sources": [
+      "CARP — Comisión Administradora del Río de la Plata",
+      "ACUMAR — Autoridad de Cuenca Matanza-Riachuelo",
+      "AySA — Agua y Saneamiento Argentino",
+      "INA — Instituto Nacional del Agua"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -58.5,
+            -34.0
+          ],
+          [
+            -57.0,
+            -33.7
+          ],
+          [
+            -55.5,
+            -33.8
+          ],
+          [
+            -53.5,
+            -34.0
+          ],
+          [
+            -51.8,
+            -34.8
+          ],
+          [
+            -52.5,
+            -36.0
+          ],
+          [
+            -55.0,
+            -36.8
+          ],
+          [
+            -57.5,
+            -36.5
+          ],
+          [
+            -58.5,
+            -35.8
+          ],
+          [
+            -58.5,
+            -34.0
           ]
         ]
       ]
