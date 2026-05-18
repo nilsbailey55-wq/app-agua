@@ -63,9 +63,19 @@
 
     /* summary bar */
     .summary-bar {
-      display: flex; gap: 0;
+      display: flex; flex-direction: column; gap: 0;
       border-bottom: 1px solid var(--border); flex-shrink: 0;
     }
+    .sum-row {
+      display: flex; gap: 0;
+    }
+    .sum-glacier-row {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 5px 10px; border-top: 1px solid var(--border);
+      font-size: 0.68rem; color: var(--text-muted);
+      background: #f7fbff;
+    }
+    .sum-glacier-row b { color: #1565c0; font-weight: 700; }
     .sum-cell {
       flex: 1; text-align: center; padding: 10px 6px;
       border-right: 1px solid var(--border);
@@ -879,26 +889,29 @@ async function loadAll() {
 // ── render summary bar ────────────────────────────────────────────────────
 function renderSummary(s) {
   if (!s) { document.getElementById('summaryBar').innerHTML = ''; return; }
+  const glacierCount = s.iangla_glaciers_total ? s.iangla_glaciers_total.toLocaleString('es-AR') : s.glaciers_indexed;
+  const iceArea = s.iangla_ice_area_km2 ? s.iangla_ice_area_km2.toLocaleString('es-AR') : null;
   document.getElementById('summaryBar').innerHTML = `
-    <div class="sum-cell">
-      <div class="sum-val c-blue">${s.basins_total}</div>
-      <div class="sum-lbl">Cuencas</div>
+    <div class="sum-row">
+      <div class="sum-cell">
+        <div class="sum-val c-blue">${s.basins_total}</div>
+        <div class="sum-lbl">Cuencas</div>
+      </div>
+      <div class="sum-cell">
+        <div class="sum-val c-red">${s.status_breakdown.red}</div>
+        <div class="sum-lbl">Críticas</div>
+      </div>
+      <div class="sum-cell">
+        <div class="sum-val c-yellow">${s.status_breakdown.yellow}</div>
+        <div class="sum-lbl">En alerta</div>
+      </div>
+      <div class="sum-cell">
+        <div class="sum-val c-green">${s.status_breakdown.green}</div>
+        <div class="sum-lbl">Estables</div>
+      </div>
     </div>
-    <div class="sum-cell">
-      <div class="sum-val c-red">${s.status_breakdown.red}</div>
-      <div class="sum-lbl">Críticas</div>
-    </div>
-    <div class="sum-cell">
-      <div class="sum-val c-yellow">${s.status_breakdown.yellow}</div>
-      <div class="sum-lbl">En alerta</div>
-    </div>
-    <div class="sum-cell">
-      <div class="sum-val c-green">${s.status_breakdown.green}</div>
-      <div class="sum-lbl">Estables</div>
-    </div>
-    <div class="sum-cell">
-      <div class="sum-val c-blue">${s.iangla_glaciers_total ? s.iangla_glaciers_total.toLocaleString('es-AR') : s.glaciers_indexed}</div>
-      <div class="sum-lbl">Glaciares<br><span style="font-size:0.6rem;font-weight:400;color:#666">${s.iangla_ice_area_km2 ? s.iangla_ice_area_km2.toLocaleString('es-AR') + ' km² hielo' : ''}</span></div>
+    <div class="sum-glacier-row">
+      🧊 <b>${glacierCount}</b> glaciares inventariados (IANIGLA)${iceArea ? ` · <b>${iceArea} km²</b> de hielo` : ''}
     </div>
   `;
 }
