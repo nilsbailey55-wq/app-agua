@@ -14,8 +14,21 @@ import ssl
 import urllib.request
 import urllib.parse
 
-# SSL: create_default_context() carga los certificados del sistema automáticamente en todas las plataformas
+# SSL: intentar cargar bundle de certificados del sistema o del framework de Python
 _SSL_CTX = ssl.create_default_context()
+for _cert_path in [
+    "/etc/ssl/certs/ca-certificates.crt",      # Debian/Ubuntu/Railway
+    "/etc/ssl/cert.pem",                        # Alpine/macOS (brew)
+    "/Library/Frameworks/Python.framework/Versions/3.13/etc/openssl/cert.pem",  # macOS Python.org
+    "/Library/Frameworks/Python.framework/Versions/3.12/etc/openssl/cert.pem",
+    "/Library/Frameworks/Python.framework/Versions/3.11/etc/openssl/cert.pem",
+]:
+    if os.path.exists(_cert_path):
+        try:
+            _SSL_CTX.load_verify_locations(_cert_path)
+        except Exception:
+            pass
+        break
 
 # ── load data ──────────────────────────────────────────────────────────────
 DATA_DIR  = os.path.join(os.path.dirname(__file__), "data")
@@ -865,4 +878,262 @@ def summary():
         "ramsar_sites_total": len(RAMSAR.get("features", [])),
         "ramsar_total_ha": sum(f["properties"].get("area_ha", 0) for f in RAMSAR.get("features", [])),
         "coverage": "Cuencas HydroBASINS L5 · Ríos HydroRIVERS · Hidrografía NE · Humedales OSM · Glaciares IANIGLA · Represas CAMMESA · Áreas APN · Ciudades INDEC · Acuíferos SEGEMAR/INA/SAG · Territorios indígenas (curado, INAI/Amnistía)",
+    }
+
+
+# ── TOOLS ─────────────────────────────────────────────────────────────────────
+
+def _fetch_elevations(points: list[tuple[float, float]]) -> list[float | None]:
+    """Fetch elevation (m) for a list of (lat, lng) via OpenTopoData SRTM30m.
+    Returns list of floats (None if missing). Free, no key, max 100 pts/request."""
+    loc_str = "|".join(f"{lat},{lng}" for lat, lng in points)
+    params = urllib.parse.urlencode({"locations": loc_str})
+    url = f"https://api.opentopodata.org/v1/srtm30m?{params}"
+    req = urllib.request.Request(url, headers={"User-Agent": "AppAgua/1.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=10, context=_SSL_CTX) as r:
+            data = json.loads(r.read())
+        results = data.get("results", [])
+        return [r.get("elevation") for r in results]
+    except Exception as e:
+        print(f"[elevation] error: {e}")
+        return [None] * len(points)
+
+
+@app.get("/api/tools/flood")
+def flood_susceptibility(
+    lat: float = Query(..., description="Latitud decimal (negativa = Sur)"),
+    lng: float = Query(..., description="Longitud decimal (negativa = Oeste)"),
+):
+    """
+    Herramienta de susceptibilidad a inundación para un punto dado.
+    Combina:
+      - Proximidad al río más cercano (STRtree sobre HydroRIVERS Strahler≥4)
+      - Orden de Strahler / caudal estimado del río
+      - Posición topográfica relativa (SRTM30m vía OpenTopoData)
+      - Pendiente local (~1 km radio)
+    Devuelve nivel de riesgo, puntaje 0-100 y factores explicativos.
+    """
+    import math
+
+    pt = Point(lng, lat)
+
+    # ── 1) River proximity ──────────────────────────────────────────────────
+    # Search nearest river segment within 0.5° (~55 km)
+    SEARCH_DEG = 0.5
+    search_buf = pt.buffer(SEARCH_DEG)
+    candidates = _RIVER_TREE.query(search_buf)
+
+    river_dist_km = None
+    nearest_strahler = 0
+    nearest_discharge = 0.0
+    nearest_river_name = None
+
+    if len(candidates):
+        best_dist = float("inf")
+        best_idx = None
+        for idx in candidates:
+            seg_geom = _geom_lines[idx]
+            d = pt.distance(seg_geom)
+            if d < best_dist:
+                best_dist = d
+                best_idx = idx
+
+        if best_idx is not None:
+            # degrees → km at Argentina's latitude (~38°S): 1° ≈ 111 km lat, 88 km lon
+            lat_rad = abs(lat) * math.pi / 180
+            km_per_deg = 111.0 * math.cos(lat_rad)
+            river_dist_km = round(best_dist * km_per_deg, 2)
+
+            seg_props = RIVERS_GEOM["features"][best_idx]["properties"]
+            nearest_strahler  = seg_props.get("s", 0)
+            nearest_discharge = seg_props.get("q", 0.0) or 0.0
+            nearest_river_name = seg_props.get("name")
+            if not nearest_river_name:
+                nearest_river_name = RIVERS_NAMES.get(_geom_ids[best_idx])
+
+    # ── 2) Elevation sampling ───────────────────────────────────────────────
+    # Center + 4 compass points at ~1 km offset
+    D_LAT = 0.009   # ~1 km northward
+    D_LNG = 0.011   # ~1 km eastward at 38°S
+    elev_pts = [
+        (lat,         lng),          # center
+        (lat + D_LAT, lng),          # N
+        (lat - D_LAT, lng),          # S
+        (lat,         lng + D_LNG),  # E
+        (lat,         lng - D_LNG),  # W
+    ]
+    elevations = _fetch_elevations(elev_pts)
+    elev_center   = elevations[0]
+    elev_surround = [e for e in elevations[1:] if e is not None]
+
+    # ── 3) Scoring ──────────────────────────────────────────────────────────
+    score = 0
+    factors = []
+
+    # 3a) River distance (0–45 pts)
+    if river_dist_km is not None:
+        if river_dist_km < 0.2:
+            pts_dist = 45
+        elif river_dist_km < 0.5:
+            pts_dist = 35
+        elif river_dist_km < 1.0:
+            pts_dist = 25
+        elif river_dist_km < 2.0:
+            pts_dist = 15
+        elif river_dist_km < 5.0:
+            pts_dist = 7
+        else:
+            pts_dist = 0
+        score += pts_dist
+
+        river_label = nearest_river_name or "río sin nombre"
+        dist_str = f"{river_dist_km:.1f} km" if river_dist_km >= 0.1 else f"{river_dist_km*1000:.0f} m"
+        factors.append({
+            "id":    "river_dist",
+            "label": "Distancia al río más cercano",
+            "value": dist_str,
+            "detail": f"{river_label} (Strahler {nearest_strahler})",
+            "pts":   pts_dist,
+            "max":   45,
+        })
+    else:
+        factors.append({
+            "id": "river_dist", "label": "Distancia al río más cercano",
+            "value": "> 55 km", "detail": "Sin ríos principales en radio de análisis",
+            "pts": 0, "max": 45,
+        })
+
+    # 3b) River magnitude — Strahler order (0–15 pts)
+    if nearest_strahler and river_dist_km is not None and river_dist_km < 10:
+        if nearest_strahler >= 9:
+            pts_mag = 15
+        elif nearest_strahler >= 7:
+            pts_mag = 12
+        elif nearest_strahler >= 5:
+            pts_mag = 8
+        elif nearest_strahler >= 3:
+            pts_mag = 4
+        else:
+            pts_mag = 1
+        score += pts_mag
+        factors.append({
+            "id":    "river_mag",
+            "label": "Magnitud del río",
+            "value": f"Orden {nearest_strahler}",
+            "detail": f"Caudal estimado ≈ {nearest_discharge:.0f} m³/s" if nearest_discharge else "caudal no disponible",
+            "pts":   pts_mag,
+            "max":   15,
+        })
+    else:
+        factors.append({
+            "id": "river_mag", "label": "Magnitud del río",
+            "value": "—", "detail": "Sin dato cercano",
+            "pts": 0, "max": 15,
+        })
+
+    # 3c) Topographic position (0–25 pts)
+    if elev_center is not None and len(elev_surround) >= 2:
+        mean_surround = sum(elev_surround) / len(elev_surround)
+        diff = mean_surround - elev_center   # positive = center is lower (depression)
+        if diff > 20:
+            pts_topo = 25
+        elif diff > 10:
+            pts_topo = 20
+        elif diff > 5:
+            pts_topo = 15
+        elif diff > 2:
+            pts_topo = 10
+        elif diff > 0:
+            pts_topo = 5
+        else:
+            pts_topo = 0  # higher or same as surroundings → low flood risk
+        score += pts_topo
+        sign = "+" if diff >= 0 else ""
+        factors.append({
+            "id":    "topo_pos",
+            "label": "Posición topográfica",
+            "value": f"{elev_center:.0f} m s.n.m.",
+            "detail": f"Entorno promedio: {mean_surround:.0f} m (diferencia: {sign}{diff:.1f} m)",
+            "pts":   pts_topo,
+            "max":   25,
+        })
+    else:
+        factors.append({
+            "id": "topo_pos", "label": "Posición topográfica",
+            "value": "No disponible", "detail": "No se pudo obtener altimetría SRTM",
+            "pts": 0, "max": 25,
+        })
+
+    # 3d) Local slope (0–15 pts)
+    if elev_center is not None and len(elev_surround) >= 2:
+        # Max elevation diff among surrounding pts / distance (~1 km)
+        diffs = [abs(e - elev_center) for e in elev_surround]
+        max_diff = max(diffs)
+        slope_pct = (max_diff / 1000) * 100   # rise/run × 100 (1 km run)
+        if slope_pct < 0.5:
+            pts_slope = 15
+        elif slope_pct < 1.0:
+            pts_slope = 12
+        elif slope_pct < 2.0:
+            pts_slope = 8
+        elif slope_pct < 5.0:
+            pts_slope = 4
+        else:
+            pts_slope = 0
+        score += pts_slope
+        slope_desc = (
+            "Muy llano" if slope_pct < 0.5 else
+            "Llano"     if slope_pct < 1.0 else
+            "Suave"     if slope_pct < 2.0 else
+            "Moderado"  if slope_pct < 5.0 else "Pronunciado"
+        )
+        factors.append({
+            "id":    "slope",
+            "label": "Pendiente local (~1 km)",
+            "value": f"{slope_pct:.1f}%",
+            "detail": slope_desc + " — " + (
+                "el agua puede acumularse" if slope_pct < 1.0 else
+                "drenaje moderado"         if slope_pct < 5.0 else "buen drenaje"
+            ),
+            "pts":   pts_slope,
+            "max":   15,
+        })
+    else:
+        factors.append({
+            "id": "slope", "label": "Pendiente local",
+            "value": "No disponible", "detail": "",
+            "pts": 0, "max": 15,
+        })
+
+    # ── 4) Risk level ───────────────────────────────────────────────────────
+    score = min(score, 100)
+    if score >= 76:
+        risk_level = "Muy Alto"
+        risk_color = "red"
+        risk_desc  = "Alta probabilidad de anegamiento ante lluvias intensas o crecida fluvial."
+    elif score >= 51:
+        risk_level = "Alto"
+        risk_color = "orange"
+        risk_desc  = "Zona con condiciones favorables para inundaciones. Evitar construcciones en áreas bajas."
+    elif score >= 26:
+        risk_level = "Moderado"
+        risk_color = "yellow"
+        risk_desc  = "Riesgo presente, especialmente en eventos de precipitación extrema."
+    else:
+        risk_level = "Bajo"
+        risk_color = "green"
+        risk_desc  = "Condiciones relativamente favorables. El riesgo cero no existe."
+
+    return {
+        "query":       {"lat": lat, "lng": lng},
+        "risk_level":  risk_level,
+        "risk_color":  risk_color,
+        "risk_desc":   risk_desc,
+        "score":       score,
+        "score_max":   100,
+        "factors":     factors,
+        "elevation_m": round(elev_center, 1) if elev_center is not None else None,
+        "note":        "Análisis indicativo basado en SRTM30m + HydroRIVERS. No reemplaza estudios hidráulicos profesionales.",
+        "sources":     ["HydroRIVERS (HydroSHEDS)", "SRTM30m vía OpenTopoData"],
     }
