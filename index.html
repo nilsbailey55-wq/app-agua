@@ -897,8 +897,8 @@ function renderSummary(s) {
       <div class="sum-lbl">Estables</div>
     </div>
     <div class="sum-cell">
-      <div class="sum-val c-blue">${s.glaciers_indexed}</div>
-      <div class="sum-lbl">Glaciares</div>
+      <div class="sum-val c-blue">${s.iangla_glaciers_total ? s.iangla_glaciers_total.toLocaleString('es-AR') : s.glaciers_indexed}</div>
+      <div class="sum-lbl">Glaciares<br><span style="font-size:0.6rem;font-weight:400;color:#666">${s.iangla_ice_area_km2 ? s.iangla_ice_area_km2.toLocaleString('es-AR') + ' km² hielo' : ''}</span></div>
     </div>
   `;
 }
