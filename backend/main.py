@@ -228,6 +228,21 @@ for _b in BASINS:
     except Exception:
         pass
 
+# Spatial lookup for aquifer polygons (only 8, no STRtree needed)
+_AQUIFER_SHAPES: list[tuple[object, dict]] = []
+for _f in AQUIFERS["features"]:
+    try:
+        _AQUIFER_SHAPES.append((shape(_f["geometry"]).buffer(0), _f["properties"]))
+    except Exception:
+        pass
+
+# Flat city list for proximity checks in tool endpoints
+_CITY_COORDS: list[tuple[float, float, int, str]] = []  # (lat, lng, pop, name)
+for _f in CITIES["features"]:
+    _coords = _f["geometry"]["coordinates"]
+    _props  = _f["properties"]
+    _CITY_COORDS.append((_coords[1], _coords[0], _props.get("population", 0), _props.get("name", "")))
+
 # ── app ────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="Agua Argentina API",
@@ -1136,4 +1151,361 @@ def flood_susceptibility(
         "elevation_m": round(elev_center, 1) if elev_center is not None else None,
         "note":        "Análisis indicativo basado en SRTM30m + HydroRIVERS. No reemplaza estudios hidráulicos profesionales.",
         "sources":     ["HydroRIVERS (HydroSHEDS)", "SRTM30m vía OpenTopoData"],
+    }
+
+
+def _fetch_soil_clay(lat: float, lng: float) -> float | None:
+    """Fetch topsoil clay content (%) from SoilGrids v2.
+    Returns None if API fails or data not available for the coordinate."""
+    params = urllib.parse.urlencode({
+        "lon":      lng,
+        "lat":      lat,
+        "property": "clay",
+        "depth":    "0-5cm",
+        "value":    "mean",
+    })
+    url = f"https://rest.isric.org/soilgrids/v2.0/properties/query?{params}"
+    req = urllib.request.Request(url, headers={"User-Agent": "AppAgua/1.0", "Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=8, context=_SSL_CTX) as r:
+            data = json.loads(r.read())
+        layers = data.get("properties", {}).get("layers", [])
+        for layer in layers:
+            if layer.get("name") == "clay":
+                for depth in layer.get("depths", []):
+                    mean_raw = depth.get("values", {}).get("mean")
+                    if mean_raw is not None:
+                        # SoilGrids clay in g/kg × 10 → divide by 10 for %
+                        d_factor = layer.get("unit_measure", {}).get("d_factor", 10)
+                        return round(mean_raw / d_factor, 1)
+    except Exception as e:
+        print(f"[soilgrids] error: {e}")
+    return None
+
+
+def _nearest_city_km(lat: float, lng: float) -> tuple[float, int, str]:
+    """Return (distance_km, population, name) of nearest city in _CITY_COORDS."""
+    import math
+    best_dist = float("inf")
+    best_pop  = 0
+    best_name = ""
+    lat_rad = abs(lat) * math.pi / 180
+    km_per_deg_lng = 111.0 * math.cos(lat_rad)
+    for c_lat, c_lng, pop, name in _CITY_COORDS:
+        dlat = (c_lat - lat) * 111.0
+        dlng = (c_lng - lng) * km_per_deg_lng
+        d = (dlat**2 + dlng**2) ** 0.5
+        if d < best_dist:
+            best_dist = d
+            best_pop  = pop
+            best_name = name
+    return round(best_dist, 1), best_pop, best_name
+
+
+@app.get("/api/tools/runoff")
+def runoff_index(
+    lat: float = Query(..., description="Latitud decimal"),
+    lng: float = Query(..., description="Longitud decimal"),
+):
+    """
+    Índice de escorrentía pluvial (SCS-CN) para un punto dado.
+    Combina:
+      - Contenido de arcilla del suelo (SoilGrids v2, ISRIC)
+      - Uso del suelo estimado por proximidad a ciudades
+      - Pendiente local (SRTM30m vía OpenTopoData)
+    Calcula la escorrentía potencial para 3 escenarios de lluvia.
+    """
+    import math
+
+    # ── 1) Elevation / slope (same 5-point SRTM call as flood tool) ──────────
+    D_LAT, D_LNG = 0.009, 0.011
+    elev_pts = [
+        (lat,         lng),
+        (lat + D_LAT, lng),
+        (lat - D_LAT, lng),
+        (lat,         lng + D_LNG),
+        (lat,         lng - D_LNG),
+    ]
+    elevations    = _fetch_elevations(elev_pts)
+    elev_center   = elevations[0]
+    elev_surround = [e for e in elevations[1:] if e is not None]
+
+    slope_pct = None
+    if elev_center is not None and len(elev_surround) >= 2:
+        max_diff  = max(abs(e - elev_center) for e in elev_surround)
+        slope_pct = round((max_diff / 1000) * 100, 2)
+
+    # ── 2) Soil clay content → Hydrologic Soil Group ────────────────────────
+    clay_pct  = _fetch_soil_clay(lat, lng)
+    hsg_label = None
+    hsg_desc  = None
+    hsg_code  = None   # A, B, C, D
+
+    if clay_pct is not None:
+        if clay_pct < 18:
+            hsg_code, hsg_label, hsg_desc = "A", "Grupo A (arenoso)", "Alta infiltración. Arena o grava."
+        elif clay_pct < 35:
+            hsg_code, hsg_label, hsg_desc = "B", "Grupo B (franco)", "Infiltración moderada. Suelos francos."
+        elif clay_pct < 45:
+            hsg_code, hsg_label, hsg_desc = "C", "Grupo C (franco-arcilloso)", "Infiltración lenta. Tendencia a impermeabilizarse."
+        else:
+            hsg_code, hsg_label, hsg_desc = "D", "Grupo D (arcilloso)", "Muy baja infiltración. Alta escorrentía."
+    else:
+        # Fallback: estimate from slope (steep Andes→A, flat Pampa→C/D)
+        if slope_pct is not None:
+            if slope_pct > 10:
+                hsg_code, hsg_label, hsg_desc = "A", "Grupo A (estimado)", "Terreno escarpado — infiltración rápida estimada."
+            elif slope_pct > 3:
+                hsg_code, hsg_label, hsg_desc = "B", "Grupo B (estimado)", "Pendiente moderada — infiltración media estimada."
+            else:
+                hsg_code, hsg_label, hsg_desc = "C", "Grupo C (estimado)", "Terreno llano — infiltración lenta estimada."
+        else:
+            hsg_code, hsg_label, hsg_desc = "B", "Grupo B (estimado)", "Dato de suelo no disponible — valor intermedio asumido."
+
+    # ── 3) Land cover from city proximity ───────────────────────────────────
+    city_dist_km, city_pop, city_name = _nearest_city_km(lat, lng)
+    if city_dist_km < 3 and city_pop > 50_000:
+        lc_code  = "urban"
+        lc_label = "Urbano / Impermeabilizado"
+        lc_desc  = f"Zona urbana (a {city_dist_km:.1f} km de {city_name})"
+    elif city_dist_km < 10 and city_pop > 20_000:
+        lc_code  = "suburban"
+        lc_label = "Periurbano / Residencial"
+        lc_desc  = f"Área periurbana (a {city_dist_km:.1f} km de {city_name})"
+    elif city_dist_km < 5 and city_pop > 5_000:
+        lc_code  = "suburban"
+        lc_label = "Periurbano / Residencial"
+        lc_desc  = f"Entorno de localidad (a {city_dist_km:.1f} km de {city_name})"
+    else:
+        lc_code  = "rural"
+        lc_label = "Rural / Natural"
+        lc_desc  = "Zona sin urbanización significativa en el radio de análisis"
+
+    # ── 4) SCS Curve Number ──────────────────────────────────────────────────
+    # CN table: {"land_use": [A, B, C, D]}
+    CN_TABLE = {
+        "urban":    [77, 85, 90, 92],
+        "suburban": [61, 75, 83, 87],
+        "rural":    [39, 61, 74, 80],
+    }
+    hsg_idx = {"A": 0, "B": 1, "C": 2, "D": 3}.get(hsg_code, 1)
+    cn = CN_TABLE[lc_code][hsg_idx]
+
+    # Adjust CN for slope (AMC II → slope correction, simplified)
+    if slope_pct is not None and slope_pct > 5:
+        cn = min(cn + 3, 98)
+
+    # ── 5) SCS-CN runoff for 3 scenarios ────────────────────────────────────
+    def scs_runoff(P_mm: float, CN: int) -> dict:
+        S = 25.4 * (1000 / CN - 10)       # potential max retention (mm)
+        Ia = 0.2 * S                        # initial abstraction
+        if P_mm <= Ia:
+            Q = 0.0
+        else:
+            Q = (P_mm - Ia) ** 2 / (P_mm - Ia + S)
+        infil = P_mm - Q
+        return {
+            "P_mm":          round(P_mm, 0),
+            "runoff_mm":     round(Q, 1),
+            "infiltration_mm": round(infil, 1),
+            "runoff_pct":    round(Q / P_mm * 100, 1) if P_mm > 0 else 0,
+        }
+
+    scenarios = [
+        {"label": "Lluvia moderada", "P_mm": 30,  "return_yr": "~2 años",  "emoji": "🌦"},
+        {"label": "Lluvia intensa",  "P_mm": 80,  "return_yr": "~10 años", "emoji": "🌧"},
+        {"label": "Lluvia extrema",  "P_mm": 160, "return_yr": "~100 años","emoji": "⛈"},
+    ]
+    for sc in scenarios:
+        sc.update(scs_runoff(sc["P_mm"], cn))
+
+    # Overall runoff propensity label (based on 80mm scenario)
+    q80 = scenarios[1]["runoff_pct"]
+    if q80 > 65:
+        tendency = "Alta escorrentía"
+        tendency_color = "red"
+    elif q80 > 40:
+        tendency = "Escorrentía moderada"
+        tendency_color = "yellow"
+    elif q80 > 20:
+        tendency = "Infiltración predominante"
+        tendency_color = "green"
+    else:
+        tendency = "Alta infiltración"
+        tendency_color = "green"
+
+    return {
+        "query":    {"lat": lat, "lng": lng},
+        "curve_number": cn,
+        "tendency":       tendency,
+        "tendency_color": tendency_color,
+        "hsg": {
+            "code":  hsg_code,
+            "label": hsg_label,
+            "desc":  hsg_desc,
+            "clay_pct": clay_pct,
+        },
+        "land_cover": {
+            "code":  lc_code,
+            "label": lc_label,
+            "desc":  lc_desc,
+        },
+        "slope_pct":    slope_pct,
+        "elevation_m":  round(elev_center, 1) if elev_center is not None else None,
+        "scenarios":    scenarios,
+        "note":    "Método SCS-CN (USDA). Estimación indicativa para eventos de lluvia puntual. "
+                   "No incluye efectos de urbanización, canal, obras hidráulicas ni condición de humedad antecedente.",
+        "sources": ["SoilGrids v2 (ISRIC)", "SRTM30m vía OpenTopoData", "SCS-CN USDA TR-55"],
+    }
+
+
+@app.get("/api/tools/aquifer")
+def aquifer_potential(
+    lat: float = Query(..., description="Latitud decimal"),
+    lng: float = Query(..., description="Longitud decimal"),
+):
+    """
+    Potencial acuífero para un punto dado.
+    Combina:
+      - Intersección espacial con ar_aquifers.geojson (8 sistemas curados)
+      - Posición topográfica y pendiente (SRTM30m) → recarga potencial
+      - Proximidad al río más cercano → conexión fluvio-acuífera
+    """
+    import math
+
+    pt = Point(lng, lat)
+
+    # ── 1) Aquifer polygon lookup ────────────────────────────────────────────
+    matched_aquifer = None
+    for aq_shape, aq_props in _AQUIFER_SHAPES:
+        if aq_shape.contains(pt):
+            matched_aquifer = aq_props
+            break
+
+    # ── 2) Elevation / slope ─────────────────────────────────────────────────
+    D_LAT, D_LNG = 0.009, 0.011
+    elev_pts = [
+        (lat,         lng),
+        (lat + D_LAT, lng),
+        (lat - D_LAT, lng),
+        (lat,         lng + D_LNG),
+        (lat,         lng - D_LNG),
+    ]
+    elevations    = _fetch_elevations(elev_pts)
+    elev_center   = elevations[0]
+    elev_surround = [e for e in elevations[1:] if e is not None]
+
+    slope_pct = None
+    topo_diff = None
+    if elev_center is not None and len(elev_surround) >= 2:
+        max_diff  = max(abs(e - elev_center) for e in elev_surround)
+        slope_pct = round((max_diff / 1000) * 100, 2)
+        mean_surround = sum(elev_surround) / len(elev_surround)
+        topo_diff = round(mean_surround - elev_center, 1)
+
+    # ── 3) Nearest river distance ────────────────────────────────────────────
+    SEARCH_DEG = 0.3
+    search_buf = pt.buffer(SEARCH_DEG)
+    candidates = _RIVER_TREE.query(search_buf)
+    river_dist_km = None
+    nearest_strahler = 0
+    if len(candidates):
+        best_dist = float("inf")
+        best_idx  = None
+        for idx in candidates:
+            d = pt.distance(_geom_lines[idx])
+            if d < best_dist:
+                best_dist = d
+                best_idx  = idx
+        if best_idx is not None:
+            lat_rad = abs(lat) * math.pi / 180
+            km_per_deg = 111.0 * math.cos(lat_rad)
+            river_dist_km   = round(best_dist * km_per_deg, 2)
+            nearest_strahler = RIVERS_GEOM["features"][best_idx]["properties"].get("s", 0)
+
+    # ── 4) Recharge potential score (if outside mapped aquifers) ─────────────
+    recharge_score = 0
+    recharge_factors = []
+
+    # Slope: moderate is best for recharge (flat = runoff pools, steep = runoff runs off)
+    if slope_pct is not None:
+        if 0.5 <= slope_pct <= 5:
+            pts_slope = 30
+            slope_desc = "Pendiente óptima para recarga"
+        elif slope_pct < 0.5:
+            pts_slope = 15
+            slope_desc = "Muy llano — puede generar encharcamiento"
+        elif slope_pct <= 15:
+            pts_slope = 20
+            slope_desc = "Pendiente moderada — recarga aceptable"
+        else:
+            pts_slope = 5
+            slope_desc = "Pendiente pronunciada — alta escorrentía, baja recarga"
+        recharge_score += pts_slope
+        recharge_factors.append({"label": "Pendiente local", "value": f"{slope_pct:.1f}%",
+                                  "desc": slope_desc, "pts": pts_slope, "max": 30})
+
+    # Topo position: slight depression → water accumulates → recharge
+    if topo_diff is not None:
+        if topo_diff > 5:
+            pts_topo = 25
+            topo_desc = "Zona deprimida — concentra escorrentía y recarga"
+        elif topo_diff >= 0:
+            pts_topo = 15
+            topo_desc = "Posición ligeramente baja — favorece la recarga"
+        else:
+            pts_topo = 5
+            topo_desc = "Posición elevada — agua drena hacia aguas abajo"
+        recharge_score += pts_topo
+        recharge_factors.append({"label": "Posición topográfica", "value": f"{elev_center:.0f} m s.n.m." if elev_center else "N/D",
+                                  "desc": topo_desc, "pts": pts_topo, "max": 25})
+
+    # River proximity: close to river = higher water table, better connectivity
+    if river_dist_km is not None:
+        if river_dist_km < 1 and nearest_strahler >= 5:
+            pts_river = 25
+            river_desc = f"Conexión fluvio-acuífera directa (río orden {nearest_strahler})"
+        elif river_dist_km < 3:
+            pts_river = 18
+            river_desc = f"Proximidad a río (orden {nearest_strahler}) — posible zona de recarga"
+        elif river_dist_km < 10:
+            pts_river = 10
+            river_desc = "Zona de influencia fluvial indirecta"
+        else:
+            pts_river = 3
+            river_desc = "Lejos de cursos de agua principales"
+        recharge_score += pts_river
+        dist_str = f"{river_dist_km:.1f} km"
+        recharge_factors.append({"label": "Proximidad a río", "value": dist_str,
+                                  "desc": river_desc, "pts": pts_river, "max": 25})
+
+    # Scale recharge to 0-100 (max possible is 30+25+25 = 80)
+    recharge_pct = min(round(recharge_score / 80 * 100), 100)
+    if recharge_pct >= 65:
+        recharge_label = "Alto"
+        recharge_color = "green"
+    elif recharge_pct >= 40:
+        recharge_label = "Moderado"
+        recharge_color = "yellow"
+    else:
+        recharge_label = "Bajo"
+        recharge_color = "red"
+
+    return {
+        "query":      {"lat": lat, "lng": lng},
+        "in_aquifer": matched_aquifer is not None,
+        "aquifer":    matched_aquifer,       # full aquifer props if matched
+        "recharge": {
+            "score":   recharge_pct,
+            "label":   recharge_label,
+            "color":   recharge_color,
+            "factors": recharge_factors,
+        },
+        "elevation_m":       round(elev_center, 1) if elev_center is not None else None,
+        "slope_pct":         slope_pct,
+        "river_dist_km":     river_dist_km,
+        "river_strahler":    nearest_strahler,
+        "note":   "Basado en 8 sistemas acuíferos curados (SEGEMAR/INA/SAG-UNESCO) y análisis SRTM. "
+                  "La ausencia de un acuífero mapeado no implica ausencia de agua subterránea.",
+        "sources": ["SEGEMAR / INA / SAG-UNESCO (acuíferos)", "SRTM30m vía OpenTopoData"],
     }

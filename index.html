@@ -625,7 +625,9 @@
       display: flex; align-items: center; justify-content: center;
       font-size: 1.2rem; flex-shrink: 0;
     }
-    .tool-icon.flood  { background: #dbeeff; }
+    .tool-icon.flood   { background: #dbeeff; }
+    .tool-icon.runoff  { background: #e8f5e9; }
+    .tool-icon.aquifer { background: #e3f2fd; }
     .tool-title { font-size: 0.82rem; font-weight: 700; color: var(--text); }
     .tool-subtitle { font-size: 0.7rem; color: var(--text-muted); margin-top: 1px; }
     .tool-activate-btn {
@@ -704,8 +706,37 @@
       font-style: italic; line-height: 1.4;
     }
 
-    /* Map cursor while tool is active */
-    body.tool-flood-active #map { cursor: crosshair; }
+    /* Map cursor while any tool is active */
+    body.tool-active #map { cursor: crosshair; }
+
+    /* Runoff scenario bars */
+    .runoff-scenarios { display: flex; flex-direction: column; gap: 8px; }
+    .runoff-scenario {
+      background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
+    }
+    .rs-head {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.75rem; margin-bottom: 5px;
+    }
+    .rs-emoji { font-size: 1rem; }
+    .rs-label { font-weight: 700; color: var(--text); flex: 1; }
+    .rs-retorno { font-size: 0.65rem; color: var(--text-muted); }
+    .rs-p { font-size: 0.72rem; font-weight: 700; color: var(--blue); margin-left: 4px; }
+    .rs-bar-wrap { }
+    .rs-bar {
+      display: flex; height: 10px; border-radius: 5px; overflow: hidden;
+      background: #e8f4f8; margin-bottom: 4px;
+    }
+    .rs-bar-run { height: 100%; border-radius: 5px 0 0 5px; transition: width 0.5s; }
+    .rs-bar-inf { height: 100%; background: #a5d6a7; border-radius: 0 5px 5px 0; transition: width 0.5s; }
+    .rs-bar-labels { display: flex; justify-content: space-between; font-size: 0.65rem; }
+
+    /* Aquifer match card */
+    .aq-match {
+      background: #e3f2fd; border: 1px solid #90caf9; border-radius: 7px;
+      padding: 10px 12px; margin-bottom: 8px;
+    }
+    .aq-match-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
 
     /* Tool active banner */
     #tool-active-banner {
@@ -788,11 +819,37 @@
             <div class="tool-icon flood">🌊</div>
             <div>
               <div class="tool-title">Susceptibilidad a inundación</div>
-              <div class="tool-subtitle">Hacé clic en cualquier punto del mapa</div>
+              <div class="tool-subtitle">Proximidad fluvial + topografía SRTM</div>
             </div>
             <button class="tool-activate-btn" id="floodToolBtn" onclick="toggleFloodTool()">Activar</button>
           </div>
           <div class="tool-result" id="floodResult"></div>
+        </div>
+
+        <!-- Runoff index tool -->
+        <div class="tool-card" id="toolCard-runoff">
+          <div class="tool-card-head">
+            <div class="tool-icon runoff">🌧</div>
+            <div>
+              <div class="tool-title">Escorrentía pluvial</div>
+              <div class="tool-subtitle">¿Cuánta lluvia infiltra vs. escurre?</div>
+            </div>
+            <button class="tool-activate-btn" id="runoffToolBtn" onclick="toggleRunoffTool()">Activar</button>
+          </div>
+          <div class="tool-result" id="runoffResult"></div>
+        </div>
+
+        <!-- Aquifer potential tool -->
+        <div class="tool-card" id="toolCard-aquifer">
+          <div class="tool-card-head">
+            <div class="tool-icon aquifer">💧</div>
+            <div>
+              <div class="tool-title">Potencial acuífero</div>
+              <div class="tool-subtitle">Agua subterránea + recarga potencial</div>
+            </div>
+            <button class="tool-activate-btn" id="aquiferToolBtn" onclick="toggleAquiferTool()">Activar</button>
+          </div>
+          <div class="tool-result" id="aquiferResult"></div>
         </div>
 
       </div>
@@ -819,8 +876,8 @@
   <!-- ═══════ MAP ═══════ -->
   <div id="map">
     <div id="tool-active-banner">
-      🌊 Hacé clic en el mapa para analizar ese punto
-      <button onclick="toggleFloodTool()">Cancelar</button>
+      <span id="tool-banner-text">Hacé clic en el mapa para analizar ese punto</span>
+      <button onclick="cancelActiveTool()">Cancelar</button>
     </div>
     <button class="clean-mode-btn" id="cleanModeBtn"
             title="Modo mapa limpio: oculta panel, capas y referencias">👁</button>
@@ -3316,7 +3373,7 @@ loadAll();
 // HERRAMIENTAS
 // ══════════════════════════════════════════════════════════════════════════
 
-// ── Herramientas section toggle ───────────────────────────────────────────
+// ── Section toggle ────────────────────────────────────────────────────────
 function toggleToolsSection() {
   const btn  = document.getElementById('toolsToggle');
   const body = document.getElementById('tools-body');
@@ -3324,104 +3381,133 @@ function toggleToolsSection() {
   btn.classList.toggle('open', open);
 }
 
-// ── Flood susceptibility tool ─────────────────────────────────────────────
-let _floodToolActive = false;
-let _floodMarker     = null;
+// ── Generic tool state management ─────────────────────────────────────────
+let _activeTool   = null;   // 'flood' | 'runoff' | 'aquifer' | null
+let _toolMarker   = null;
 
-function toggleFloodTool() {
-  _floodToolActive = !_floodToolActive;
-  const btn    = document.getElementById('floodToolBtn');
-  const banner = document.getElementById('tool-active-banner');
+const TOOL_META = {
+  flood:   { btn: 'floodToolBtn',   result: 'floodResult',   emoji: '🌊', label: 'Susceptibilidad a inundación' },
+  runoff:  { btn: 'runoffToolBtn',  result: 'runoffResult',  emoji: '🌧', label: 'Escorrentía pluvial' },
+  aquifer: { btn: 'aquiferToolBtn', result: 'aquiferResult', emoji: '💧', label: 'Potencial acuífero' },
+};
 
-  if (_floodToolActive) {
-    btn.textContent = 'Desactivar';
-    btn.classList.add('active');
-    document.body.classList.add('tool-flood-active');
-    banner.classList.add('show');
-    // Open tools section so result is visible
-    const body = document.getElementById('tools-body');
-    if (!body.classList.contains('open')) toggleToolsSection();
-    toast('Clic en el mapa para analizar susceptibilidad a inundación');
-  } else {
-    _deactivateFloodTool();
-  }
+function _openToolsSection() {
+  const body = document.getElementById('tools-body');
+  if (!body.classList.contains('open')) toggleToolsSection();
 }
 
-function _deactivateFloodTool() {
-  _floodToolActive = false;
-  const btn    = document.getElementById('floodToolBtn');
+function _activateTool(toolName) {
+  // Deactivate whatever was running
+  if (_activeTool) _deactivateTool(_activeTool, false);
+
+  _activeTool = toolName;
+  const meta   = TOOL_META[toolName];
+  const btn    = document.getElementById(meta.btn);
   const banner = document.getElementById('tool-active-banner');
-  btn.textContent = 'Activar';
-  btn.classList.remove('active');
-  document.body.classList.remove('tool-flood-active');
-  banner.classList.remove('show');
-  if (_floodMarker) { map.removeLayer(_floodMarker); _floodMarker = null; }
+
+  btn.textContent = 'Desactivar';
+  btn.classList.add('active');
+  document.body.classList.add('tool-active');
+  document.getElementById('tool-banner-text').textContent =
+    `${meta.emoji} Clic en el mapa — ${meta.label}`;
+  banner.classList.add('show');
+  _openToolsSection();
+  toast(`Clic en cualquier punto del mapa para analizar`);
 }
 
-// Hook into map click (intercept when tool is active)
+function _deactivateTool(toolName, clearMarker = true) {
+  const meta = TOOL_META[toolName];
+  if (!meta) return;
+  const btn = document.getElementById(meta.btn);
+  if (btn) { btn.textContent = 'Activar'; btn.classList.remove('active'); }
+  document.body.classList.remove('tool-active');
+  document.getElementById('tool-active-banner').classList.remove('show');
+  if (clearMarker && _toolMarker) { map.removeLayer(_toolMarker); _toolMarker = null; }
+  if (_activeTool === toolName) _activeTool = null;
+}
+
+function cancelActiveTool() {
+  if (_activeTool) _deactivateTool(_activeTool, true);
+}
+
+// Individual toggle functions (called from buttons)
+function toggleFloodTool()   { _activeTool === 'flood'   ? _deactivateTool('flood')   : _activateTool('flood');   }
+function toggleRunoffTool()  { _activeTool === 'runoff'  ? _deactivateTool('runoff')  : _activateTool('runoff');  }
+function toggleAquiferTool() { _activeTool === 'aquifer' ? _deactivateTool('aquifer') : _activateTool('aquifer'); }
+
+// ── Map click dispatcher ──────────────────────────────────────────────────
 map.on('click', async function(e) {
-  if (!_floodToolActive) return;
+  if (!_activeTool) return;
 
   const { lat, lng } = e.latlng;
+  const toolName = _activeTool;
+  const meta     = TOOL_META[toolName];
 
   // Drop/move marker
-  if (_floodMarker) map.removeLayer(_floodMarker);
-  _floodMarker = L.circleMarker([lat, lng], {
-    radius: 9, color: '#1a6fa8', weight: 2.5,
-    fillColor: '#5bb3f0', fillOpacity: 0.85,
-    className: 'flood-pin',
+  if (_toolMarker) map.removeLayer(_toolMarker);
+  const markerColor = { flood: '#1a6fa8', runoff: '#2d9b5a', aquifer: '#0277bd' }[toolName];
+  const fillColor   = { flood: '#5bb3f0', runoff: '#81c784', aquifer: '#4fc3f7' }[toolName];
+  _toolMarker = L.circleMarker([lat, lng], {
+    radius: 9, color: markerColor, weight: 2.5,
+    fillColor, fillOpacity: 0.85,
   }).addTo(map).bindTooltip('Analizando…', { permanent: false });
 
-  // Show loading state
-  const resultEl = document.getElementById('floodResult');
+  // Show loading
+  const resultEl = document.getElementById(meta.result);
   resultEl.classList.add('show');
   resultEl.innerHTML = `<div class="tool-result-loading">
     <div class="spinner" style="width:22px;height:22px;margin:0 auto 8px;border-width:3px;"></div>
-    Consultando altimetría SRTM y red fluvial…
+    Consultando datos…
   </div>`;
 
   try {
-    const res = await fetch(`${API}/api/tools/flood?lat=${lat}&lng=${lng}`);
+    const res = await fetch(`${API}/api/tools/${toolName}?lat=${lat}&lng=${lng}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const d = await res.json();
-    renderFloodResult(d, resultEl);
 
-    // Update marker tooltip
-    _floodMarker.unbindTooltip();
-    _floodMarker.bindTooltip(
-      `<b>Riesgo: ${d.risk_level}</b><br>${lat.toFixed(4)}°, ${lng.toFixed(4)}°`,
+    if      (toolName === 'flood')   renderFloodResult(d, resultEl);
+    else if (toolName === 'runoff')  renderRunoffResult(d, resultEl);
+    else if (toolName === 'aquifer') renderAquiferResult(d, resultEl);
+
+    _toolMarker.unbindTooltip();
+    _toolMarker.bindTooltip(
+      `<b>${meta.label}</b><br>${lat.toFixed(4)}°, ${lng.toFixed(4)}°`,
       { permanent: false }
     );
   } catch(err) {
     resultEl.innerHTML = `<div style="color:var(--red);font-size:0.78rem;padding:8px 0;">
-      ⚠ Error al consultar el servidor. Intentá de nuevo.
+      ⚠ Error al consultar. Intentá de nuevo.
     </div>`;
-    console.error('[flood tool]', err);
+    console.error(`[${toolName} tool]`, err);
   }
 });
 
-function renderFloodResult(d, el) {
-  const color = d.risk_color || 'green';
-
-  const factorsHtml = (d.factors || []).map(f => {
-    const pct  = Math.round((f.pts / f.max) * 100);
-    const barH = Math.round((f.pts / f.max) * 32); // px, max 32
+// ── Shared factor bar renderer ────────────────────────────────────────────
+function _factorBarsHtml(factors) {
+  return (factors || []).map(f => {
+    const pct  = f.max > 0 ? Math.round((f.pts / f.max) * 100) : 0;
+    const barH = Math.round((f.pts / f.max) * 32);
+    const barColor = pct > 65 ? '#c0392b' : pct > 35 ? '#d4a017' : '#2d9b5a';
     return `
       <div class="flood-factor">
         <div class="ff-bar-wrap">
           <div class="ff-bar-bg">
-            <div class="ff-bar-fill" style="height:${barH}px;background:${pct>65?'#c0392b':pct>35?'#d4a017':'#2d9b5a'}"></div>
+            <div class="ff-bar-fill" style="height:${barH}px;background:${barColor}"></div>
           </div>
           <div class="ff-pts">${f.pts}/${f.max}</div>
         </div>
         <div class="ff-info">
           <div class="ff-label">${f.label}</div>
           <div class="ff-value">${f.value}</div>
-          ${f.detail ? `<div class="ff-detail">${f.detail}</div>` : ''}
+          ${f.detail || f.desc ? `<div class="ff-detail">${f.detail || f.desc}</div>` : ''}
         </div>
       </div>`;
   }).join('');
+}
 
+// ── Flood result renderer ─────────────────────────────────────────────────
+function renderFloodResult(d, el) {
+  const color = d.risk_color || 'green';
   el.innerHTML = `
     <div class="flood-risk-badge ${color}">
       <div>
@@ -3430,7 +3516,116 @@ function renderFloodResult(d, el) {
       </div>
       <div class="flood-risk-desc">${d.risk_desc}</div>
     </div>
-    <div class="flood-factors">${factorsHtml}</div>
+    <div class="flood-factors">${_factorBarsHtml(d.factors)}</div>
+    ${d.note ? `<div class="tool-result-note">⚠ ${d.note}</div>` : ''}
+  `;
+}
+
+// ── Runoff result renderer ────────────────────────────────────────────────
+function renderRunoffResult(d, el) {
+  const tcColor = { red: 'var(--red)', yellow: 'var(--yellow)', green: 'var(--green)' }[d.tendency_color] || '#888';
+
+  const scenariosHtml = (d.scenarios || []).map(sc => {
+    const runPct  = sc.runoff_pct || 0;
+    const infPct  = 100 - runPct;
+    const barColor = runPct > 65 ? '#c0392b' : runPct > 40 ? '#d4a017' : '#2d9b5a';
+    return `
+      <div class="runoff-scenario">
+        <div class="rs-head">
+          <span class="rs-emoji">${sc.emoji}</span>
+          <span class="rs-label">${sc.label}</span>
+          <span class="rs-retorno">${sc.return_yr}</span>
+          <span class="rs-p">${sc.P_mm} mm</span>
+        </div>
+        <div class="rs-bar-wrap">
+          <div class="rs-bar">
+            <div class="rs-bar-run" style="width:${runPct}%;background:${barColor}"></div>
+            <div class="rs-bar-inf" style="width:${infPct}%"></div>
+          </div>
+          <div class="rs-bar-labels">
+            <span style="color:${barColor};font-weight:700">${sc.runoff_mm} mm escurre (${runPct}%)</span>
+            <span style="color:#2d9b5a;font-weight:700">${sc.infiltration_mm} mm infiltra</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <div style="font-size:1rem;font-weight:800;color:${tcColor}">${d.tendency}</div>
+      <div style="font-size:0.7rem;color:var(--text-muted)">CN ${d.curve_number}</div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <div class="chip" style="min-width:0;flex:1">
+        <div class="chip-val">${d.hsg?.code || '?'}</div>
+        <div class="chip-lbl">${d.hsg?.label || 'Grupo hidrológico'}</div>
+      </div>
+      <div class="chip" style="min-width:0;flex:1">
+        <div class="chip-val" style="font-size:0.72rem">${d.land_cover?.label || '—'}</div>
+        <div class="chip-lbl">Uso del suelo estimado</div>
+      </div>
+    </div>
+    <div class="runoff-scenarios">${scenariosHtml}</div>
+    ${d.note ? `<div class="tool-result-note">⚠ ${d.note}</div>` : ''}
+  `;
+}
+
+// ── Aquifer result renderer ───────────────────────────────────────────────
+function renderAquiferResult(d, el) {
+  let aquiferHtml = '';
+  if (d.in_aquifer && d.aquifer) {
+    const aq = d.aquifer;
+    const statusColor = { green: 'var(--green)', yellow: 'var(--yellow)', red: 'var(--red)', orange: '#e65100' }[aq.status] || '#888';
+    const sourcesHtml = (aq.sources || []).map(s =>
+      `<li><a href="${s.url}" target="_blank" rel="noopener">${s.label}</a></li>`
+    ).join('');
+    aquiferHtml = `
+      <div class="aq-match">
+        <div class="aq-match-head">
+          <span style="font-size:1.3rem">💧</span>
+          <div>
+            <div style="font-weight:800;font-size:0.88rem;color:var(--blue-dk)">${aq.name}</div>
+            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:capitalize">${aq.type}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin:8px 0;flex-wrap:wrap">
+          <div class="chip" style="min-width:0;flex:1">
+            <div class="chip-val" style="font-size:0.78rem">${aq.depth_m || '—'}</div>
+            <div class="chip-lbl">Profundidad</div>
+          </div>
+          <div class="chip" style="min-width:0;flex:1">
+            <div class="chip-val" style="font-size:0.78rem;color:${statusColor}">${aq.status_label || '—'}</div>
+            <div class="chip-lbl">Estado</div>
+          </div>
+        </div>
+        ${aq.uses ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:6px">Usos: ${aq.uses}</div>` : ''}
+        ${aq.status_detail ? `<div style="font-size:0.72rem;color:var(--text);line-height:1.4;margin-bottom:6px">${aq.status_detail}</div>` : ''}
+        ${sourcesHtml ? `<ul class="sources-list">${sourcesHtml}</ul>` : ''}
+      </div>`;
+  } else {
+    aquiferHtml = `<div style="font-size:0.78rem;color:var(--text-muted);font-style:italic;margin-bottom:8px">
+      Punto fuera de los 8 sistemas acuíferos relevados. Agua subterránea puede existir a menor escala.
+    </div>`;
+  }
+
+  // Recharge section
+  const rc = d.recharge || {};
+  const rcColor = { green: 'var(--green)', yellow: 'var(--yellow)', red: 'var(--red)' }[rc.color] || '#888';
+  const rcHtml = rc.factors?.length ? `
+    <div style="margin-top:10px">
+      <div style="font-size:0.63rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">
+        Potencial de recarga local
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-weight:800;font-size:1rem;color:${rcColor}">${rc.label || '—'}</span>
+        <span style="font-size:0.7rem;color:var(--text-muted)">${rc.score}/100</span>
+      </div>
+      <div class="flood-factors">${_factorBarsHtml(rc.factors)}</div>
+    </div>` : '';
+
+  el.innerHTML = `
+    ${aquiferHtml}
+    ${rcHtml}
     ${d.note ? `<div class="tool-result-note">⚠ ${d.note}</div>` : ''}
   `;
 }
