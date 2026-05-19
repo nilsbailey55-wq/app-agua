@@ -819,7 +819,7 @@
             <div class="tool-icon flood">🌊</div>
             <div>
               <div class="tool-title">Susceptibilidad a inundación</div>
-              <div class="tool-subtitle">Proximidad fluvial + topografía SRTM</div>
+              <div class="tool-subtitle">Método HAND · HydroRIVERS + SRTM30m</div>
             </div>
             <button class="tool-activate-btn" id="floodToolBtn" onclick="toggleFloodTool()">Activar</button>
           </div>
@@ -3508,6 +3508,26 @@ function _factorBarsHtml(factors) {
 // ── Flood result renderer ─────────────────────────────────────────────────
 function renderFloodResult(d, el) {
   const color = d.risk_color || 'green';
+
+  // HAND callout — only if we got a real HAND value
+  let handHtml = '';
+  if (d.hand_m !== null && d.hand_m !== undefined) {
+    const handColor = d.hand_m < 3 ? 'var(--red)' : d.hand_m < 10 ? '#e65100' : d.hand_m < 30 ? 'var(--yellow)' : 'var(--green)';
+    handHtml = `
+      <div style="display:flex;align-items:center;gap:8px;background:#f0f7ff;
+                  border:1px solid #b3d1f0;border-radius:6px;padding:7px 10px;margin-bottom:8px">
+        <span style="font-size:1.1rem">📏</span>
+        <div>
+          <div style="font-size:0.68rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em">HAND</div>
+          <div style="font-size:1rem;font-weight:800;color:${handColor}">${d.hand_m.toFixed(1)} m sobre el cauce</div>
+        </div>
+        <div style="margin-left:auto;font-size:0.65rem;color:var(--text-muted);text-align:right;line-height:1.3">
+          ${d.elevation_m !== null ? `${d.elevation_m} m s.n.m.` : ''}<br>
+          método HAND
+        </div>
+      </div>`;
+  }
+
   el.innerHTML = `
     <div class="flood-risk-badge ${color}">
       <div>
@@ -3516,6 +3536,7 @@ function renderFloodResult(d, el) {
       </div>
       <div class="flood-risk-desc">${d.risk_desc}</div>
     </div>
+    ${handHtml}
     <div class="flood-factors">${_factorBarsHtml(d.factors)}</div>
     ${d.note ? `<div class="tool-result-note">⚠ ${d.note}</div>` : ''}
   `;
