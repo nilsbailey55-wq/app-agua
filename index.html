@@ -3232,87 +3232,161 @@ function buildFlowChartSVG(metric) {
   const data = metric.data;
   if (!data || data.length < 2) return '<p class="flow-chart-loading">Sin datos suficientes.</p>';
 
-  const W = 320, H = 110;
-  const PAD = { top: 10, right: 12, bottom: 24, left: 44 };
+  const W = 320, H = 118;
+  const PAD = { top: 12, right: 38, bottom: 24, left: 44 };
   const cW = W - PAD.left - PAD.right;
   const cH = H - PAD.top - PAD.bottom;
 
-  const years  = data.map(d => d.year);
   const values = data.map(d => d.value);
-  const minY   = Math.min(...values) - 0.3;
-  const maxY   = Math.max(...values) + 0.3;
-  const mean   = metric.historical_mean;
+  const mean   = metric.historical_mean || (metric.sigma_bands?.mean);
   const alertL = metric.alert_low;
+  const sb     = metric.sigma_bands;   // may be undefined for non-enriched metrics
+
+  // Y range: expand to include sigma bands if available
+  let minY = Math.min(...values);
+  let maxY = Math.max(...values);
+  if (sb) {
+    minY = Math.min(minY, sb.band_2s_lo);
+    maxY = Math.max(maxY, sb.band_2s_hi);
+  }
+  const pad = (maxY - minY) * 0.06 || 0.3;
+  minY -= pad; maxY += pad;
 
   const xS = i => PAD.left + (i / (data.length - 1)) * cW;
   const yS = v => PAD.top  + cH - ((v - minY) / (maxY - minY)) * cH;
 
-  // Polilínea de valores
-  const pts = data.map((d, i) => `${xS(i).toFixed(1)},${yS(d.value).toFixed(1)}`).join(' ');
+  // ── σ bands (filled rectangles) ────────────────────────────────────────
+  let sigmaBands = '';
+  if (sb) {
+    const y2s_hi  = yS(sb.band_2s_hi).toFixed(1);
+    const y15s_hi = yS(sb.band_15s_hi).toFixed(1);
+    const y1s_hi  = yS(sb.band_1s_hi).toFixed(1);
+    const y1s_lo  = yS(sb.band_1s_lo).toFixed(1);
+    const y15s_lo = yS(sb.band_15s_lo).toFixed(1);
+    const y2s_lo  = yS(sb.band_2s_lo).toFixed(1);
+    const x1 = PAD.left, x2 = W - PAD.right;
 
-  // Área bajo la curva
+    // Outer band ±2σ (light red tint)
+    sigmaBands += `<rect x="${x1}" y="${y2s_hi}" width="${x2-x1}" height="${y2s_lo - y2s_hi}" fill="#fde8e8" opacity="0.55"/>`;
+    // Inner band ±1.5σ (light yellow)
+    sigmaBands += `<rect x="${x1}" y="${y15s_hi}" width="${x2-x1}" height="${y15s_lo - y15s_hi}" fill="#fff9e6" opacity="0.7"/>`;
+    // Core band ±1σ (light green)
+    sigmaBands += `<rect x="${x1}" y="${y1s_hi}" width="${x2-x1}" height="${y1s_lo - y1s_hi}" fill="#e8f5e9" opacity="0.8"/>`;
+
+    // Dashed boundary lines
+    const dline = (y, col) =>
+      `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${col}" stroke-width="0.7" stroke-dasharray="3 3" opacity="0.6"/>`;
+    sigmaBands += dline(y15s_hi, '#e65100') + dline(y15s_lo, '#e65100');
+    sigmaBands += dline(y1s_hi,  '#2e7d32') + dline(y1s_lo,  '#2e7d32');
+
+    // Labels on right edge
+    const lbl = (y, txt, col) =>
+      `<text x="${x2+2}" y="${parseFloat(y)+3.5}" font-size="6" fill="${col}" opacity="0.85">${txt}</text>`;
+    sigmaBands += lbl(y15s_hi, '+1.5σ', '#e65100') + lbl(y15s_lo, '−1.5σ', '#e65100');
+    sigmaBands += lbl(y1s_hi,  '+1σ',   '#2e7d32') + lbl(y1s_lo,  '−1σ',   '#2e7d32');
+  }
+
+  // ── Polilínea + área ─────────────────────────────────────────────────────
+  const pts = data.map((d, i) => `${xS(i).toFixed(1)},${yS(d.value).toFixed(1)}`).join(' ');
   const areaPath = `M${xS(0).toFixed(1)},${yS(data[0].value).toFixed(1)} ` +
     data.map((d, i) => `L${xS(i).toFixed(1)},${yS(d.value).toFixed(1)}`).join(' ') +
     ` L${xS(data.length-1).toFixed(1)},${(PAD.top+cH).toFixed(1)} L${PAD.left.toFixed(1)},${(PAD.top+cH).toFixed(1)} Z`;
 
-  // Marcador del punto actual
+  // ── Punto actual ─────────────────────────────────────────────────────────
   const currentIdx = data.findIndex(d => d.is_current);
-  const currentDot = currentIdx >= 0 ? (() => {
+  let currentDot = '';
+  if (currentIdx >= 0) {
     const cx = xS(currentIdx), cy = yS(data[currentIdx].value);
-    const isLow = data[currentIdx].value < mean;
-    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.5" fill="${isLow ? '#e74c3c' : '#1976d2'}" stroke="#fff" stroke-width="1.5"/>`;
-  })() : '';
+    const an = metric.anomaly;
+    const dotColor = an
+      ? ({ green:'#2e7d32', yellow:'#f57f17', orange:'#e65100', red:'#c0392b', blue:'#1565c0' }[an.color] || '#1976d2')
+      : (data[currentIdx].value < mean ? '#e74c3c' : '#1976d2');
+    currentDot = `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="${dotColor}" stroke="#fff" stroke-width="1.8"/>`;
+  }
 
-  // Línea de media histórica
+  // ── Media histórica ───────────────────────────────────────────────────────
   const meanY = yS(mean).toFixed(1);
-  const meanLine = `<line x1="${PAD.left}" y1="${meanY}" x2="${W-PAD.right}" y2="${meanY}" stroke="#1565c0" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>`;
-  const meanLabel = `<text x="${W-PAD.right+2}" y="${parseFloat(meanY)+4}" font-size="7" fill="#1565c0" opacity="0.8">media</text>`;
+  const meanLine  = `<line x1="${PAD.left}" y1="${meanY}" x2="${W-PAD.right}" y2="${meanY}" stroke="#1565c0" stroke-width="1.1" stroke-dasharray="5 3" opacity="0.75"/>`;
+  const meanLabel = `<text x="${W-PAD.right+2}" y="${parseFloat(meanY)+3.5}" font-size="6.5" fill="#1565c0" opacity="0.9">media</text>`;
 
-  // Línea de alerta baja (si existe)
-  const alertLine = alertL ? (() => {
+  // ── Línea alerta baja ─────────────────────────────────────────────────────
+  let alertLine = '';
+  if (alertL && alertL > minY && alertL < maxY) {
     const ay = yS(alertL).toFixed(1);
-    return `<line x1="${PAD.left}" y1="${ay}" x2="${W-PAD.right}" y2="${ay}" stroke="#e74c3c" stroke-width="0.8" stroke-dasharray="2 3" opacity="0.6"/>
-            <text x="${W-PAD.right+2}" y="${parseFloat(ay)+4}" font-size="7" fill="#e74c3c" opacity="0.8">alerta</text>`;
-  })() : '';
+    alertLine = `<line x1="${PAD.left}" y1="${ay}" x2="${W-PAD.right}" y2="${ay}" stroke="#c0392b" stroke-width="0.9" stroke-dasharray="2 3" opacity="0.7"/>
+                 <text x="${W-PAD.right+2}" y="${parseFloat(ay)+3.5}" font-size="6" fill="#c0392b" opacity="0.85">mín</text>`;
+  }
 
-  // Eje X: ticks de año cada 5 años
-  const xAxisTicks = data.filter((d,i) => d.year % 5 === 0).map((d, _, arr) => {
+  // ── Ejes ──────────────────────────────────────────────────────────────────
+  const xAxisTicks = data.filter(d => d.year % 5 === 0).map(d => {
     const i = data.indexOf(d);
-    const x = xS(i).toFixed(1);
-    const y = (PAD.top + cH + 10).toFixed(1);
-    return `<text x="${x}" y="${y}" text-anchor="middle" font-size="7.5" fill="#888">${d.year}</text>`;
+    return `<text x="${xS(i).toFixed(1)}" y="${(PAD.top+cH+10).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="#888">${d.year}</text>`;
   }).join('');
 
-  // Eje Y: 3 etiquetas
   const yTicks = [minY, mean, maxY].map(v => {
     const y = yS(v).toFixed(1);
-    return `<text x="${PAD.left - 3}" y="${parseFloat(y)+3}" text-anchor="end" font-size="7" fill="#888">${v.toFixed(1)}</text>`;
+    const label = Math.abs(v) >= 1000 ? `${(v/1000).toFixed(1)}k` : v.toFixed(1);
+    return `<text x="${PAD.left-3}" y="${parseFloat(y)+3}" text-anchor="end" font-size="7" fill="#888">${label}</text>`;
   }).join('');
 
-  // Label unidad
-  const unitLabel = `<text x="${PAD.left}" y="${PAD.top - 2}" font-size="6.5" fill="#aaa">${metric.unit}</text>`;
+  const unitLabel = `<text x="${PAD.left}" y="${PAD.top-2}" font-size="6.5" fill="#aaa">${metric.unit}</text>`;
 
   return `
   <svg class="flow-chart-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-    <!-- área -->
-    <path d="${areaPath}" fill="#1e88e5" opacity="0.10"/>
-    <!-- rejilla horizontal sutil -->
+    <!-- σ bands -->
+    ${sigmaBands}
+    <!-- rejilla -->
     ${[minY, mean, maxY].map(v =>
       `<line x1="${PAD.left}" y1="${yS(v).toFixed(1)}" x2="${W-PAD.right}" y2="${yS(v).toFixed(1)}" stroke="#e0e8f0" stroke-width="0.5"/>`
     ).join('')}
-    <!-- línea alerta -->
+    <!-- alerta mínima -->
     ${alertLine}
-    <!-- línea media -->
+    <!-- media histórica -->
     ${meanLine}${meanLabel}
+    <!-- área bajo curva -->
+    <path d="${areaPath}" fill="#1e88e5" opacity="0.08"/>
     <!-- serie -->
-    <polyline points="${pts}" fill="none" stroke="#1976d2" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+    <polyline points="${pts}" fill="none" stroke="#1976d2" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>
     <!-- punto actual -->
     ${currentDot}
     <!-- ejes -->
-    ${unitLabel}
-    ${yTicks}
-    ${xAxisTicks}
+    ${unitLabel}${yTicks}${xAxisTicks}
   </svg>`;
+}
+
+function _anomalyBadgeHtml(metric) {
+  const an = metric.anomaly;
+  const sb = metric.sigma_bands;
+  if (!an || !sb) return '';
+
+  const colorMap = {
+    green:  { bg: '#e8f5e9', border: '#81c784', text: '#1b5e20' },
+    yellow: { bg: '#fff9e6', border: '#ffd54f', text: '#f57f17' },
+    orange: { bg: '#fbe9e7', border: '#ff8a65', text: '#bf360c' },
+    red:    { bg: '#fde8e8', border: '#ef9a9a', text: '#b71c1c' },
+    blue:   { bg: '#e3f2fd', border: '#90caf9', text: '#0d47a1' },
+  };
+  const c = colorMap[an.color] || colorMap.green;
+  const pctStr = an.pct_vs_mean >= 0 ? `+${an.pct_vs_mean}%` : `${an.pct_vs_mean}%`;
+  const icon = { green:'✅', yellow:'⚠️', orange:'🟠', red:'🔴', blue:'🔵' }[an.color] || '•';
+
+  return `
+    <div style="display:flex;align-items:center;gap:8px;
+                background:${c.bg};border:1px solid ${c.border};
+                border-radius:6px;padding:6px 10px;margin-bottom:6px">
+      <span style="font-size:1rem">${icon}</span>
+      <div style="flex:1">
+        <div style="font-weight:800;font-size:0.82rem;color:${c.text}">${an.status}</div>
+        <div style="font-size:0.68rem;color:#555;margin-top:1px">
+          Valor actual: <b>${an.value.toLocaleString('es-AR')}</b> ${metric.unit}
+          · ${pctStr} vs media · z = ${an.z_score}
+        </div>
+      </div>
+      <div style="font-size:0.64rem;color:#777;text-align:right;line-height:1.4">
+        ±1σ: ${sb.band_1s_lo.toLocaleString('es-AR')}–${sb.band_1s_hi.toLocaleString('es-AR')}<br>
+        ±1.5σ: ${sb.band_15s_lo.toLocaleString('es-AR')}–${sb.band_15s_hi.toLocaleString('es-AR')}
+      </div>
+    </div>`;
 }
 
 async function loadPrecipChart(lat, lng, containerId) {
@@ -3332,6 +3406,7 @@ async function loadPrecipChart(lat, lng, containerId) {
       : '';
     el.innerHTML = `
       <div class="flow-chart-title">🌧 Precipitación en tu ubicación ${diffStr}</div>
+      ${_anomalyBadgeHtml(metric)}
       ${buildFlowChartSVG(metric)}
       <div class="flow-chart-note">
         Media 1990-2025: <b>${metric.historical_mean} mm/año</b> ·
@@ -3354,12 +3429,17 @@ async function loadFlowChart(basinId, containerId) {
     if (!metrics.length) { el.style.display = 'none'; return; }
 
     const metric = metrics[0];
+    const sb     = metric.sigma_bands;
+    const sdStr  = sb ? ` · σ = ${sb.std_dev.toLocaleString('es-AR')} ${metric.unit}` : '';
+
     el.innerHTML = `
       <div class="flow-chart-title">📈 ${metric.label}</div>
+      ${_anomalyBadgeHtml(metric)}
       ${buildFlowChartSVG(metric)}
       <div class="flow-chart-note">
-        Media histórica: ${metric.historical_mean} ${metric.unit} · Fuente: ${metric.source}
-        ${d.metadata?.note ? ' · <em>' + d.metadata.note + '</em>' : ''}
+        Media histórica: <b>${metric.historical_mean?.toLocaleString('es-AR')}</b> ${metric.unit}${sdStr}
+        · Fuente: ${metric.source}
+        ${metric.note ? ' · <em>' + metric.note + '</em>' : ''}
       </div>`;
   } catch(e) {
     el.style.display = 'none';

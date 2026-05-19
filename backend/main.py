@@ -510,23 +510,86 @@ async def get_climate_precip(
                     "data":             annual,
                 }],
             }
-    return _PRECIP_CACHE[key]
+    result = _PRECIP_CACHE[key]
+    # Enrich with anomaly stats (applied after caching to avoid storing duplicated data)
+    return {
+        **result,
+        "metrics": [_flow_series_stats(m) for m in result["metrics"]],
+    }
+
+
+def _flow_series_stats(metric: dict) -> dict:
+    """Compute anomaly statistics for a flow metric and return enriched copy."""
+    import math, copy
+    m = copy.deepcopy(metric)
+    data = m.get("data", [])
+    if len(data) < 3:
+        return m
+
+    values = [d["value"] for d in data]
+    mean   = m.get("historical_mean") or (sum(values) / len(values))
+
+    # Population std-dev using all data points
+    variance = sum((v - mean) ** 2 for v in values) / len(values)
+    std_dev  = math.sqrt(variance)
+
+    sigma_bands = {
+        "mean":        round(mean, 2),
+        "std_dev":     round(std_dev, 2),
+        "band_1s_lo":  round(mean - std_dev,       2),
+        "band_1s_hi":  round(mean + std_dev,       2),
+        "band_15s_lo": round(mean - 1.5 * std_dev, 2),
+        "band_15s_hi": round(mean + 1.5 * std_dev, 2),
+        "band_2s_lo":  round(mean - 2.0 * std_dev, 2),
+        "band_2s_hi":  round(mean + 2.0 * std_dev, 2),
+    }
+
+    # Classify current value
+    current_pt = next((d for d in reversed(data) if d.get("is_current")), None)
+    anomaly = None
+    if current_pt is not None:
+        v   = current_pt["value"]
+        z   = (v - mean) / std_dev if std_dev > 0 else 0
+        pct = round((v / mean - 1) * 100, 1) if mean else 0
+
+        if   z <= -2.5:  status, color = "Sequía severa",     "red"
+        elif z <= -1.5:  status, color = "Déficit hídrico",   "orange"
+        elif z <= -0.5:  status, color = "Levemente bajo",    "yellow"
+        elif z >=  2.5:  status, color = "Crecida severa",    "red"
+        elif z >=  1.5:  status, color = "Caudal elevado",    "blue"
+        elif z >=  0.5:  status, color = "Levemente alto",    "yellow"
+        else:            status, color = "Normal",             "green"
+
+        anomaly = {
+            "value":    v,
+            "z_score":  round(z, 2),
+            "pct_vs_mean": pct,
+            "status":   status,
+            "color":    color,
+            "label":    current_pt.get("label", str(current_pt.get("year"))),
+        }
+
+    m["sigma_bands"] = sigma_bands
+    m["anomaly"]     = anomaly
+    return m
 
 
 @app.get("/api/water/flow-series")
 def get_flow_series(basin: str = Query(None, description="basin_id para filtrar (ej: negro_limay)")):
-    """Series históricas de caudal/nivel por cuenca.
-    Si no se especifica basin, retorna todas las series disponibles."""
+    """Series históricas de caudal/nivel por cuenca, enriquecidas con estadísticas
+    de anomalía: desviación estándar, bandas ±1σ/±1.5σ/±2σ y clasificación
+    del valor actual respecto a la media histórica.
+    Si no se especifica basin, retorna el índice de cuencas disponibles."""
     series = FLOW_SERIES.get("series", {})
     if basin:
         if basin not in series:
             raise HTTPException(status_code=404, detail=f"No hay series para la cuenca '{basin}'")
+        enriched_metrics = [_flow_series_stats(m) for m in series[basin]["metrics"]]
         return {
             "basin_id": basin,
-            "metrics": series[basin]["metrics"],
+            "metrics":  enriched_metrics,
             "metadata": FLOW_SERIES.get("metadata", {}),
         }
-    # Retornar índice de cuencas disponibles (sin los datos completos)
     return {
         "available": [
             {"basin_id": k, "metrics": [m["id"] for m in v["metrics"]]}
