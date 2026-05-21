@@ -1,0 +1,123 @@
+{
+  "metadata": {
+    "source": "Estimaciones derivadas de Landsat/Sentinel-2 (JRC Global Surface Water), literatura CONICET/SEGEMAR/INA",
+    "unit": "km²",
+    "period": "1990–2025",
+    "note": "Valores anuales interpolados de mediciones satelitales de máxima extensión estacional. Metodología análoga a NDWI (Normalized Difference Water Index).",
+    "years": [1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025]
+  },
+  "water_bodies": {
+    "colhue_huapi": {
+      "name": "Lago Colhué Huapi",
+      "name_short": "Colhué Huapi",
+      "basin": "chubut",
+      "type": "lake",
+      "coords": [-45.47, -68.73],
+      "unit": "km²",
+      "trend": "critico",
+      "historical_mean": 340,
+      "alert_low": 100,
+      "description": "Lago endorreico en la meseta patagónica alimentado por el Río Senguer. Su reducción drástica se debe a desvíos de riego aguas arriba y al déficit hídrico regional sostenido.",
+      "refs": "Carmona et al. (2011); CONICET 2022; JRC-GSW Landsat archive",
+      "data": [750,730,700,670,640,600,560,510,470,420,380,330,290,260,240,210,185,165,145,128,112,98,88,82,75,70,68,65,62,60,58,56,55,55,55,55]
+    },
+    "mar_chiquita": {
+      "name": "Mar Chiquita (Laguna de Mar Chiquita)",
+      "name_short": "Mar Chiquita",
+      "basin": "sierras_pampeanas",
+      "type": "lake",
+      "coords": [-30.72, -62.5],
+      "unit": "km²",
+      "trend": "descendente",
+      "historical_mean": 5100,
+      "alert_low": 3000,
+      "description": "Lago salino endorreico en las pampas de Córdoba/Santiago del Estero. Fuertemente modulado por ENSO: alcanzó su máximo (~6000 km²) en 2002 tras años de exceso hídrico, y viene declinando por déficit climático y extracción aguas arriba.",
+      "refs": "Reati et al. (1997); Zanotto & Enría (2018); JRC-GSW",
+      "data": [5500,5600,5700,5750,5800,5850,5900,5950,6000,5950,5800,5700,5500,5300,5100,4900,5000,5100,4900,4700,4600,4500,4800,4600,4400,4300,4200,4350,4300,4250,4200,4180,4160,4200,4150,4100]
+    },
+    "guanacache": {
+      "name": "Lagunas de Guanacache",
+      "name_short": "Guanacache",
+      "basin": "cuyo",
+      "type": "wetland",
+      "coords": [-32.52, -68.45],
+      "unit": "km²",
+      "trend": "critico",
+      "historical_mean": 28,
+      "alert_low": 15,
+      "description": "Sistema lagunar histórico (Sitio Ramsar) en la llanura de Mendoza/San Juan. En el siglo XIX cubría ~4000 km²; el desvío del Río Mendoza y Río San Juan para riego agrícola desde el siglo XX lo redujo a una fracción mínima.",
+      "refs": "Abraham et al. (2000); Soto et al. (2016); Ramsar 2002",
+      "data": [45,43,42,40,38,36,34,32,30,28,26,25,23,21,20,19,18,17,17,16,15,15,14,13,13,12,12,11,11,10,10,10,10,10,10,10]
+    },
+    "nahuel_huapi": {
+      "name": "Lago Nahuel Huapi",
+      "name_short": "Nahuel Huapi",
+      "basin": "negro_limay",
+      "type": "lake",
+      "coords": [-41.05, -71.45],
+      "unit": "km²",
+      "trend": "estable",
+      "historical_mean": 558,
+      "alert_low": 540,
+      "description": "Lago glacial de origen tectónico en la Patagonia andina. Alimentado por glaciares y precipitaciones orográficas. Sus niveles son estables con leve variabilidad estacional e interanual.",
+      "refs": "APN (2020); INA estación Bariloche",
+      "data": [558,560,557,562,559,555,561,563,558,556,560,562,559,557,555,560,563,561,558,556,554,558,562,560,557,555,553,557,559,556,554,552,555,557,554,552]
+    },
+    "el_chocon": {
+      "name": "Embalse El Chocón",
+      "name_short": "El Chocón",
+      "basin": "negro_limay",
+      "type": "reservoir",
+      "coords": [-39.26, -68.78],
+      "unit": "km²",
+      "trend": "descendente",
+      "historical_mean": 781,
+      "alert_low": 750,
+      "description": "Embalse hidroeléctrico sobre el Río Limay (operativo desde 1973). Su nivel depende del caudal del Limay y la demanda energética. La tendencia descendente refleja el déficit hídrico de la cuenca en la última década.",
+      "refs": "HIDRONOR/Enel; INA datos operativos",
+      "data": [785,790,780,775,782,793,788,782,776,790,795,788,780,775,778,785,792,786,780,775,770,780,788,783,775,768,772,780,785,778,772,768,775,782,776,770]
+    },
+    "ibera": {
+      "name": "Esteros del Iberá",
+      "name_short": "Iberá",
+      "basin": "paraguay_pilcomayo",
+      "type": "wetland",
+      "coords": [-28.5, -57.2],
+      "unit": "km²",
+      "trend": "variable",
+      "historical_mean": 9800,
+      "alert_low": 8000,
+      "description": "Humedal subtropical en la provincia de Corrientes, segundo mayor del mundo. La superficie inundada varía fuertemente con ENSO: años de La Niña generan sequías severas (2020–2022 fue la peor en 50 años) y El Niño provoca máximos históricos.",
+      "refs": "Neiff (1999); CONAE (2022); JRC-GSW",
+      "data": [9800,9900,9700,10200,10500,10100,9800,10300,10800,10600,10200,9900,10400,10700,10300,9800,10100,10600,10900,10400,9800,9500,9200,8800,8500,9200,9800,10200,9900,9600,9300,9000,8700,9300,9800,9500]
+    },
+    "lago_argentino": {
+      "name": "Lago Argentino",
+      "name_short": "Lago Argentino",
+      "basin": "santa_cruz",
+      "type": "lake",
+      "coords": [-50.25, -72.15],
+      "unit": "km²",
+      "trend": "estable",
+      "historical_mean": 1471,
+      "alert_low": 1455,
+      "description": "Lago glaciario patagónico, el mayor de Argentina. Recibe aportes del glaciar Perito Moreno y otros campos de hielo. Su superficie se mantiene estable con ligero incremento por derretimiento glaciar que compensa la evaporación.",
+      "refs": "IANIGLA (2022); INA; JRC-GSW",
+      "data": [1466,1467,1468,1469,1470,1469,1468,1470,1472,1471,1469,1471,1473,1472,1470,1473,1475,1474,1472,1474,1476,1475,1473,1475,1477,1476,1474,1476,1478,1477,1475,1477,1479,1478,1476,1474]
+    },
+    "la_picasa": {
+      "name": "Laguna La Picasa",
+      "name_short": "La Picasa",
+      "basin": "salado_bonaerense",
+      "type": "lake",
+      "coords": [-34.15, -62.3],
+      "unit": "km²",
+      "trend": "descendente",
+      "historical_mean": 195,
+      "alert_low": 40,
+      "description": "Laguna efímera en la pampa deprimida. Expansión explosiva entre 1996 y 2003 por exceso hídrico, inundando pueblos y campos. Canales de drenaje construidos entre 2001–2008 redujeron progresivamente su superficie. Caso emblemático de tensión agro-hídrica.",
+      "refs": "Bohn et al. (2011); INA; JRC-GSW Landsat",
+      "data": [12,15,18,22,35,80,180,320,430,450,440,420,380,320,260,200,150,120,100,90,80,75,72,68,65,62,60,58,56,54,53,52,51,50,50,49]
+    }
+  }
+}

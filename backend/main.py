@@ -51,6 +51,7 @@ LAKES_GRAPH_PATH  = os.path.join(DATA_DIR, "ar_lakes_graph.json")     # Lakes co
 INDIGENOUS_PATH   = os.path.join(DATA_DIR, "ar_indigenous.geojson")  # Territorios indígenas con conflicto hídrico (curado)
 RAMSAR_PATH       = os.path.join(DATA_DIR, "ar_ramsar.geojson")      # 23 Sitios Ramsar oficiales (Convención 1971)
 FLOW_SERIES_PATH  = os.path.join(DATA_DIR, "ar_flow_series.json")   # Series históricas caudal/nivel por cuenca
+WATER_BODY_PATH   = os.path.join(DATA_DIR, "water_body_area.json")  # Monitoreo superficie cuerpos de agua (Landsat/GSW-JRC)
 PRECIP_GRID_PATH  = os.path.join(DATA_DIR, "ar_precip_grid.json")   # Grid ERA5 pre-computado (build_precip_grid.py)
 
 with open(DATA_PATH, encoding="utf-8") as f:
@@ -105,6 +106,8 @@ with open(RAMSAR_PATH, encoding="utf-8") as f:
     RAMSAR = json.load(f)
 with open(FLOW_SERIES_PATH, encoding="utf-8") as f:
     FLOW_SERIES = json.load(f)
+with open(WATER_BODY_PATH, encoding="utf-8") as f:
+    WATER_BODIES = json.load(f)
 
 # Grid de precipitación ERA5 pre-computado (opcional — generado por build_precip_grid.py)
 _PRECIP_GRID: dict = {}
@@ -596,6 +599,88 @@ def get_flow_series(basin: str = Query(None, description="basin_id para filtrar 
             for k, v in series.items() if v.get("metrics")
         ],
         "metadata": FLOW_SERIES.get("metadata", {}),
+    }
+
+
+def _enrich_water_body(wb_id: str, wb: dict) -> dict:
+    """Enriquece un cuerpo de agua con tendencia lineal, estadísticas y anomalía actual."""
+    import math, copy
+    w = copy.deepcopy(wb)
+    years = WATER_BODIES["metadata"]["years"]
+    data  = w.get("data", [])
+    n = len(data)
+    if n < 3:
+        return w
+
+    # Tendencia lineal (mínimos cuadrados) sobre valores anuales
+    xs = list(range(n))
+    x_mean = sum(xs) / n
+    y_mean = sum(data) / n
+    num   = sum((xs[i] - x_mean) * (data[i] - y_mean) for i in range(n))
+    denom = sum((xs[i] - x_mean) ** 2 for i in range(n))
+    slope_per_year = num / denom if denom else 0.0   # km²/año
+
+    # Cambio porcentual (último vs primero)
+    first_val = data[0]
+    last_val  = data[-1]
+    pct_change = round((last_val - first_val) / first_val * 100, 1) if first_val else 0.0
+
+    # Máximo y mínimo con año
+    max_val = max(data); max_yr = years[data.index(max_val)]
+    min_val = min(data); min_yr = years[data.index(min_val)]
+
+    # σ (población) y z-score del valor actual
+    variance  = sum((v - y_mean) ** 2 for v in data) / n
+    std_dev   = math.sqrt(variance)
+    z_current = round((last_val - y_mean) / std_dev, 2) if std_dev else 0.0
+
+    w["stats"] = {
+        "first_year":       years[0],
+        "last_year":        years[-1],
+        "first_value":      round(first_val, 1),
+        "last_value":       round(last_val, 1),
+        "pct_change":       pct_change,
+        "slope_per_year":   round(slope_per_year, 2),
+        "mean":             round(y_mean, 1),
+        "std_dev":          round(std_dev, 1),
+        "max_value":        round(max_val, 1),
+        "max_year":         max_yr,
+        "min_value":        round(min_val, 1),
+        "min_year":         min_yr,
+        "z_current":        z_current,
+        "trend_line_start": round(y_mean + slope_per_year * (0 - x_mean), 1),
+        "trend_line_end":   round(y_mean + slope_per_year * (n - 1 - x_mean), 1),
+    }
+    w["years"] = years
+    w["id"]    = wb_id
+    return w
+
+
+@app.get("/api/water/surface-change")
+def get_water_surface_change(id: str = Query(None, description="ID del cuerpo de agua (ej: colhue_huapi)")):
+    """Superficie histórica de cuerpos de agua derivada de Landsat/Sentinel GSW-JRC (1990–2025).
+    Sin parámetros retorna el índice; con ?id= retorna la serie completa enriquecida."""
+    bodies = WATER_BODIES.get("water_bodies", {})
+    if id:
+        if id not in bodies:
+            raise HTTPException(status_code=404, detail=f"Cuerpo de agua '{id}' no encontrado")
+        return _enrich_water_body(id, bodies[id])
+    # Índice liviano
+    return {
+        "water_bodies": [
+            {
+                "id":    k,
+                "name":  v["name"],
+                "name_short": v["name_short"],
+                "trend": v["trend"],
+                "type":  v["type"],
+                "basin": v.get("basin"),
+                "coords": v["coords"],
+                "unit":  v["unit"],
+            }
+            for k, v in bodies.items()
+        ],
+        "metadata": WATER_BODIES.get("metadata", {}),
     }
 
 

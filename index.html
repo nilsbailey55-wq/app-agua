@@ -760,6 +760,103 @@
     /* Flood marker pin */
     .flood-pin { cursor: pointer; }
 
+    /* ── Cuerpos de Agua section ─────────────────────────────────────────── */
+    #wb-section { border-top: 2px solid var(--border); flex-shrink: 0; }
+    .wb-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 22px; cursor: pointer;
+      user-select: none; font-size: 0.63rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-muted); background: #f7fbff;
+      border: none; width: 100%; text-align: left;
+      transition: background 0.1s;
+    }
+    .wb-header:hover { background: var(--blue-light); }
+    .wb-header .wb-chevron {
+      margin-left: auto; font-size: 0.85rem; color: var(--blue);
+      transition: transform 0.2s;
+    }
+    .wb-header.open .wb-chevron { transform: rotate(180deg); }
+    #wb-body { display: none; padding: 10px 16px 14px; }
+    #wb-body.open { display: block; }
+
+    .wb-card {
+      border: 1px solid var(--border); border-radius: 8px;
+      overflow: hidden; margin-bottom: 8px; background: #fff;
+    }
+    .wb-card:last-child { margin-bottom: 0; }
+    .wb-card-head {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; cursor: pointer; transition: background 0.1s;
+    }
+    .wb-card-head:hover { background: var(--surface); }
+    .wb-type-icon {
+      width: 30px; height: 30px; border-radius: 7px;
+      background: #dbeeff; display: flex;
+      align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .wb-name { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+    .wb-meta { font-size: 0.67rem; color: var(--text-muted); margin-top: 1px; }
+    .wb-trend-chip {
+      margin-left: auto; flex-shrink: 0;
+      font-size: 0.62rem; font-weight: 700;
+      padding: 3px 8px; border-radius: 99px;
+      letter-spacing: 0.04em;
+    }
+    .wb-trend-chip.critico     { background: #fde8e8; color: #b71c1c; }
+    .wb-trend-chip.descendente { background: #fbe9e7; color: #bf360c; }
+    .wb-trend-chip.variable    { background: #fff9e6; color: #f57f17; }
+    .wb-trend-chip.estable     { background: #e3f2fd; color: #0d47a1; }
+    .wb-trend-chip.ascendente  { background: #e8f5e9; color: #1b5e20; }
+
+    .wb-detail {
+      display: none; padding: 10px 12px 12px;
+      border-top: 1px solid var(--border); background: #fafcff;
+    }
+    .wb-detail.open { display: block; }
+
+    .wb-trend-badge {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 8px 10px; border-radius: 7px; margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .wb-trend-badge.critico     { background: rgba(192,57,43,.09);  border: 1px solid rgba(192,57,43,.3); }
+    .wb-trend-badge.descendente { background: rgba(230,81,0,.08);   border: 1px solid rgba(230,81,0,.28); }
+    .wb-trend-badge.variable    { background: rgba(212,160,23,.09); border: 1px solid rgba(212,160,23,.35); }
+    .wb-trend-badge.estable     { background: rgba(26,111,168,.07); border: 1px solid rgba(26,111,168,.22); }
+    .wb-trend-badge.ascendente  { background: rgba(45,155,90,.09);  border: 1px solid rgba(45,155,90,.3); }
+
+    .wb-badge-icon  { font-size: 1.35rem; margin-top: 1px; }
+    .wb-badge-main  { flex: 1; min-width: 0; }
+    .wb-badge-label { font-size: 0.92rem; font-weight: 800; line-height: 1; }
+    .wb-badge-sub   { font-size: 0.67rem; color: var(--text-muted); margin-top: 3px; }
+
+    .wb-stats-row   { display: flex; gap: 6px; margin: 6px 0; }
+    .wb-stat {
+      flex: 1; background: #fff; border: 1px solid var(--border);
+      border-radius: 6px; padding: 5px 7px; text-align: center;
+    }
+    .wb-stat-val { font-size: 0.82rem; font-weight: 700; color: var(--blue-dk); }
+    .wb-stat-lbl { font-size: 0.58rem; color: var(--text-muted); margin-top: 1px; }
+
+    .wb-chart-wrap { margin: 8px 0 4px; }
+    .wb-chart-wrap svg { max-width: 100%; }
+
+    .wb-desc {
+      font-size: 0.67rem; color: var(--text-muted);
+      line-height: 1.4; margin-top: 8px; font-style: italic;
+      border-top: 1px solid var(--border); padding-top: 7px;
+    }
+    .wb-map-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.67rem; font-weight: 600; color: var(--blue);
+      background: none; border: 1px solid var(--blue);
+      border-radius: 4px; padding: 3px 8px; cursor: pointer;
+      margin-top: 6px; transition: background 0.1s;
+    }
+    .wb-map-btn:hover { background: var(--blue-light); }
+
     /* responsive */
     @media (max-width: 700px) {
       #app { flex-direction: column; }
@@ -852,6 +949,22 @@
           <div class="tool-result" id="aquiferResult"></div>
         </div>
 
+      </div>
+    </div>
+
+    <!-- ═══ CUERPOS DE AGUA ═══ -->
+    <div id="wb-section">
+      <button class="wb-header" id="wbToggle" onclick="toggleWbSection()">
+        🛰 Cuerpos de Agua
+        <span class="wb-chevron">▾</span>
+      </button>
+      <div id="wb-body">
+        <p style="font-size:0.67rem;color:var(--text-muted);margin-bottom:10px;line-height:1.4;">
+          Evolución de superficie 1990–2025 · Estimación satelital Landsat/Sentinel (JRC-GSW)
+        </p>
+        <div id="wb-list">
+          <div class="spinner" style="margin:16px auto;width:24px;height:24px;border-width:2px"></div>
+        </div>
       </div>
     </div>
 
@@ -3728,6 +3841,228 @@ function renderAquiferResult(d, el) {
     ${aquiferHtml}
     ${rcHtml}
     ${d.note ? `<div class="tool-result-note">⚠ ${d.note}</div>` : ''}
+  `;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  CUERPOS DE AGUA — monitoreo de superficie histórica
+// ══════════════════════════════════════════════════════════════════
+
+let _wbBodyOpen = false;
+let _wbLoaded   = false;
+let _wbIndex    = null;
+
+function toggleWbSection() {
+  _wbBodyOpen = !_wbBodyOpen;
+  document.getElementById('wbToggle').classList.toggle('open', _wbBodyOpen);
+  document.getElementById('wb-body').classList.toggle('open', _wbBodyOpen);
+  if (_wbBodyOpen && !_wbLoaded) _loadWaterBodies();
+}
+
+async function _loadWaterBodies() {
+  try {
+    const res = await fetch(`${API}/api/water/surface-change`);
+    if (!res.ok) throw new Error(res.status);
+    _wbIndex = await res.json();
+    _wbLoaded = true;
+    _renderWbList();
+  } catch(e) {
+    document.getElementById('wb-list').innerHTML =
+      '<p style="font-size:0.75rem;color:var(--red);padding:8px 0">Error al cargar datos de cuerpos de agua.</p>';
+  }
+}
+
+function _renderWbList() {
+  const typeIcons  = { lake:'🏞', reservoir:'🏗', wetland:'🌿' };
+  const typeNames  = { lake:'Lago', reservoir:'Embalse', wetland:'Humedal' };
+  const trendLabels = { critico:'Crítico ▾', descendente:'Descendente ▾', variable:'Variable ▾', estable:'Estable ▾', ascendente:'Ascendente ▾' };
+
+  document.getElementById('wb-list').innerHTML = (_wbIndex.water_bodies || []).map(wb => `
+    <div class="wb-card" id="wb-${wb.id}">
+      <div class="wb-card-head" onclick="toggleWbDetail('${wb.id}')">
+        <div class="wb-type-icon">${typeIcons[wb.type] || '💧'}</div>
+        <div style="flex:1;min-width:0">
+          <div class="wb-name">${wb.name_short}</div>
+          <div class="wb-meta">${typeNames[wb.type] || wb.type}</div>
+        </div>
+        <div class="wb-trend-chip ${wb.trend}">${trendLabels[wb.trend] || wb.trend}</div>
+      </div>
+      <div class="wb-detail" id="wb-detail-${wb.id}">
+        <div class="tool-result-loading">⏳ Cargando datos…</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function toggleWbDetail(id) {
+  const detail = document.getElementById(`wb-detail-${id}`);
+  if (!detail) return;
+  const isOpen = detail.classList.contains('open');
+  if (isOpen) { detail.classList.remove('open'); return; }
+  detail.classList.add('open');
+  if (detail.dataset.loaded) return;
+
+  try {
+    const res = await fetch(`${API}/api/water/surface-change?id=${id}`);
+    if (!res.ok) throw new Error(res.status);
+    const wb = await res.json();
+    detail.innerHTML = _renderWbDetail(wb);
+    detail.dataset.loaded = '1';
+  } catch(e) {
+    detail.innerHTML = `<p style="font-size:0.75rem;color:var(--red)">Error al cargar datos del cuerpo de agua.</p>`;
+  }
+}
+
+function wbFlyTo(lat, lng, name) {
+  if (!window.map) return;
+  map.flyTo([lat, lng], 10, { duration: 1.2 });
+  showToast(`📍 ${name}`);
+}
+
+/* ─── Chart SVG ─────────────────────────────────────────────────── */
+function buildAreaChartSVG(wb) {
+  const values = wb.data;
+  const years  = wb.years;
+  if (!values || values.length < 2) return '';
+
+  const st  = wb.stats || {};
+  const W = 320, H = 110;
+  const PAD = { top: 12, right: 42, bottom: 24, left: 44 };
+  const cW = W - PAD.left - PAD.right;
+  const cH = H - PAD.top - PAD.bottom;
+  const n = values.length;
+
+  const alertL = wb.alert_low;
+  const mean   = st.mean || (values.reduce((a, b) => a + b, 0) / n);
+
+  let minY = Math.min(...values);
+  let maxY = Math.max(...values);
+  if (alertL)                  { minY = Math.min(minY, alertL); }
+  // Do NOT expand Y range for trend line — it may project below 0; clip via SVG clipPath instead
+  const pYPad = (maxY - minY) * 0.06 || 1;
+  minY -= pYPad; maxY += pYPad;
+
+  const xS = i => PAD.left + (i / (n - 1)) * cW;
+  const yS = v => PAD.top  + cH - ((v - minY) / (maxY - minY)) * cH;
+
+  const seriesColors = { critico:'#c0392b', descendente:'#e65100', variable:'#f57f17', estable:'#1565c0', ascendente:'#2e7d32' };
+  const sc = seriesColors[wb.trend] || '#1976d2';
+
+  // Area fill
+  const pts = values.map((v, i) => `${xS(i).toFixed(1)},${yS(v).toFixed(1)}`).join(' ');
+  const areaPath = `M${xS(0).toFixed(1)},${yS(values[0]).toFixed(1)} ` +
+    values.map((v, i) => `L${xS(i).toFixed(1)},${yS(v).toFixed(1)}`).join(' ') +
+    ` L${xS(n-1).toFixed(1)},${(PAD.top+cH).toFixed(1)} L${PAD.left.toFixed(1)},${(PAD.top+cH).toFixed(1)} Z`;
+
+  // clipPath id (unique per call using timestamp avoids collisions in the DOM)
+  const clipId = `wbc-${Date.now()}`;
+
+  // Linear trend line — clipped to chart area
+  let trendLine = '';
+  if (st.trend_line_start != null) {
+    const ty1 = yS(st.trend_line_start).toFixed(1);
+    const ty2 = yS(st.trend_line_end).toFixed(1);
+    trendLine = `<line clip-path="url(#${clipId})" x1="${PAD.left}" y1="${ty1}" x2="${W-PAD.right}" y2="${ty2}" stroke="${sc}" stroke-width="1.3" stroke-dasharray="5 3" opacity="0.65"/>`;
+  }
+
+  // Mean dashed line
+  const mY = yS(mean).toFixed(1);
+  const meanLine = `<line x1="${PAD.left}" y1="${mY}" x2="${W-PAD.right}" y2="${mY}" stroke="#1565c0" stroke-width="0.9" stroke-dasharray="5 3" opacity="0.55"/>
+    <text x="${W-PAD.right+2}" y="${(parseFloat(mY)+3.5).toFixed(1)}" font-size="6.5" fill="#1565c0" opacity="0.8">media</text>`;
+
+  // Alert low line
+  let alertLine = '';
+  if (alertL && alertL > minY && alertL < maxY) {
+    const ay = yS(alertL).toFixed(1);
+    alertLine = `<line x1="${PAD.left}" y1="${ay}" x2="${W-PAD.right}" y2="${ay}" stroke="#c0392b" stroke-width="0.8" stroke-dasharray="2 3" opacity="0.65"/>
+      <text x="${W-PAD.right+2}" y="${(parseFloat(ay)+3.5).toFixed(1)}" font-size="6" fill="#c0392b" opacity="0.8">mín</text>`;
+  }
+
+  // Last-point dot (current)
+  const lx = xS(n-1).toFixed(1), ly = yS(values[n-1]).toFixed(1);
+  const lastDot = `<circle cx="${lx}" cy="${ly}" r="5" fill="${sc}" stroke="#fff" stroke-width="1.8"/>`;
+
+  // Axis ticks
+  const xTicks = years.filter(y => y % 5 === 0).map(y => {
+    const i = years.indexOf(y);
+    return `<text x="${xS(i).toFixed(1)}" y="${(PAD.top+cH+10).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="#888">${y}</text>`;
+  }).join('');
+
+  const yTickVals = [minY + pYPad, mean, maxY - pYPad];
+  const yTicks = yTickVals.map(v => {
+    const yl = yS(v).toFixed(1);
+    const lbl = v >= 1000 ? `${(v/1000).toFixed(1)}k` : `${Math.round(v)}`;
+    return `<text x="${PAD.left-3}" y="${(parseFloat(yl)+3).toFixed(1)}" text-anchor="end" font-size="7" fill="#888">${lbl}</text>`;
+  }).join('');
+
+  return `<svg class="flow-chart-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <clipPath id="${clipId}">
+        <rect x="${PAD.left}" y="${PAD.top}" width="${cW}" height="${cH}"/>
+      </clipPath>
+    </defs>
+    ${yTickVals.map(v => `<line x1="${PAD.left}" y1="${yS(v).toFixed(1)}" x2="${W-PAD.right}" y2="${yS(v).toFixed(1)}" stroke="#e0e8f0" stroke-width="0.5"/>`).join('')}
+    ${alertLine}
+    ${meanLine}
+    ${trendLine}
+    <path clip-path="url(#${clipId})" d="${areaPath}" fill="${sc}" opacity="0.07"/>
+    <polyline clip-path="url(#${clipId})" points="${pts}" fill="none" stroke="${sc}" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>
+    ${lastDot}
+    <text x="${PAD.left}" y="${PAD.top-2}" font-size="6.5" fill="#aaa">km²</text>
+    ${yTicks}${xTicks}
+  </svg>`;
+}
+
+/* ─── Detail card ────────────────────────────────────────────────── */
+function _renderWbDetail(wb) {
+  const st   = wb.stats || {};
+  const pct  = st.pct_change;
+  const pctStr  = pct != null ? (pct > 0 ? `+${pct}%` : `${pct}%`) : '';
+  const slopeAbs = st.slope_per_year != null ? Math.abs(st.slope_per_year).toFixed(1) : '';
+  const slopeDir = st.slope_per_year < 0 ? '▼' : (st.slope_per_year > 0 ? '▲' : '');
+  const slopeStr = slopeAbs ? `${slopeDir} ${slopeAbs} km²/año` : '';
+
+  const trendLabels = { critico:'Crítico', descendente:'Descendente', variable:'Variable', estable:'Estable', ascendente:'Ascendente' };
+  const trendIcons  = { critico:'🚨', descendente:'📉', variable:'〰️', estable:'➡️', ascendente:'📈' };
+  const trendColors = { critico:'#b71c1c', descendente:'#bf360c', variable:'#e65100', estable:'#0d47a1', ascendente:'#1b5e20' };
+  const col = trendColors[wb.trend] || '#333';
+
+  const fmtKm2 = v => {
+    if (v == null) return '—';
+    return v >= 1000 ? `${(v/1000).toFixed(1)}k km²` : `${Math.round(v)} km²`;
+  };
+
+  const badgeSub = [pctStr ? `${pctStr} desde ${st.first_year}` : '', slopeStr].filter(Boolean).join(' · ');
+
+  return `
+    <div class="wb-trend-badge ${wb.trend}">
+      <div class="wb-badge-icon">${trendIcons[wb.trend] || '💧'}</div>
+      <div class="wb-badge-main">
+        <div class="wb-badge-label" style="color:${col}">${trendLabels[wb.trend] || wb.trend}</div>
+        ${badgeSub ? `<div class="wb-badge-sub">${badgeSub}</div>` : ''}
+      </div>
+      <button class="wb-map-btn" onclick="wbFlyTo(${wb.coords[0]},${wb.coords[1]},'${wb.name_short}')">🗺 Ver mapa</button>
+    </div>
+
+    <div class="wb-stats-row">
+      <div class="wb-stat">
+        <div class="wb-stat-val">${fmtKm2(st.first_value)}</div>
+        <div class="wb-stat-lbl">${st.first_year || ''}</div>
+      </div>
+      <div class="wb-stat">
+        <div class="wb-stat-val">${fmtKm2(st.last_value)}</div>
+        <div class="wb-stat-lbl">${st.last_year || ''} (actual)</div>
+      </div>
+      <div class="wb-stat">
+        <div class="wb-stat-val">${fmtKm2(st.max_value)}</div>
+        <div class="wb-stat-lbl">máx (${st.max_year || ''})</div>
+      </div>
+    </div>
+
+    <div class="wb-chart-wrap">${buildAreaChartSVG(wb)}</div>
+
+    <div class="wb-desc">${wb.description || ''}</div>
+    <div style="font-size:0.59rem;color:var(--text-muted);margin-top:4px;">Fuente: ${wb.refs || 'JRC-GSW / Landsat'}</div>
   `;
 }
 </script>
