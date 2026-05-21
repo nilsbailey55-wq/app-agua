@@ -2068,10 +2068,23 @@ async function buildWaterLayers() {
   };
 
   glaciersLayer = L.layerGroup();
+  // Pre-compute dataset range for proportional scaling
+  const _gAreas = glaciers.features.map(f => f.properties.area_km2 || 1);
+  const _gSqrtMin = Math.sqrt(Math.min(..._gAreas));   // ≈ 1
+  const _gSqrtMax = Math.sqrt(Math.max(..._gAreas));   // ≈ √29 ≈ 5.4
+  const _GLACIER_R_MIN = 3, _GLACIER_R_MAX = 14;       // px range
+
   glaciers.features.forEach(f => {
     const p = f.properties;
     const [lng, lat] = f.geometry.coordinates;
-    const r = Math.max(2.2, Math.min(11, Math.sqrt(p.area_km2) * 1.4));
+    // Normalize sqrt(area) over dataset range → radius in [3, 14] px
+    // sqrt scaling: visual circle area ∝ glacier area
+    const sqrtA = Math.sqrt(Math.max(1, p.area_km2));
+    const t = (_gSqrtMax > _gSqrtMin)
+      ? (sqrtA - _gSqrtMin) / (_gSqrtMax - _gSqrtMin)
+      : 0.5;
+    const r = _GLACIER_R_MIN + t * (_GLACIER_R_MAX - _GLACIER_R_MIN);
+
     const isMajor = p.is_major;
     L.circleMarker([lat, lng], {
       radius: r,
