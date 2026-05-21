@@ -26,10 +26,11 @@ import urllib.parse
 import urllib.request
 
 # ── configuración ──────────────────────────────────────────────────────────────
-GRID_RES    = 0.5          # resolución en grados (debe coincidir con main.py)
+GRID_RES    = 1.0          # resolución en grados (debe coincidir con main.py)
 START_YEAR  = 1990
 END_YEAR    = 2025
-SLEEP_S     = 0.4          # pausa entre llamadas (respetar rate limit Open-Meteo)
+SLEEP_S     = 1.0          # pausa entre llamadas (respetar rate limit Open-Meteo)
+MAX_RETRIES = 5            # reintentos ante 429 (con backoff exponencial)
 SAVE_EVERY  = 50           # guardar progreso cada N celdas
 MIN_DAYS    = 300          # mínimo de días por año para considerarlo válido
 
@@ -61,8 +62,11 @@ def grid_cells():
     return cells
 
 
-def fetch_cell(lat: float, lon: float) -> dict | None:
-    """Llama a Open-Meteo ERA5 para una celda. Retorna dict con data anual o None si falla."""
+_RATE_LIMITED = "RATE_LIMITED"   # sentinel para distinguir 429 de "sin datos"
+
+def fetch_cell(lat: float, lon: float):
+    """Llama a Open-Meteo ERA5 para una celda.
+    Retorna dict con data anual, None si es océano/sin datos, o _RATE_LIMITED si 429."""
     params = urllib.parse.urlencode({
         "latitude":   lat,
         "longitude":  lon,
@@ -77,6 +81,9 @@ def fetch_cell(lat: float, lon: float) -> dict | None:
         with urllib.request.urlopen(req, timeout=60, context=_SSL_CTX) as r:
             raw = json.loads(r.read())
     except Exception as e:
+        msg = str(e)
+        if "429" in msg:
+            return _RATE_LIMITED
         print(f"  ERROR fetch ({lat},{lon}): {e}")
         return None
 
@@ -117,9 +124,16 @@ def cell_key(lat: float, lon: float) -> str:
 
 
 def load_progress() -> dict:
+    # 1. archivo de progreso parcial (de una corrida interrumpida)
     if os.path.exists(PROG_PATH):
         with open(PROG_PATH, encoding="utf-8") as f:
             return json.load(f)
+    # 2. grid final ya existente → retomar solo los nulls (celdas que fallaron con 429)
+    if os.path.exists(OUT_PATH):
+        with open(OUT_PATH, encoding="utf-8") as f:
+            existing = json.load(f).get("cells", {})
+        # solo retener las celdas con datos reales; las null se reintentarán
+        return {k: v for k, v in existing.items() if v is not None}
     return {}
 
 
@@ -166,14 +180,27 @@ def main():
         key = cell_key(lat, lon)
         print(f"[{len(done)+1}/{total}] ({lat:.1f}, {lon:.1f})", end=" ", flush=True)
 
-        result = fetch_cell(lat, lon)
-        if result:
+        # reintentos con backoff exponencial ante 429
+        result = None
+        for attempt in range(MAX_RETRIES):
+            result = fetch_cell(lat, lon)
+            if result != _RATE_LIMITED:
+                break
+            wait = 30 * (2 ** attempt)   # 30s, 60s, 120s, 240s, 480s
+            print(f"\n  429 rate limit — esperando {wait}s...", end=" ", flush=True)
+            time.sleep(wait)
+
+        if result and result != _RATE_LIMITED:
             done[key] = result
             print(f"✓  {result['mean']} mm/año  ({len(result['data'])} años)")
-        else:
-            # celda fuera de tierra (océano o fuera de Argentina) — guardar vacío para no reintentar
-            done[key] = None
+        elif result == _RATE_LIMITED:
+            # agotados los reintentos — no guardar null, se reintentará en la próxima corrida
+            print("✗ rate limit persistente, se reintentará")
             errors += 1
+            continue   # no agregar al dict → la próxima corrida la reintenta
+        else:
+            # sin datos reales (océano / fuera de cobertura)
+            done[key] = None
             print("— (sin datos / océano)")
 
         if i % SAVE_EVERY == 0:
