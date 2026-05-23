@@ -1245,6 +1245,20 @@ function setBasemap(key) {
 }
 setBasemap('carto');  // default
 
+// Stop Leaflet from grabbing drag/click on the map toolbar and result panel
+const _mapToolbar = document.getElementById('map-toolbar');
+if (_mapToolbar) {
+  L.DomEvent.disableClickPropagation(_mapToolbar);
+  L.DomEvent.disableScrollPropagation(_mapToolbar);
+}
+const _mapToolPanel = document.getElementById('map-tool-panel');
+if (_mapToolPanel) {
+  L.DomEvent.disableClickPropagation(_mapToolPanel);
+  L.DomEvent.disableScrollPropagation(_mapToolPanel);
+}
+const _toolActiveBanner = document.getElementById('tool-active-banner');
+if (_toolActiveBanner) L.DomEvent.disableClickPropagation(_toolActiveBanner);
+
 // Stop Leaflet from grabbing drag/click on the basemap selector
 const _basemapSelEl = document.getElementById('basemapSelector');
 if (_basemapSelEl) {
