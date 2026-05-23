@@ -879,6 +879,62 @@ def get_chirps(basin: str = Query(None, description="basin_id (ej: negro_limay).
     }
 
 
+@app.get("/api/climate/precip-heatmap")
+def get_precip_heatmap():
+    """Grilla de precipitación ERA5-Land precalculada para el heatmap del mapa.
+    Resolución 2°. Contiene anual 2022-2024 y mensual 2024/2023 por punto.
+    Generado por scripts/build_precip_heatmap.py (actualizar periódicamente)."""
+    path = os.path.join(DATA_DIR, "precip_heatmap.json")
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Grilla no generada aún — correr build_precip_heatmap.py")
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+@app.get("/api/climate/precip-recent")
+async def get_precip_recent():
+    """Precipitación acumulada últimos 7 días para la grilla 2° (Open-Meteo on-demand).
+    Lag típico ERA5-Land: ~5-6 días. Los últimos 1-2 días pueden no estar disponibles."""
+    from datetime import date, timedelta
+    today    = date.today()
+    end_dt   = today - timedelta(days=1)
+    start_dt = today - timedelta(days=8)
+
+    LAT_MIN, LAT_MAX, LON_MIN, LON_MAX, STEP = -55.0, -21.0, -74.0, -52.0, 2.0
+    lats = [round(LAT_MIN + i * STEP, 1) for i in range(int((LAT_MAX - LAT_MIN) / STEP) + 1)]
+    lons = [round(LON_MIN + j * STEP, 1) for j in range(int((LON_MAX - LON_MIN) / STEP) + 1)]
+
+    import urllib.parse
+    BASE = "https://archive-api.open-meteo.com/v1/archive"
+    results = []
+
+    async def fetch_one(lat, lon):
+        params = urllib.parse.urlencode({
+            "latitude": lat, "longitude": lon,
+            "start_date": start_dt.isoformat(), "end_date": end_dt.isoformat(),
+            "daily": "precipitation_sum", "timezone": "UTC",
+        })
+        try:
+            url = f"{BASE}?{params}"
+            data = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: json.loads(urllib.request.urlopen(url, timeout=15).read())
+            )
+            vals = [v for v in data["daily"]["precipitation_sum"] if v is not None]
+            total = round(sum(vals), 1)
+            if total > 0:
+                results.append({"lat": lat, "lon": lon, "precip_7d": total})
+        except Exception:
+            pass
+
+    tasks = [fetch_one(la, lo) for la in lats for lo in lons]
+    await asyncio.gather(*tasks)
+    return {
+        "period": f"{start_dt.isoformat()} → {end_dt.isoformat()}",
+        "unit": "mm",
+        "points": results,
+    }
+
+
 @app.get("/api/argentina-border")
 def get_argentina_border():
     """Polígono fronterizo de Argentina (Natural Earth admin_0). Para overlay sutil."""

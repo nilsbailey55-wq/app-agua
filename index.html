@@ -7,6 +7,7 @@
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -2639,14 +2640,37 @@ async function buildWaterLayers() {
       </button>` +
       section('Marcos') +
         btn('basins',   '#1a6fa8', '📐', 'cuencas',     '#e8f4fb') +
-        `<button id="precipToggle" title="Coropleta de precipitación media anual CHIRPS (1991–2020) por cuenca" data-bg-off="#fff" style="
-          background:#fff;border:1.6px solid #1565c0;border-radius:5px;
-          padding:4px 8px;font-size:0.7rem;font-weight:700;
-          color:#1565c0;cursor:pointer;display:flex;align-items:center;gap:5px;
-          white-space:nowrap;width:100%;">
-          <span style="font-size:0.85rem;">🌧</span>
-          <span id="precipToggleLabel">Mostrar lluvia</span>
-        </button>` +
+        `<div id="precipControl" style="display:flex;flex-direction:column;gap:3px;">
+          <button id="precipToggle" data-bg-off="#fff" style="
+            background:#fff;border:1.6px solid #1565c0;border-radius:5px;
+            padding:4px 8px;font-size:0.7rem;font-weight:700;
+            color:#1565c0;cursor:pointer;display:flex;align-items:center;gap:5px;
+            white-space:nowrap;width:100%;">
+            <span style="font-size:0.85rem;">🌧</span>
+            <span id="precipToggleLabel">Mostrar lluvia</span>
+          </button>
+          <div id="precipPeriodRow" style="display:none;padding-left:4px;gap:3px;flex-direction:column;">
+            <select id="precipPeriodType" style="font-size:0.65rem;border:1px solid #bcd;border-radius:4px;padding:2px 4px;width:100%;color:#1565c0;background:#f0f6ff;">
+              <option value="annual">Anual</option>
+              <option value="monthly">Mensual</option>
+              <option value="recent">Últimos 7 días</option>
+            </select>
+            <select id="precipYear" style="font-size:0.65rem;border:1px solid #bcd;border-radius:4px;padding:2px 4px;width:100%;color:#333;display:none;">
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+              <option value="2022">2022</option>
+              <option value="normal">Normal 91–20</option>
+            </select>
+            <select id="precipMonth" style="font-size:0.65rem;border:1px solid #bcd;border-radius:4px;padding:2px 4px;width:100%;color:#333;display:none;">
+              <option value="0">Enero</option><option value="1">Febrero</option>
+              <option value="2">Marzo</option><option value="3">Abril</option>
+              <option value="4">Mayo</option><option value="5">Junio</option>
+              <option value="6">Julio</option><option value="7">Agosto</option>
+              <option value="8">Septiembre</option><option value="9">Octubre</option>
+              <option value="10">Noviembre</option><option value="11">Diciembre</option>
+            </select>
+          </div>
+        </div>` +
       section('Hidrografía') +
         btn('water',    '#0d47a1', '💧', 'agua',        '#e8f4fb') +
         btn('wetlands', '#33691e', '🌾', 'humedales',   '#f1f8e9') +
@@ -2751,8 +2775,11 @@ async function buildWaterLayers() {
     wire('ramsar',    () => ramsarLayer,      () => ramsarVisible,   v => ramsarVisible = v,
          'Ocultar sitios Ramsar','Mostrar sitios Ramsar');
 
-    // Precipitación CHIRPS toggle (async — usa su propia lógica)
+    // Precipitación heatmap toggle + selectores de período
     d.querySelector('#precipToggle')?.addEventListener('click', () => togglePrecipLayer());
+    d.querySelector('#precipPeriodType')?.addEventListener('change', () => _onPrecipPeriodChange());
+    d.querySelector('#precipYear')?.addEventListener('change',       () => _onPrecipPeriodChange());
+    d.querySelector('#precipMonth')?.addEventListener('change',      () => _onPrecipPeriodChange());
 
     // "Otras áreas" group expander
     const expBtn = d.querySelector('#otherAreasExpander');
@@ -3717,130 +3744,177 @@ async function loadFlowChart(basinId, containerId) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// CHIRPS — Precipitación por cuenca (panel sidebar + capa coropleta)
+// CHIRPS / ERA5 — Heatmap de precipitación (panel sidebar + mapa)
 // ══════════════════════════════════════════════════════════════════════════
 
-let _chirpsIndex   = null;   // índice liviano cargado una vez
-let _precipLayer   = null;   // Leaflet layer (choropleth)
+let _chirpsIndex   = null;   // índice liviano cuencas (sidebar)
+let _heatmapData   = null;   // grilla precalculada (precip_heatmap.json)
+let _precipLayer   = null;   // Leaflet.heat layer activo
 let _precipVisible = false;
+let _precipPeriod  = { type: 'annual', year: '2024', month: 0 };
 
-// Escala de color mm/año → color hex
-function _precipColor(mm) {
-  if (mm <  200) return '#fff7bc';
-  if (mm <  350) return '#fee391';
-  if (mm <  500) return '#fec44f';
-  if (mm <  700) return '#fe9929';
-  if (mm <  900) return '#ec7014';
-  if (mm < 1100) return '#cc4c02';
-  if (mm < 1300) return '#8c2d04';
-  return '#4a0e00';
-}
-
-// Carga el índice CHIRPS una vez (para coropleta y sidebar)
+// ── Carga del índice CHIRPS (sidebar) ─────────────────────────────────────
 async function _ensureCHIRPSIndex() {
   if (_chirpsIndex) return _chirpsIndex;
   try {
     const res = await fetch(`${API}/api/climate/chirps`);
-    if (!res.ok) {
-      console.warn('[CHIRPS] fetch failed:', res.status, res.statusText);
-      return null;
-    }
+    if (!res.ok) { console.warn('[CHIRPS] fetch failed:', res.status); return null; }
     _chirpsIndex = await res.json();
     console.log('[CHIRPS] index loaded:', _chirpsIndex.basins?.length, 'cuencas');
     return _chirpsIndex;
-  } catch(e) {
-    console.warn('[CHIRPS] error:', e);
-    return null;
-  }
+  } catch(e) { console.warn('[CHIRPS] error:', e); return null; }
 }
 
-// Toggle capa coropleta en el mapa
-async function togglePrecipLayer() {
-  const btn = document.getElementById('precipToggle');
-  const lbl = document.getElementById('precipToggleLabel');
+// ── Carga de la grilla de heatmap ─────────────────────────────────────────
+async function _ensureHeatmapData() {
+  if (_heatmapData) return _heatmapData;
+  try {
+    const res = await fetch(`${API}/api/climate/precip-heatmap`);
+    if (!res.ok) { console.warn('[heatmap] fetch failed:', res.status); return null; }
+    _heatmapData = await res.json();
+    console.log('[heatmap] loaded:', _heatmapData.points?.length, 'puntos');
+    return _heatmapData;
+  } catch(e) { console.warn('[heatmap] error:', e); return null; }
+}
 
-  if (_precipVisible && _precipLayer) {
-    _precipLayer.remove();
-    _precipLayer   = null;
+// ── Extrae [lat, lon, valor] para el período seleccionado ─────────────────
+function _heatPoints(data, period) {
+  const pts = [];
+  for (const p of data.points) {
+    let val = null;
+    if (period.type === 'annual') {
+      val = period.year === 'normal' ? p.normal_91_20 : p.annual?.[period.year];
+    } else if (period.type === 'monthly') {
+      const src = period.year === '2023' ? p.monthly_2023 : p.monthly_2024;
+      val = src?.[period.month] ?? null;
+    } else if (period.type === 'recent') {
+      val = p.recent_7d ?? null;
+    }
+    if (val != null && val > 0) pts.push([p.lat, p.lon, val]);
+  }
+  return pts;
+}
+
+// ── Construye y muestra el heatmap ────────────────────────────────────────
+async function _buildHeatLayer(period) {
+  if (_precipLayer) { _precipLayer.remove(); _precipLayer = null; }
+
+  let points;
+
+  if (period.type === 'recent') {
+    // On-demand del backend
+    try {
+      const res = await fetch(`${API}/api/climate/precip-recent`);
+      if (!res.ok) throw new Error(res.status);
+      const d = await res.json();
+      points = d.points.map(p => [p.lat, p.lon, p.precip_7d]).filter(p => p[2] > 0);
+    } catch(e) {
+      toast('Error cargando datos recientes');
+      return;
+    }
+  } else {
+    const data = await _ensureHeatmapData();
+    if (!data) { toast('No se pudo cargar la grilla de precipitación'); return; }
+    points = _heatPoints(data, period);
+  }
+
+  if (!points.length) { toast('Sin datos para este período'); return; }
+
+  // Normaliza intensidad (0–1) según rango del período
+  const vals = points.map(p => p[2]);
+  const maxV = Math.max(...vals);
+  const normalized = points.map(([la, lo, v]) => [la, lo, v / maxV]);
+
+  _precipLayer = L.heatLayer(normalized, {
+    radius: 35,
+    blur: 25,
+    maxZoom: 8,
+    max: 1.0,
+    gradient: {
+      0.0: '#ffffcc',
+      0.2: '#a1dab4',
+      0.4: '#41b6c4',
+      0.6: '#2c7fb8',
+      0.8: '#253494',
+      1.0: '#081d58',
+    },
+  }).addTo(map);
+
+  _updatePrecipLegend(period, Math.max(...vals));
+}
+
+// ── Toggle principal ───────────────────────────────────────────────────────
+async function togglePrecipLayer() {
+  const btn     = document.getElementById('precipToggle');
+  const lbl     = document.getElementById('precipToggleLabel');
+  const row     = document.getElementById('precipPeriodRow');
+
+  if (_precipVisible) {
+    if (_precipLayer) { _precipLayer.remove(); _precipLayer = null; }
     _precipVisible = false;
-    if (btn) { btn.style.background = btn.dataset.bgOff || '#fff'; }
+    if (btn) btn.style.background = '#fff';
     if (lbl) lbl.textContent = 'Mostrar lluvia';
+    if (row) row.style.display = 'none';
     _removePrecipLegend();
     return;
   }
 
   if (lbl) lbl.textContent = 'Cargando…';
-  toast('Cargando precipitación CHIRPS…');
+  toast('Cargando heatmap de precipitación…');
 
-  const idx = await _ensureCHIRPSIndex();
-  if (!idx) {
-    toast('No se pudo cargar datos CHIRPS');
-    if (lbl) lbl.textContent = 'Mostrar lluvia';
-    return;
+  // Pre-carga grilla (salvo "recent" que va on-demand)
+  if (_precipPeriod.type !== 'recent') {
+    const ok = await _ensureHeatmapData();
+    if (!ok) { if (lbl) lbl.textContent = 'Mostrar lluvia'; return; }
   }
 
-  // Construir mapa basin_id → datos
-  const byId = {};
-  idx.basins.forEach(b => { byId[b.id] = b; });
-
-  // Crear layer GeoJSON coloreando cada cuenca
-  const features = allBasins
-    .filter(f => byId[f.id] && f.geometry)
-    .map(f => ({
-      type: 'Feature',
-      properties: { ...f.properties, _id: f.id, _mm: byId[f.id].mean_base,
-                    _anom: byId[f.id].anomaly_2024_pct, _z: byId[f.id].z_2024 },
-      geometry: f.geometry,
-    }));
-
-  if (!features.length) {
-    toast('Sin geometrías para coropleta');
-    if (lbl) lbl.textContent = 'Mostrar lluvia';
-    return;
-  }
-
-  _precipLayer = L.geoJSON({ type: 'FeatureCollection', features }, {
-    style: feat => ({
-      fillColor: _precipColor(feat.properties._mm),
-      fillOpacity: 0.55,
-      color: '#fff',
-      weight: 0.8,
-      opacity: 0.5,
-    }),
-    interactive: false,
-  }).addTo(map);
-
-  // Llevar capas de agua al frente
-  [waterLayerGroup, wetlandsLayer, glaciersLayer].forEach(g => {
-    if (g && g.eachLayer) g.eachLayer(l => l.bringToFront && l.bringToFront());
-  });
+  await _buildHeatLayer(_precipPeriod);
 
   _precipVisible = true;
-  if (btn) { btn.style.background = '#bbdefb'; }
+  if (btn) btn.style.background = '#bbdefb';
   if (lbl) lbl.textContent = 'Ocultar lluvia';
-  _renderPrecipLegend();
+  if (row) row.style.display = 'flex';
 }
 
-// Leyenda de precipitación
-function _renderPrecipLegend() {
-  if (document.getElementById('precip-legend')) return;
-  const steps = [
-    { mm: '<200',     color: '#fff7bc' },
-    { mm: '200–350',  color: '#fee391' },
-    { mm: '350–500',  color: '#fec44f' },
-    { mm: '500–700',  color: '#fe9929' },
-    { mm: '700–900',  color: '#ec7014' },
-    { mm: '900–1100', color: '#cc4c02' },
-    { mm: '1100–1300',color: '#8c2d04' },
-    { mm: '>1300',    color: '#4a0e00' },
-  ];
+// ── Selectores de período ──────────────────────────────────────────────────
+function _onPrecipPeriodChange() {
+  const type  = document.getElementById('precipPeriodType')?.value  ?? 'annual';
+  const year  = document.getElementById('precipYear')?.value        ?? '2024';
+  const month = parseInt(document.getElementById('precipMonth')?.value ?? '0');
+  const ysel  = document.getElementById('precipYear');
+  const msel  = document.getElementById('precipMonth');
+
+  if (ysel) ysel.style.display = (type === 'annual' || type === 'monthly') ? 'block' : 'none';
+  if (msel) msel.style.display = (type === 'monthly') ? 'block' : 'none';
+  // Ocultar "normal 91-20" en vista mensual (no tenemos ese desglose)
+  if (ysel) {
+    const normalOpt = ysel.querySelector('option[value="normal"]');
+    if (normalOpt) normalOpt.style.display = (type === 'monthly') ? 'none' : '';
+  }
+
+  _precipPeriod = { type, year, month };
+  if (_precipVisible) {
+    toast('Actualizando mapa…');
+    _buildHeatLayer(_precipPeriod);
+  }
+}
+
+// ── Leyenda del heatmap ────────────────────────────────────────────────────
+function _updatePrecipLegend(period, maxVal) {
+  _removePrecipLegend();
+  const unit  = period.type === 'monthly' ? 'mm/mes' : 'mm/año';
+  const title = period.type === 'recent'  ? 'mm · últimos 7d' : unit;
+  const steps = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
+  const colors = ['#ffffcc','#a1dab4','#41b6c4','#2c7fb8','#253494','#081d58'];
+
   const el = document.createElement('div');
   el.id = 'precip-legend';
-  el.style.cssText = 'position:absolute;bottom:106px;right:12px;z-index:800;background:rgba(255,255,255,0.95);border-radius:8px;padding:8px 10px;font-size:0.62rem;box-shadow:0 2px 8px rgba(0,0,0,.15);min-width:110px;';
-  el.innerHTML = `<div style="font-weight:700;margin-bottom:5px;color:#1565c0;">🌧 mm/año</div>` +
-    steps.map(s => `<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
-      <div style="width:14px;height:10px;border-radius:2px;background:${s.color};border:1px solid rgba(0,0,0,.15);flex-shrink:0;"></div>
-      <span>${s.mm}</span></div>`).join('');
+  el.style.cssText = 'position:absolute;bottom:106px;right:12px;z-index:800;background:rgba(255,255,255,0.95);border-radius:8px;padding:8px 10px;font-size:0.62rem;box-shadow:0 2px 8px rgba(0,0,0,.15);min-width:115px;';
+  el.innerHTML = `<div style="font-weight:700;margin-bottom:5px;color:#1565c0;">🌧 ${title}</div>` +
+    steps.map((s, i) => `<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
+      <div style="width:14px;height:10px;border-radius:2px;background:${colors[i]};border:1px solid rgba(0,0,0,.1);flex-shrink:0;"></div>
+      <span>${Math.round(s * maxVal)}</span></div>`).join('') +
+    `<div style="color:#aaa;margin-top:4px;font-size:0.58rem;">ERA5-Land · Open-Meteo</div>`;
   document.getElementById('map').appendChild(el);
   L.DomEvent.disableClickPropagation(el);
 }
