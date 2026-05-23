@@ -805,6 +805,69 @@
     /* Flood marker pin */
     .flood-pin { cursor: pointer; }
 
+    /* ── Map toolbar ─────────────────────────────────────────────────────── */
+    #map-toolbar {
+      position: absolute;
+      bottom: 28px; left: 50%; transform: translateX(-50%);
+      z-index: 800;
+      display: flex; align-items: center; gap: 2px;
+      background: rgba(255,255,255,0.97);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0,0,0,0.11);
+      border-radius: 14px; padding: 5px 6px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.16);
+    }
+    .map-tool-btn {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 2px; padding: 7px 14px; border: none; border-radius: 9px;
+      background: transparent; cursor: pointer;
+      transition: background 0.15s; min-width: 62px; outline: none;
+    }
+    .map-tool-btn:hover { background: #f0f5fb; }
+    .map-tool-btn.active { background: var(--blue); }
+    .mt-icon { font-size: 1.1rem; line-height: 1; }
+    .mt-label {
+      font-size: 0.6rem; font-weight: 700; color: var(--text-muted);
+      letter-spacing: 0.04em; text-transform: uppercase;
+      transition: color 0.15s; white-space: nowrap;
+    }
+    .map-tool-btn:hover  .mt-label { color: var(--blue); }
+    .map-tool-btn.active .mt-label { color: #fff; }
+    .map-toolbar-divider { width: 1px; height: 28px; background: #dce8f0; margin: 0 4px; }
+
+    /* ── Map tool result panel ───────────────────────────────────────────── */
+    #map-tool-panel {
+      display: none; position: absolute;
+      bottom: 106px; left: 16px;
+      z-index: 801;
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+      width: 330px; max-height: calc(100vh - 180px);
+      overflow-y: auto;
+      border: 1px solid rgba(0,0,0,0.09);
+    }
+    #map-tool-panel.show { display: block; }
+    .mtp-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: #fff; z-index: 1;
+      border-radius: 12px 12px 0 0;
+    }
+    .mtp-title { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+    .mtp-close {
+      width: 26px; height: 26px; border: none; border-radius: 50%;
+      background: #f0f4f8; font-size: 1.1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted); transition: background 0.1s;
+    }
+    .mtp-close:hover { background: #dce8f0; }
+    .mtp-body { padding: 12px 14px 14px; }
+    /* Inside the panel results are always visible */
+    #map-tool-panel .tool-result { display: block; padding: 0; border: none; background: none; }
+
+    /* Adjust active-tool banner so it clears the new toolbar */
+    #tool-active-banner { bottom: 108px !important; }
+
     /* ── Cuerpos de Agua section ─────────────────────────────────────────── */
     #wb-section { border-top: 2px solid var(--border); flex-shrink: 0; }
     .wb-header {
@@ -947,55 +1010,7 @@
       <div class="spinner" id="loadingSpinner"></div>
     </div>
 
-    <!-- ═══ HERRAMIENTAS ═══ -->
-    <div id="tools-section">
-      <button class="tools-header" id="toolsToggle" onclick="toggleToolsSection()">
-        🛠 Herramientas
-        <span class="tools-chevron">▾</span>
-      </button>
-      <div id="tools-body">
-
-        <!-- Flood susceptibility tool -->
-        <div class="tool-card" id="toolCard-flood">
-          <div class="tool-card-head">
-            <div class="tool-icon flood">🌊</div>
-            <div>
-              <div class="tool-title">Susceptibilidad a inundación</div>
-              <div class="tool-subtitle">Método HAND · HydroRIVERS + SRTM30m</div>
-            </div>
-            <button class="tool-activate-btn" id="floodToolBtn" onclick="toggleFloodTool()">Activar</button>
-          </div>
-          <div class="tool-result" id="floodResult"></div>
-        </div>
-
-        <!-- Runoff index tool -->
-        <div class="tool-card" id="toolCard-runoff">
-          <div class="tool-card-head">
-            <div class="tool-icon runoff">🌧</div>
-            <div>
-              <div class="tool-title">Escorrentía pluvial</div>
-              <div class="tool-subtitle">¿Cuánta lluvia infiltra vs. escurre?</div>
-            </div>
-            <button class="tool-activate-btn" id="runoffToolBtn" onclick="toggleRunoffTool()">Activar</button>
-          </div>
-          <div class="tool-result" id="runoffResult"></div>
-        </div>
-
-        <!-- Aquifer potential tool -->
-        <div class="tool-card" id="toolCard-aquifer">
-          <div class="tool-card-head">
-            <div class="tool-icon aquifer">💧</div>
-            <div>
-              <div class="tool-title">Potencial acuífero</div>
-              <div class="tool-subtitle">Agua subterránea + recarga potencial</div>
-            </div>
-            <button class="tool-activate-btn" id="aquiferToolBtn" onclick="toggleAquiferTool()">Activar</button>
-          </div>
-          <div class="tool-result" id="aquiferResult"></div>
-        </div>
-
-      </div>
-    </div>
+    <!-- Tools moved to map toolbar (#map-toolbar) -->
 
     <!-- ═══ CUERPOS DE AGUA ═══ -->
     <div id="wb-section">
@@ -1036,6 +1051,40 @@
     <div id="tool-active-banner">
       <span id="tool-banner-text">Hacé clic en el mapa para analizar ese punto</span>
       <button onclick="cancelActiveTool()">Cancelar</button>
+    </div>
+
+    <!-- ═══ MAP TOOLBAR ═══ -->
+    <div id="map-toolbar">
+      <button class="map-tool-btn" id="traceMapBtn" onclick="enterTraceMode()" title="Trazar el origen del agua de cualquier punto">
+        <div class="mt-icon">🔍</div>
+        <div class="mt-label">Origen</div>
+      </button>
+      <div class="map-toolbar-divider"></div>
+      <button class="map-tool-btn" id="floodToolBtn" onclick="toggleFloodTool()" title="Susceptibilidad a inundación (método HAND)">
+        <div class="mt-icon">🌊</div>
+        <div class="mt-label">Inundación</div>
+      </button>
+      <button class="map-tool-btn" id="runoffToolBtn" onclick="toggleRunoffTool()" title="Escorrentía pluvial (SCS-CN)">
+        <div class="mt-icon">🌧</div>
+        <div class="mt-label">Escorrentía</div>
+      </button>
+      <button class="map-tool-btn" id="aquiferToolBtn" onclick="toggleAquiferTool()" title="Potencial acuífero subterráneo">
+        <div class="mt-icon">💧</div>
+        <div class="mt-label">Acuífero</div>
+      </button>
+    </div>
+
+    <!-- ═══ TOOL RESULT PANEL (map overlay) ═══ -->
+    <div id="map-tool-panel">
+      <div class="mtp-head">
+        <span class="mtp-title" id="mtp-title">Resultado</span>
+        <button class="mtp-close" onclick="cancelActiveTool()">×</button>
+      </div>
+      <div class="mtp-body">
+        <div class="tool-result" id="floodResult"></div>
+        <div class="tool-result" id="runoffResult"></div>
+        <div class="tool-result" id="aquiferResult"></div>
+      </div>
     </div>
     <button class="clean-mode-btn" id="cleanModeBtn"
             title="Modo mapa limpio: oculta panel, capas y referencias">👁</button>
@@ -2554,16 +2603,7 @@ async function buildWaterLayers() {
       `<div style="font-size:0.58rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#999;padding:5px 4px 1px;">${title}</div>`;
 
     d.innerHTML = reopenTab + closeRow +
-      `<button id="traceModeBtn" title="Trazar el origen del agua de cualquier punto" style="
-        background:#00838f;border:1.6px solid #00838f;border-radius:5px;
-        padding:6px 8px;font-size:0.72rem;font-weight:700;
-        color:#fff;cursor:pointer;display:flex;align-items:center;gap:5px;
-        white-space:nowrap;width:100%;margin-bottom:4px;
-      ">
-        <span style="font-size:0.85rem;">🔍</span>
-        <span>Trazar origen del agua</span>
-      </button>
-      <button id="flowToggleBtn" title="Animar el flujo de los ríos (estilo Windy)" style="
+      `<button id="flowToggleBtn" title="Animar el flujo de los ríos (estilo Windy)" style="
         background:#fff;border:1.6px solid #0d47a1;border-radius:5px;
         padding:6px 8px;font-size:0.72rem;font-weight:700;
         color:#0d47a1;cursor:pointer;display:flex;align-items:center;gap:5px;
@@ -2614,9 +2654,6 @@ async function buildWaterLayers() {
     // Close + reopen handlers
     d.querySelector('#layersClose').addEventListener('click', () => d.classList.add('collapsed'));
     d.querySelector('#layersReopen').addEventListener('click', () => d.classList.remove('collapsed'));
-
-    // Trace mode button
-    d.querySelector('#traceModeBtn').addEventListener('click', () => enterTraceMode());
 
     // Flow animation toggle
     d.querySelector('#flowToggleBtn').addEventListener('click', () => {
@@ -3076,11 +3113,13 @@ let traceLayer = null;
 function enterTraceMode() {
   traceModeActive = true;
   document.getElementById('traceMode-banner').classList.add('active');
+  document.getElementById('traceMapBtn').classList.add('active');
   map.getContainer().style.cursor = 'crosshair';
 }
 function exitTraceMode() {
   traceModeActive = false;
   document.getElementById('traceMode-banner').classList.remove('active');
+  document.getElementById('traceMapBtn').classList.remove('active');
   map.getContainer().style.cursor = '';
 }
 function clearTraceLayer() {
@@ -3666,27 +3705,19 @@ const TOOL_META = {
   aquifer: { btn: 'aquiferToolBtn', result: 'aquiferResult', emoji: '💧', label: 'Potencial acuífero' },
 };
 
-function _openToolsSection() {
-  const body = document.getElementById('tools-body');
-  if (!body.classList.contains('open')) toggleToolsSection();
-}
-
 function _activateTool(toolName) {
-  // Deactivate whatever was running
   if (_activeTool) _deactivateTool(_activeTool, false);
-
   _activeTool = toolName;
-  const meta   = TOOL_META[toolName];
-  const btn    = document.getElementById(meta.btn);
-  const banner = document.getElementById('tool-active-banner');
+  const meta = TOOL_META[toolName];
+  const btn  = document.getElementById(meta.btn);
 
-  btn.textContent = 'Desactivar';
   btn.classList.add('active');
   document.body.classList.add('tool-active');
   document.getElementById('tool-banner-text').textContent =
     `${meta.emoji} Clic en el mapa — ${meta.label}`;
-  banner.classList.add('show');
-  _openToolsSection();
+  document.getElementById('tool-active-banner').classList.add('show');
+  // Hide result panel until we get a result
+  document.getElementById('map-tool-panel').classList.remove('show');
   toast(`Clic en cualquier punto del mapa para analizar`);
 }
 
@@ -3694,11 +3725,24 @@ function _deactivateTool(toolName, clearMarker = true) {
   const meta = TOOL_META[toolName];
   if (!meta) return;
   const btn = document.getElementById(meta.btn);
-  if (btn) { btn.textContent = 'Activar'; btn.classList.remove('active'); }
+  if (btn) btn.classList.remove('active');
   document.body.classList.remove('tool-active');
   document.getElementById('tool-active-banner').classList.remove('show');
+  document.getElementById('map-tool-panel').classList.remove('show');
   if (clearMarker && _toolMarker) { map.removeLayer(_toolMarker); _toolMarker = null; }
   if (_activeTool === toolName) _activeTool = null;
+}
+
+function _showToolPanel(toolName) {
+  const meta  = TOOL_META[toolName];
+  const panel = document.getElementById('map-tool-panel');
+  document.getElementById('mtp-title').textContent = `${meta.emoji} ${meta.label}`;
+  // Hide all result divs then show the active one
+  ['floodResult','runoffResult','aquiferResult'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (id === meta.result) ? 'block' : 'none';
+  });
+  panel.classList.add('show');
 }
 
 function cancelActiveTool() {
@@ -3727,13 +3771,14 @@ map.on('click', async function(e) {
     fillColor, fillOpacity: 0.85,
   }).addTo(map).bindTooltip('Analizando…', { permanent: false });
 
-  // Show loading
+  // Show loading in panel
   const resultEl = document.getElementById(meta.result);
-  resultEl.classList.add('show');
+  resultEl.style.display = 'block';
   resultEl.innerHTML = `<div class="tool-result-loading">
     <div class="spinner" style="width:22px;height:22px;margin:0 auto 8px;border-width:3px;"></div>
     Consultando datos…
   </div>`;
+  _showToolPanel(toolName);
 
   try {
     const res = await fetch(`${API}/api/tools/${toolName}?lat=${lat}&lng=${lng}`);
@@ -3743,6 +3788,9 @@ map.on('click', async function(e) {
     if      (toolName === 'flood')   renderFloodResult(d, resultEl);
     else if (toolName === 'runoff')  renderRunoffResult(d, resultEl);
     else if (toolName === 'aquifer') renderAquiferResult(d, resultEl);
+
+    // Hide instruction banner once we have a result
+    document.getElementById('tool-active-banner').classList.remove('show');
 
     _toolMarker.unbindTooltip();
     _toolMarker.bindTooltip(
