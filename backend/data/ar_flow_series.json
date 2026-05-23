@@ -13,47 +13,157 @@
           "label": "Nivel Lago Nahuel Huapi",
           "unit": "m s.n.m.",
           "historical_mean": 769.05,
-          "alert_low": 768.20,
-          "alert_high": 770.50,
+          "alert_low": 768.2,
+          "alert_high": 770.5,
           "source": "AIC / DPA Río Negro",
           "note": "Nivel medio anual. Media histórica 1984-2008. Alerta baja: 768.20 m.",
           "data": [
-            {"year": 1990, "value": 769.1},
-            {"year": 1991, "value": 769.4},
-            {"year": 1992, "value": 769.9},
-            {"year": 1993, "value": 769.3},
-            {"year": 1994, "value": 769.0},
-            {"year": 1995, "value": 769.1},
-            {"year": 1996, "value": 769.6},
-            {"year": 1997, "value": 769.5},
-            {"year": 1998, "value": 769.8},
-            {"year": 1999, "value": 769.2},
-            {"year": 2000, "value": 769.3},
-            {"year": 2001, "value": 769.7},
-            {"year": 2002, "value": 770.0},
-            {"year": 2003, "value": 769.5},
-            {"year": 2004, "value": 769.2},
-            {"year": 2005, "value": 769.8},
-            {"year": 2006, "value": 769.6},
-            {"year": 2007, "value": 769.3},
-            {"year": 2008, "value": 769.4},
-            {"year": 2009, "value": 769.0},
-            {"year": 2010, "value": 769.3},
-            {"year": 2011, "value": 769.1},
-            {"year": 2012, "value": 769.0},
-            {"year": 2013, "value": 768.8},
-            {"year": 2014, "value": 768.9},
-            {"year": 2015, "value": 769.1},
-            {"year": 2016, "value": 769.2},
-            {"year": 2017, "value": 769.0},
-            {"year": 2018, "value": 768.8},
-            {"year": 2019, "value": 768.7},
-            {"year": 2020, "value": 768.5},
-            {"year": 2021, "value": 768.3},
-            {"year": 2022, "value": 768.4},
-            {"year": 2023, "value": 768.2},
-            {"year": 2024, "value": 768.0},
-            {"year": 2025, "value": 767.96, "is_current": true, "label": "ene 2026: 767,96 m"}
+            {
+              "year": 1990,
+              "value": 769.1
+            },
+            {
+              "year": 1991,
+              "value": 769.4
+            },
+            {
+              "year": 1992,
+              "value": 769.9
+            },
+            {
+              "year": 1993,
+              "value": 769.3
+            },
+            {
+              "year": 1994,
+              "value": 769.0
+            },
+            {
+              "year": 1995,
+              "value": 769.1
+            },
+            {
+              "year": 1996,
+              "value": 769.6
+            },
+            {
+              "year": 1997,
+              "value": 769.5
+            },
+            {
+              "year": 1998,
+              "value": 769.8
+            },
+            {
+              "year": 1999,
+              "value": 769.2
+            },
+            {
+              "year": 2000,
+              "value": 769.3
+            },
+            {
+              "year": 2001,
+              "value": 769.7
+            },
+            {
+              "year": 2002,
+              "value": 770.0
+            },
+            {
+              "year": 2003,
+              "value": 769.5
+            },
+            {
+              "year": 2004,
+              "value": 769.2
+            },
+            {
+              "year": 2005,
+              "value": 769.8
+            },
+            {
+              "year": 2006,
+              "value": 769.6
+            },
+            {
+              "year": 2007,
+              "value": 769.3
+            },
+            {
+              "year": 2008,
+              "value": 769.4
+            },
+            {
+              "year": 2009,
+              "value": 769.0
+            },
+            {
+              "year": 2010,
+              "value": 769.3
+            },
+            {
+              "year": 2011,
+              "value": 769.1
+            },
+            {
+              "year": 2012,
+              "value": 769.0
+            },
+            {
+              "year": 2013,
+              "value": 768.8
+            },
+            {
+              "year": 2014,
+              "value": 768.9
+            },
+            {
+              "year": 2015,
+              "value": 769.1
+            },
+            {
+              "year": 2016,
+              "value": 769.2
+            },
+            {
+              "year": 2017,
+              "value": 769.0
+            },
+            {
+              "year": 2018,
+              "value": 768.8
+            },
+            {
+              "year": 2019,
+              "value": 768.7
+            },
+            {
+              "year": 2020,
+              "value": 768.5
+            },
+            {
+              "year": 2021,
+              "value": 768.3
+            },
+            {
+              "year": 2022,
+              "value": 768.4
+            },
+            {
+              "year": 2023,
+              "value": 768.2
+            },
+            {
+              "year": 2024,
+              "value": 768.0
+            },
+            {
+              "year": 2025,
+              "value": 767.96,
+              "is_current": true,
+              "label": "ene 2026: 767,96 m"
+            }
           ]
         }
       ]
@@ -70,42 +180,152 @@
           "source": "INA / SNIH — Estación Corrientes",
           "note": "Caudal medio anual. Media histórica 1904-2020. Alerta baja: 10.000 m³/s. La sequía 2021-2022 fue la peor en 77 años.",
           "data": [
-            {"year": 1990, "value": 15800},
-            {"year": 1991, "value": 14200},
-            {"year": 1992, "value": 21500},
-            {"year": 1993, "value": 16800},
-            {"year": 1994, "value": 15200},
-            {"year": 1995, "value": 18200},
-            {"year": 1996, "value": 17100},
-            {"year": 1997, "value": 19600},
-            {"year": 1998, "value": 23200},
-            {"year": 1999, "value": 15900},
-            {"year": 2000, "value": 14600},
-            {"year": 2001, "value": 16100},
-            {"year": 2002, "value": 18800},
-            {"year": 2003, "value": 17500},
-            {"year": 2004, "value": 15400},
-            {"year": 2005, "value": 16700},
-            {"year": 2006, "value": 17300},
-            {"year": 2007, "value": 16500},
-            {"year": 2008, "value": 14900},
-            {"year": 2009, "value": 13200},
-            {"year": 2010, "value": 19800},
-            {"year": 2011, "value": 22400},
-            {"year": 2012, "value": 18600},
-            {"year": 2013, "value": 16900},
-            {"year": 2014, "value": 17400},
-            {"year": 2015, "value": 18500},
-            {"year": 2016, "value": 21200},
-            {"year": 2017, "value": 17600},
-            {"year": 2018, "value": 15700},
-            {"year": 2019, "value": 14300},
-            {"year": 2020, "value": 13600},
-            {"year": 2021, "value": 8700},
-            {"year": 2022, "value": 9400},
-            {"year": 2023, "value": 14800},
-            {"year": 2024, "value": 16200},
-            {"year": 2025, "value": 14500, "is_current": true, "label": "est. 2025"}
+            {
+              "year": 1990,
+              "value": 15800
+            },
+            {
+              "year": 1991,
+              "value": 14200
+            },
+            {
+              "year": 1992,
+              "value": 21500
+            },
+            {
+              "year": 1993,
+              "value": 16800
+            },
+            {
+              "year": 1994,
+              "value": 15200
+            },
+            {
+              "year": 1995,
+              "value": 18200
+            },
+            {
+              "year": 1996,
+              "value": 17100
+            },
+            {
+              "year": 1997,
+              "value": 19600
+            },
+            {
+              "year": 1998,
+              "value": 23200
+            },
+            {
+              "year": 1999,
+              "value": 15900
+            },
+            {
+              "year": 2000,
+              "value": 14600
+            },
+            {
+              "year": 2001,
+              "value": 16100
+            },
+            {
+              "year": 2002,
+              "value": 18800
+            },
+            {
+              "year": 2003,
+              "value": 17500
+            },
+            {
+              "year": 2004,
+              "value": 15400
+            },
+            {
+              "year": 2005,
+              "value": 16700
+            },
+            {
+              "year": 2006,
+              "value": 17300
+            },
+            {
+              "year": 2007,
+              "value": 16500
+            },
+            {
+              "year": 2008,
+              "value": 14900
+            },
+            {
+              "year": 2009,
+              "value": 13200
+            },
+            {
+              "year": 2010,
+              "value": 19800
+            },
+            {
+              "year": 2011,
+              "value": 22400
+            },
+            {
+              "year": 2012,
+              "value": 18600
+            },
+            {
+              "year": 2013,
+              "value": 16900
+            },
+            {
+              "year": 2014,
+              "value": 17400
+            },
+            {
+              "year": 2015,
+              "value": 18500
+            },
+            {
+              "year": 2016,
+              "value": 21200
+            },
+            {
+              "year": 2017,
+              "value": 17600
+            },
+            {
+              "year": 2018,
+              "value": 15700
+            },
+            {
+              "year": 2019,
+              "value": 14300
+            },
+            {
+              "year": 2020,
+              "value": 13600
+            },
+            {
+              "year": 2021,
+              "value": 8700
+            },
+            {
+              "year": 2022,
+              "value": 9400
+            },
+            {
+              "year": 2023,
+              "value": 14800
+            },
+            {
+              "year": 2024,
+              "value": 16200
+            },
+            {
+              "year": 2025,
+              "value": 14500,
+              "is_current": true,
+              "label": "est. 2025"
+            }
           ]
         }
       ]
@@ -122,42 +342,152 @@
           "source": "INA / CTM Salto Grande — Estación Concordia",
           "note": "Caudal medio anual. Media histórica 1940-2020. La crecida de 2007 inundó Concordia y Salto (UY). La Niña 2021-22 provocó mínimos históricos.",
           "data": [
-            {"year": 1990, "value": 5200},
-            {"year": 1991, "value": 4700},
-            {"year": 1992, "value": 7600},
-            {"year": 1993, "value": 5600},
-            {"year": 1994, "value": 5100},
-            {"year": 1995, "value": 6300},
-            {"year": 1996, "value": 5800},
-            {"year": 1997, "value": 6600},
-            {"year": 1998, "value": 8500},
-            {"year": 1999, "value": 5500},
-            {"year": 2000, "value": 4900},
-            {"year": 2001, "value": 5400},
-            {"year": 2002, "value": 6300},
-            {"year": 2003, "value": 5800},
-            {"year": 2004, "value": 5200},
-            {"year": 2005, "value": 5600},
-            {"year": 2006, "value": 6000},
-            {"year": 2007, "value": 9900},
-            {"year": 2008, "value": 5600},
-            {"year": 2009, "value": 4100},
-            {"year": 2010, "value": 7600},
-            {"year": 2011, "value": 8600},
-            {"year": 2012, "value": 6300},
-            {"year": 2013, "value": 5900},
-            {"year": 2014, "value": 6200},
-            {"year": 2015, "value": 6600},
-            {"year": 2016, "value": 7900},
-            {"year": 2017, "value": 5900},
-            {"year": 2018, "value": 5200},
-            {"year": 2019, "value": 4800},
-            {"year": 2020, "value": 4100},
-            {"year": 2021, "value": 2700},
-            {"year": 2022, "value": 3100},
-            {"year": 2023, "value": 5300},
-            {"year": 2024, "value": 5600},
-            {"year": 2025, "value": 4900, "is_current": true, "label": "est. 2025"}
+            {
+              "year": 1990,
+              "value": 5200
+            },
+            {
+              "year": 1991,
+              "value": 4700
+            },
+            {
+              "year": 1992,
+              "value": 7600
+            },
+            {
+              "year": 1993,
+              "value": 5600
+            },
+            {
+              "year": 1994,
+              "value": 5100
+            },
+            {
+              "year": 1995,
+              "value": 6300
+            },
+            {
+              "year": 1996,
+              "value": 5800
+            },
+            {
+              "year": 1997,
+              "value": 6600
+            },
+            {
+              "year": 1998,
+              "value": 8500
+            },
+            {
+              "year": 1999,
+              "value": 5500
+            },
+            {
+              "year": 2000,
+              "value": 4900
+            },
+            {
+              "year": 2001,
+              "value": 5400
+            },
+            {
+              "year": 2002,
+              "value": 6300
+            },
+            {
+              "year": 2003,
+              "value": 5800
+            },
+            {
+              "year": 2004,
+              "value": 5200
+            },
+            {
+              "year": 2005,
+              "value": 5600
+            },
+            {
+              "year": 2006,
+              "value": 6000
+            },
+            {
+              "year": 2007,
+              "value": 9900
+            },
+            {
+              "year": 2008,
+              "value": 5600
+            },
+            {
+              "year": 2009,
+              "value": 4100
+            },
+            {
+              "year": 2010,
+              "value": 7600
+            },
+            {
+              "year": 2011,
+              "value": 8600
+            },
+            {
+              "year": 2012,
+              "value": 6300
+            },
+            {
+              "year": 2013,
+              "value": 5900
+            },
+            {
+              "year": 2014,
+              "value": 6200
+            },
+            {
+              "year": 2015,
+              "value": 6600
+            },
+            {
+              "year": 2016,
+              "value": 7900
+            },
+            {
+              "year": 2017,
+              "value": 5900
+            },
+            {
+              "year": 2018,
+              "value": 5200
+            },
+            {
+              "year": 2019,
+              "value": 4800
+            },
+            {
+              "year": 2020,
+              "value": 4100
+            },
+            {
+              "year": 2021,
+              "value": 2700
+            },
+            {
+              "year": 2022,
+              "value": 3100
+            },
+            {
+              "year": 2023,
+              "value": 5300
+            },
+            {
+              "year": 2024,
+              "value": 5600
+            },
+            {
+              "year": 2025,
+              "value": 4900,
+              "is_current": true,
+              "label": "est. 2025"
+            }
           ]
         }
       ]
@@ -173,42 +503,152 @@
           "source": "INA / AIC Colorado — Estación Buta Ranquil",
           "note": "Caudal medio anual. Media histórica 1940-2000. Régimen nivo-pluvial: máximos en deshielo (oct-dic). Tendencia declinante desde 2010.",
           "data": [
-            {"year": 1990, "value": 145},
-            {"year": 1991, "value": 138},
-            {"year": 1992, "value": 163},
-            {"year": 1993, "value": 152},
-            {"year": 1994, "value": 141},
-            {"year": 1995, "value": 159},
-            {"year": 1996, "value": 156},
-            {"year": 1997, "value": 166},
-            {"year": 1998, "value": 174},
-            {"year": 1999, "value": 149},
-            {"year": 2000, "value": 143},
-            {"year": 2001, "value": 155},
-            {"year": 2002, "value": 161},
-            {"year": 2003, "value": 153},
-            {"year": 2004, "value": 146},
-            {"year": 2005, "value": 156},
-            {"year": 2006, "value": 151},
-            {"year": 2007, "value": 149},
-            {"year": 2008, "value": 136},
-            {"year": 2009, "value": 129},
-            {"year": 2010, "value": 158},
-            {"year": 2011, "value": 163},
-            {"year": 2012, "value": 149},
-            {"year": 2013, "value": 144},
-            {"year": 2014, "value": 151},
-            {"year": 2015, "value": 157},
-            {"year": 2016, "value": 161},
-            {"year": 2017, "value": 147},
-            {"year": 2018, "value": 137},
-            {"year": 2019, "value": 131},
-            {"year": 2020, "value": 127},
-            {"year": 2021, "value": 114},
-            {"year": 2022, "value": 117},
-            {"year": 2023, "value": 128},
-            {"year": 2024, "value": 121},
-            {"year": 2025, "value": 118, "is_current": true, "label": "est. 2025"}
+            {
+              "year": 1990,
+              "value": 145
+            },
+            {
+              "year": 1991,
+              "value": 138
+            },
+            {
+              "year": 1992,
+              "value": 163
+            },
+            {
+              "year": 1993,
+              "value": 152
+            },
+            {
+              "year": 1994,
+              "value": 141
+            },
+            {
+              "year": 1995,
+              "value": 159
+            },
+            {
+              "year": 1996,
+              "value": 156
+            },
+            {
+              "year": 1997,
+              "value": 166
+            },
+            {
+              "year": 1998,
+              "value": 174
+            },
+            {
+              "year": 1999,
+              "value": 149
+            },
+            {
+              "year": 2000,
+              "value": 143
+            },
+            {
+              "year": 2001,
+              "value": 155
+            },
+            {
+              "year": 2002,
+              "value": 161
+            },
+            {
+              "year": 2003,
+              "value": 153
+            },
+            {
+              "year": 2004,
+              "value": 146
+            },
+            {
+              "year": 2005,
+              "value": 156
+            },
+            {
+              "year": 2006,
+              "value": 151
+            },
+            {
+              "year": 2007,
+              "value": 149
+            },
+            {
+              "year": 2008,
+              "value": 136
+            },
+            {
+              "year": 2009,
+              "value": 129
+            },
+            {
+              "year": 2010,
+              "value": 158
+            },
+            {
+              "year": 2011,
+              "value": 163
+            },
+            {
+              "year": 2012,
+              "value": 149
+            },
+            {
+              "year": 2013,
+              "value": 144
+            },
+            {
+              "year": 2014,
+              "value": 151
+            },
+            {
+              "year": 2015,
+              "value": 157
+            },
+            {
+              "year": 2016,
+              "value": 161
+            },
+            {
+              "year": 2017,
+              "value": 147
+            },
+            {
+              "year": 2018,
+              "value": 137
+            },
+            {
+              "year": 2019,
+              "value": 131
+            },
+            {
+              "year": 2020,
+              "value": 127
+            },
+            {
+              "year": 2021,
+              "value": 114
+            },
+            {
+              "year": 2022,
+              "value": 117
+            },
+            {
+              "year": 2023,
+              "value": 128
+            },
+            {
+              "year": 2024,
+              "value": 121
+            },
+            {
+              "year": 2025,
+              "value": 118,
+              "is_current": true,
+              "label": "est. 2025"
+            }
           ]
         }
       ]
@@ -224,42 +664,152 @@
           "source": "CONICET / INA — Estación Punta Bandera",
           "note": "Nivel medio anual. El Glaciar Perito Moreno provoca vaciamientos periódicos (ruptura de dique de hielo cada 2-4 años). Tendencia descendente post-2010 asociada a retroceso glaciar.",
           "data": [
-            {"year": 1990, "value": 177.8},
-            {"year": 1991, "value": 177.5},
-            {"year": 1992, "value": 178.2},
-            {"year": 1993, "value": 177.9},
-            {"year": 1994, "value": 177.6},
-            {"year": 1995, "value": 177.8},
-            {"year": 1996, "value": 178.1},
-            {"year": 1997, "value": 178.3},
-            {"year": 1998, "value": 178.6},
-            {"year": 1999, "value": 177.9},
-            {"year": 2000, "value": 177.7},
-            {"year": 2001, "value": 177.9},
-            {"year": 2002, "value": 178.1},
-            {"year": 2003, "value": 178.0},
-            {"year": 2004, "value": 177.8},
-            {"year": 2005, "value": 178.0},
-            {"year": 2006, "value": 177.9},
-            {"year": 2007, "value": 178.0},
-            {"year": 2008, "value": 177.7},
-            {"year": 2009, "value": 177.5},
-            {"year": 2010, "value": 177.8},
-            {"year": 2011, "value": 177.9},
-            {"year": 2012, "value": 177.7},
-            {"year": 2013, "value": 177.5},
-            {"year": 2014, "value": 177.4},
-            {"year": 2015, "value": 177.6},
-            {"year": 2016, "value": 177.7},
-            {"year": 2017, "value": 177.5},
-            {"year": 2018, "value": 177.3},
-            {"year": 2019, "value": 177.1},
-            {"year": 2020, "value": 176.9},
-            {"year": 2021, "value": 176.7},
-            {"year": 2022, "value": 176.8},
-            {"year": 2023, "value": 176.9},
-            {"year": 2024, "value": 176.7},
-            {"year": 2025, "value": 176.5, "is_current": true, "label": "est. 2025"}
+            {
+              "year": 1990,
+              "value": 177.8
+            },
+            {
+              "year": 1991,
+              "value": 177.5
+            },
+            {
+              "year": 1992,
+              "value": 178.2
+            },
+            {
+              "year": 1993,
+              "value": 177.9
+            },
+            {
+              "year": 1994,
+              "value": 177.6
+            },
+            {
+              "year": 1995,
+              "value": 177.8
+            },
+            {
+              "year": 1996,
+              "value": 178.1
+            },
+            {
+              "year": 1997,
+              "value": 178.3
+            },
+            {
+              "year": 1998,
+              "value": 178.6
+            },
+            {
+              "year": 1999,
+              "value": 177.9
+            },
+            {
+              "year": 2000,
+              "value": 177.7
+            },
+            {
+              "year": 2001,
+              "value": 177.9
+            },
+            {
+              "year": 2002,
+              "value": 178.1
+            },
+            {
+              "year": 2003,
+              "value": 178.0
+            },
+            {
+              "year": 2004,
+              "value": 177.8
+            },
+            {
+              "year": 2005,
+              "value": 178.0
+            },
+            {
+              "year": 2006,
+              "value": 177.9
+            },
+            {
+              "year": 2007,
+              "value": 178.0
+            },
+            {
+              "year": 2008,
+              "value": 177.7
+            },
+            {
+              "year": 2009,
+              "value": 177.5
+            },
+            {
+              "year": 2010,
+              "value": 177.8
+            },
+            {
+              "year": 2011,
+              "value": 177.9
+            },
+            {
+              "year": 2012,
+              "value": 177.7
+            },
+            {
+              "year": 2013,
+              "value": 177.5
+            },
+            {
+              "year": 2014,
+              "value": 177.4
+            },
+            {
+              "year": 2015,
+              "value": 177.6
+            },
+            {
+              "year": 2016,
+              "value": 177.7
+            },
+            {
+              "year": 2017,
+              "value": 177.5
+            },
+            {
+              "year": 2018,
+              "value": 177.3
+            },
+            {
+              "year": 2019,
+              "value": 177.1
+            },
+            {
+              "year": 2020,
+              "value": 176.9
+            },
+            {
+              "year": 2021,
+              "value": 176.7
+            },
+            {
+              "year": 2022,
+              "value": 176.8
+            },
+            {
+              "year": 2023,
+              "value": 176.9
+            },
+            {
+              "year": 2024,
+              "value": 176.7
+            },
+            {
+              "year": 2025,
+              "value": 176.5,
+              "is_current": true,
+              "label": "est. 2025"
+            }
           ]
         }
       ]
@@ -276,42 +826,152 @@
           "source": "INA / SNIH — Estación Formosa",
           "note": "Caudal medio anual. Media histórica 1960-2020. El Niño 1997-98 provocó la peor crecida en décadas. La sequía 2020-22 (La Niña) fue la peor en 60 años.",
           "data": [
-            {"year": 1990, "value": 2800},
-            {"year": 1991, "value": 3100},
-            {"year": 1992, "value": 4200},
-            {"year": 1993, "value": 3400},
-            {"year": 1994, "value": 2900},
-            {"year": 1995, "value": 3600},
-            {"year": 1996, "value": 3200},
-            {"year": 1997, "value": 4800},
-            {"year": 1998, "value": 5200},
-            {"year": 1999, "value": 3100},
-            {"year": 2000, "value": 2700},
-            {"year": 2001, "value": 3200},
-            {"year": 2002, "value": 4100},
-            {"year": 2003, "value": 3600},
-            {"year": 2004, "value": 3100},
-            {"year": 2005, "value": 3400},
-            {"year": 2006, "value": 3700},
-            {"year": 2007, "value": 4200},
-            {"year": 2008, "value": 3300},
-            {"year": 2009, "value": 2600},
-            {"year": 2010, "value": 4800},
-            {"year": 2011, "value": 5100},
-            {"year": 2012, "value": 3800},
-            {"year": 2013, "value": 3500},
-            {"year": 2014, "value": 3700},
-            {"year": 2015, "value": 3900},
-            {"year": 2016, "value": 4300},
-            {"year": 2017, "value": 3600},
-            {"year": 2018, "value": 3200},
-            {"year": 2019, "value": 2800},
-            {"year": 2020, "value": 2100},
-            {"year": 2021, "value": 1400},
-            {"year": 2022, "value": 1600},
-            {"year": 2023, "value": 3100},
-            {"year": 2024, "value": 3400},
-            {"year": 2025, "value": 2900, "is_current": true, "label": "est. 2025"}
+            {
+              "year": 1990,
+              "value": 2800
+            },
+            {
+              "year": 1991,
+              "value": 3100
+            },
+            {
+              "year": 1992,
+              "value": 4200
+            },
+            {
+              "year": 1993,
+              "value": 3400
+            },
+            {
+              "year": 1994,
+              "value": 2900
+            },
+            {
+              "year": 1995,
+              "value": 3600
+            },
+            {
+              "year": 1996,
+              "value": 3200
+            },
+            {
+              "year": 1997,
+              "value": 4800
+            },
+            {
+              "year": 1998,
+              "value": 5200
+            },
+            {
+              "year": 1999,
+              "value": 3100
+            },
+            {
+              "year": 2000,
+              "value": 2700
+            },
+            {
+              "year": 2001,
+              "value": 3200
+            },
+            {
+              "year": 2002,
+              "value": 4100
+            },
+            {
+              "year": 2003,
+              "value": 3600
+            },
+            {
+              "year": 2004,
+              "value": 3100
+            },
+            {
+              "year": 2005,
+              "value": 3400
+            },
+            {
+              "year": 2006,
+              "value": 3700
+            },
+            {
+              "year": 2007,
+              "value": 4200
+            },
+            {
+              "year": 2008,
+              "value": 3300
+            },
+            {
+              "year": 2009,
+              "value": 2600
+            },
+            {
+              "year": 2010,
+              "value": 4800
+            },
+            {
+              "year": 2011,
+              "value": 5100
+            },
+            {
+              "year": 2012,
+              "value": 3800
+            },
+            {
+              "year": 2013,
+              "value": 3500
+            },
+            {
+              "year": 2014,
+              "value": 3700
+            },
+            {
+              "year": 2015,
+              "value": 3900
+            },
+            {
+              "year": 2016,
+              "value": 4300
+            },
+            {
+              "year": 2017,
+              "value": 3600
+            },
+            {
+              "year": 2018,
+              "value": 3200
+            },
+            {
+              "year": 2019,
+              "value": 2800
+            },
+            {
+              "year": 2020,
+              "value": 2100
+            },
+            {
+              "year": 2021,
+              "value": 1400
+            },
+            {
+              "year": 2022,
+              "value": 1600
+            },
+            {
+              "year": 2023,
+              "value": 3100
+            },
+            {
+              "year": 2024,
+              "value": 3400
+            },
+            {
+              "year": 2025,
+              "value": 2900,
+              "is_current": true,
+              "label": "est. 2025"
+            }
           ]
         }
       ]
@@ -327,42 +987,152 @@
           "source": "INA / SNIH — Estación Embarcación",
           "note": "Caudal medio anual. Media histórica 1940-2010. Régimen pluvial subtropical con alta variabilidad interanual. Mayor aportante de sedimentos del sistema del Plata.",
           "data": [
-            {"year": 1990, "value": 320},
-            {"year": 1991, "value": 290},
-            {"year": 1992, "value": 480},
-            {"year": 1993, "value": 370},
-            {"year": 1994, "value": 310},
-            {"year": 1995, "value": 420},
-            {"year": 1996, "value": 360},
-            {"year": 1997, "value": 510},
-            {"year": 1998, "value": 580},
-            {"year": 1999, "value": 340},
-            {"year": 2000, "value": 290},
-            {"year": 2001, "value": 350},
-            {"year": 2002, "value": 440},
-            {"year": 2003, "value": 390},
-            {"year": 2004, "value": 320},
-            {"year": 2005, "value": 380},
-            {"year": 2006, "value": 410},
-            {"year": 2007, "value": 380},
-            {"year": 2008, "value": 330},
-            {"year": 2009, "value": 270},
-            {"year": 2010, "value": 450},
-            {"year": 2011, "value": 490},
-            {"year": 2012, "value": 400},
-            {"year": 2013, "value": 360},
-            {"year": 2014, "value": 390},
-            {"year": 2015, "value": 420},
-            {"year": 2016, "value": 460},
-            {"year": 2017, "value": 380},
-            {"year": 2018, "value": 310},
-            {"year": 2019, "value": 280},
-            {"year": 2020, "value": 260},
-            {"year": 2021, "value": 210},
-            {"year": 2022, "value": 230},
-            {"year": 2023, "value": 340},
-            {"year": 2024, "value": 310},
-            {"year": 2025, "value": 290, "is_current": true, "label": "est. 2025"}
+            {
+              "year": 1990,
+              "value": 320
+            },
+            {
+              "year": 1991,
+              "value": 290
+            },
+            {
+              "year": 1992,
+              "value": 480
+            },
+            {
+              "year": 1993,
+              "value": 370
+            },
+            {
+              "year": 1994,
+              "value": 310
+            },
+            {
+              "year": 1995,
+              "value": 420
+            },
+            {
+              "year": 1996,
+              "value": 360
+            },
+            {
+              "year": 1997,
+              "value": 510
+            },
+            {
+              "year": 1998,
+              "value": 580
+            },
+            {
+              "year": 1999,
+              "value": 340
+            },
+            {
+              "year": 2000,
+              "value": 290
+            },
+            {
+              "year": 2001,
+              "value": 350
+            },
+            {
+              "year": 2002,
+              "value": 440
+            },
+            {
+              "year": 2003,
+              "value": 390
+            },
+            {
+              "year": 2004,
+              "value": 320
+            },
+            {
+              "year": 2005,
+              "value": 380
+            },
+            {
+              "year": 2006,
+              "value": 410
+            },
+            {
+              "year": 2007,
+              "value": 380
+            },
+            {
+              "year": 2008,
+              "value": 330
+            },
+            {
+              "year": 2009,
+              "value": 270
+            },
+            {
+              "year": 2010,
+              "value": 450
+            },
+            {
+              "year": 2011,
+              "value": 490
+            },
+            {
+              "year": 2012,
+              "value": 400
+            },
+            {
+              "year": 2013,
+              "value": 360
+            },
+            {
+              "year": 2014,
+              "value": 390
+            },
+            {
+              "year": 2015,
+              "value": 420
+            },
+            {
+              "year": 2016,
+              "value": 460
+            },
+            {
+              "year": 2017,
+              "value": 380
+            },
+            {
+              "year": 2018,
+              "value": 310
+            },
+            {
+              "year": 2019,
+              "value": 280
+            },
+            {
+              "year": 2020,
+              "value": 260
+            },
+            {
+              "year": 2021,
+              "value": 210
+            },
+            {
+              "year": 2022,
+              "value": 230
+            },
+            {
+              "year": 2023,
+              "value": 340
+            },
+            {
+              "year": 2024,
+              "value": 310
+            },
+            {
+              "year": 2025,
+              "value": 290,
+              "is_current": true,
+              "label": "est. 2025"
+            }
           ]
         }
       ]
@@ -378,42 +1148,152 @@
           "source": "INA / SNIH — Estación Joaquín V. González",
           "note": "Caudal medio anual. Media histórica 1950-2010. Régimen semi-árido con fuerte modulación ENSO. El Niño 1997-98 y 2010-11 generaron crecidas excepcionales.",
           "data": [
-            {"year": 1990, "value": 138},
-            {"year": 1991, "value": 121},
-            {"year": 1992, "value": 198},
-            {"year": 1993, "value": 172},
-            {"year": 1994, "value": 145},
-            {"year": 1995, "value": 178},
-            {"year": 1996, "value": 162},
-            {"year": 1997, "value": 205},
-            {"year": 1998, "value": 224},
-            {"year": 1999, "value": 158},
-            {"year": 2000, "value": 132},
-            {"year": 2001, "value": 148},
-            {"year": 2002, "value": 189},
-            {"year": 2003, "value": 175},
-            {"year": 2004, "value": 151},
-            {"year": 2005, "value": 169},
-            {"year": 2006, "value": 182},
-            {"year": 2007, "value": 171},
-            {"year": 2008, "value": 147},
-            {"year": 2009, "value": 118},
-            {"year": 2010, "value": 193},
-            {"year": 2011, "value": 208},
-            {"year": 2012, "value": 179},
-            {"year": 2013, "value": 161},
-            {"year": 2014, "value": 172},
-            {"year": 2015, "value": 185},
-            {"year": 2016, "value": 197},
-            {"year": 2017, "value": 164},
-            {"year": 2018, "value": 138},
-            {"year": 2019, "value": 121},
-            {"year": 2020, "value": 108},
-            {"year": 2021, "value": 87},
-            {"year": 2022, "value": 95},
-            {"year": 2023, "value": 152},
-            {"year": 2024, "value": 143},
-            {"year": 2025, "value": 128, "is_current": true, "label": "est. 2025"}
+            {
+              "year": 1990,
+              "value": 138
+            },
+            {
+              "year": 1991,
+              "value": 121
+            },
+            {
+              "year": 1992,
+              "value": 198
+            },
+            {
+              "year": 1993,
+              "value": 172
+            },
+            {
+              "year": 1994,
+              "value": 145
+            },
+            {
+              "year": 1995,
+              "value": 178
+            },
+            {
+              "year": 1996,
+              "value": 162
+            },
+            {
+              "year": 1997,
+              "value": 205
+            },
+            {
+              "year": 1998,
+              "value": 224
+            },
+            {
+              "year": 1999,
+              "value": 158
+            },
+            {
+              "year": 2000,
+              "value": 132
+            },
+            {
+              "year": 2001,
+              "value": 148
+            },
+            {
+              "year": 2002,
+              "value": 189
+            },
+            {
+              "year": 2003,
+              "value": 175
+            },
+            {
+              "year": 2004,
+              "value": 151
+            },
+            {
+              "year": 2005,
+              "value": 169
+            },
+            {
+              "year": 2006,
+              "value": 182
+            },
+            {
+              "year": 2007,
+              "value": 171
+            },
+            {
+              "year": 2008,
+              "value": 147
+            },
+            {
+              "year": 2009,
+              "value": 118
+            },
+            {
+              "year": 2010,
+              "value": 193
+            },
+            {
+              "year": 2011,
+              "value": 208
+            },
+            {
+              "year": 2012,
+              "value": 179
+            },
+            {
+              "year": 2013,
+              "value": 161
+            },
+            {
+              "year": 2014,
+              "value": 172
+            },
+            {
+              "year": 2015,
+              "value": 185
+            },
+            {
+              "year": 2016,
+              "value": 197
+            },
+            {
+              "year": 2017,
+              "value": 164
+            },
+            {
+              "year": 2018,
+              "value": 138
+            },
+            {
+              "year": 2019,
+              "value": 121
+            },
+            {
+              "year": 2020,
+              "value": 108
+            },
+            {
+              "year": 2021,
+              "value": 87
+            },
+            {
+              "year": 2022,
+              "value": 95
+            },
+            {
+              "year": 2023,
+              "value": 152
+            },
+            {
+              "year": 2024,
+              "value": 143
+            },
+            {
+              "year": 2025,
+              "value": 128,
+              "is_current": true,
+              "label": "est. 2025"
+            }
           ]
         }
       ]
@@ -429,42 +1309,152 @@
           "source": "DGI Mendoza / INA — Estación Guaymallén",
           "note": "Caudal medio anual. Media histórica 1940-2010. Régimen nivo-glaciar con máximos en oct-dic. Tendencia declinante asociada al retroceso glaciar acelerado post-2010.",
           "data": [
-            {"year": 1990, "value": 62},
-            {"year": 1991, "value": 55},
-            {"year": 1992, "value": 71},
-            {"year": 1993, "value": 65},
-            {"year": 1994, "value": 59},
-            {"year": 1995, "value": 68},
-            {"year": 1996, "value": 64},
-            {"year": 1997, "value": 73},
-            {"year": 1998, "value": 76},
-            {"year": 1999, "value": 62},
-            {"year": 2000, "value": 58},
-            {"year": 2001, "value": 63},
-            {"year": 2002, "value": 68},
-            {"year": 2003, "value": 61},
-            {"year": 2004, "value": 57},
-            {"year": 2005, "value": 65},
-            {"year": 2006, "value": 62},
-            {"year": 2007, "value": 58},
-            {"year": 2008, "value": 55},
-            {"year": 2009, "value": 51},
-            {"year": 2010, "value": 61},
-            {"year": 2011, "value": 64},
-            {"year": 2012, "value": 56},
-            {"year": 2013, "value": 52},
-            {"year": 2014, "value": 55},
-            {"year": 2015, "value": 58},
-            {"year": 2016, "value": 61},
-            {"year": 2017, "value": 54},
-            {"year": 2018, "value": 48},
-            {"year": 2019, "value": 45},
-            {"year": 2020, "value": 43},
-            {"year": 2021, "value": 40},
-            {"year": 2022, "value": 42},
-            {"year": 2023, "value": 46},
-            {"year": 2024, "value": 41},
-            {"year": 2025, "value": 38, "is_current": true, "label": "est. 2025"}
+            {
+              "year": 1990,
+              "value": 62
+            },
+            {
+              "year": 1991,
+              "value": 55
+            },
+            {
+              "year": 1992,
+              "value": 71
+            },
+            {
+              "year": 1993,
+              "value": 65
+            },
+            {
+              "year": 1994,
+              "value": 59
+            },
+            {
+              "year": 1995,
+              "value": 68
+            },
+            {
+              "year": 1996,
+              "value": 64
+            },
+            {
+              "year": 1997,
+              "value": 73
+            },
+            {
+              "year": 1998,
+              "value": 76
+            },
+            {
+              "year": 1999,
+              "value": 62
+            },
+            {
+              "year": 2000,
+              "value": 58
+            },
+            {
+              "year": 2001,
+              "value": 63
+            },
+            {
+              "year": 2002,
+              "value": 68
+            },
+            {
+              "year": 2003,
+              "value": 61
+            },
+            {
+              "year": 2004,
+              "value": 57
+            },
+            {
+              "year": 2005,
+              "value": 65
+            },
+            {
+              "year": 2006,
+              "value": 62
+            },
+            {
+              "year": 2007,
+              "value": 58
+            },
+            {
+              "year": 2008,
+              "value": 55
+            },
+            {
+              "year": 2009,
+              "value": 51
+            },
+            {
+              "year": 2010,
+              "value": 61
+            },
+            {
+              "year": 2011,
+              "value": 64
+            },
+            {
+              "year": 2012,
+              "value": 56
+            },
+            {
+              "year": 2013,
+              "value": 52
+            },
+            {
+              "year": 2014,
+              "value": 55
+            },
+            {
+              "year": 2015,
+              "value": 58
+            },
+            {
+              "year": 2016,
+              "value": 61
+            },
+            {
+              "year": 2017,
+              "value": 54
+            },
+            {
+              "year": 2018,
+              "value": 48
+            },
+            {
+              "year": 2019,
+              "value": 45
+            },
+            {
+              "year": 2020,
+              "value": 43
+            },
+            {
+              "year": 2021,
+              "value": 40
+            },
+            {
+              "year": 2022,
+              "value": 42
+            },
+            {
+              "year": 2023,
+              "value": 46
+            },
+            {
+              "year": 2024,
+              "value": 41
+            },
+            {
+              "year": 2025,
+              "value": 38,
+              "is_current": true,
+              "label": "est. 2025"
+            }
           ]
         }
       ]
@@ -481,42 +1471,152 @@
           "source": "INA / SNIH — Estación Roque Pérez",
           "note": "Caudal medio anual. Régimen pluvial muy variable. Las inundaciones de 2000-2002 afectaron 9 millones de hectáreas en la provincia de Buenos Aires. Tendencia a eventos extremos más frecuentes.",
           "data": [
-            {"year": 1990, "value": 45},
-            {"year": 1991, "value": 38},
-            {"year": 1992, "value": 92},
-            {"year": 1993, "value": 68},
-            {"year": 1994, "value": 52},
-            {"year": 1995, "value": 80},
-            {"year": 1996, "value": 71},
-            {"year": 1997, "value": 95},
-            {"year": 1998, "value": 110},
-            {"year": 1999, "value": 62},
-            {"year": 2000, "value": 145},
-            {"year": 2001, "value": 168},
-            {"year": 2002, "value": 130},
-            {"year": 2003, "value": 88},
-            {"year": 2004, "value": 56},
-            {"year": 2005, "value": 78},
-            {"year": 2006, "value": 85},
-            {"year": 2007, "value": 99},
-            {"year": 2008, "value": 72},
-            {"year": 2009, "value": 48},
-            {"year": 2010, "value": 115},
-            {"year": 2011, "value": 128},
-            {"year": 2012, "value": 92},
-            {"year": 2013, "value": 78},
-            {"year": 2014, "value": 85},
-            {"year": 2015, "value": 96},
-            {"year": 2016, "value": 112},
-            {"year": 2017, "value": 81},
-            {"year": 2018, "value": 61},
-            {"year": 2019, "value": 48},
-            {"year": 2020, "value": 39},
-            {"year": 2021, "value": 31},
-            {"year": 2022, "value": 35},
-            {"year": 2023, "value": 68},
-            {"year": 2024, "value": 82},
-            {"year": 2025, "value": 61, "is_current": true, "label": "est. 2025"}
+            {
+              "year": 1990,
+              "value": 45
+            },
+            {
+              "year": 1991,
+              "value": 38
+            },
+            {
+              "year": 1992,
+              "value": 92
+            },
+            {
+              "year": 1993,
+              "value": 68
+            },
+            {
+              "year": 1994,
+              "value": 52
+            },
+            {
+              "year": 1995,
+              "value": 80
+            },
+            {
+              "year": 1996,
+              "value": 71
+            },
+            {
+              "year": 1997,
+              "value": 95
+            },
+            {
+              "year": 1998,
+              "value": 110
+            },
+            {
+              "year": 1999,
+              "value": 62
+            },
+            {
+              "year": 2000,
+              "value": 145
+            },
+            {
+              "year": 2001,
+              "value": 168
+            },
+            {
+              "year": 2002,
+              "value": 130
+            },
+            {
+              "year": 2003,
+              "value": 88
+            },
+            {
+              "year": 2004,
+              "value": 56
+            },
+            {
+              "year": 2005,
+              "value": 78
+            },
+            {
+              "year": 2006,
+              "value": 85
+            },
+            {
+              "year": 2007,
+              "value": 99
+            },
+            {
+              "year": 2008,
+              "value": 72
+            },
+            {
+              "year": 2009,
+              "value": 48
+            },
+            {
+              "year": 2010,
+              "value": 115
+            },
+            {
+              "year": 2011,
+              "value": 128
+            },
+            {
+              "year": 2012,
+              "value": 92
+            },
+            {
+              "year": 2013,
+              "value": 78
+            },
+            {
+              "year": 2014,
+              "value": 85
+            },
+            {
+              "year": 2015,
+              "value": 96
+            },
+            {
+              "year": 2016,
+              "value": 112
+            },
+            {
+              "year": 2017,
+              "value": 81
+            },
+            {
+              "year": 2018,
+              "value": 61
+            },
+            {
+              "year": 2019,
+              "value": 48
+            },
+            {
+              "year": 2020,
+              "value": 39
+            },
+            {
+              "year": 2021,
+              "value": 31
+            },
+            {
+              "year": 2022,
+              "value": 35
+            },
+            {
+              "year": 2023,
+              "value": 68
+            },
+            {
+              "year": 2024,
+              "value": 82
+            },
+            {
+              "year": 2025,
+              "value": 61,
+              "is_current": true,
+              "label": "est. 2025"
+            }
           ]
         }
       ]
@@ -532,42 +1632,152 @@
           "source": "INA / SNIH — Estación Las Plumas",
           "note": "Caudal medio anual. Media histórica 1950-2010. Régimen nivo-pluvial con máximos en ago-nov. Tendencia declinante marcada post-2009 asociada a reducción de precipitaciones en la cordillera patagónica.",
           "data": [
-            {"year": 1990, "value": 98},
-            {"year": 1991, "value": 89},
-            {"year": 1992, "value": 112},
-            {"year": 1993, "value": 101},
-            {"year": 1994, "value": 93},
-            {"year": 1995, "value": 107},
-            {"year": 1996, "value": 103},
-            {"year": 1997, "value": 115},
-            {"year": 1998, "value": 118},
-            {"year": 1999, "value": 96},
-            {"year": 2000, "value": 88},
-            {"year": 2001, "value": 97},
-            {"year": 2002, "value": 108},
-            {"year": 2003, "value": 102},
-            {"year": 2004, "value": 91},
-            {"year": 2005, "value": 99},
-            {"year": 2006, "value": 104},
-            {"year": 2007, "value": 97},
-            {"year": 2008, "value": 88},
-            {"year": 2009, "value": 79},
-            {"year": 2010, "value": 103},
-            {"year": 2011, "value": 109},
-            {"year": 2012, "value": 95},
-            {"year": 2013, "value": 87},
-            {"year": 2014, "value": 92},
-            {"year": 2015, "value": 98},
-            {"year": 2016, "value": 101},
-            {"year": 2017, "value": 88},
-            {"year": 2018, "value": 79},
-            {"year": 2019, "value": 73},
-            {"year": 2020, "value": 68},
-            {"year": 2021, "value": 62},
-            {"year": 2022, "value": 67},
-            {"year": 2023, "value": 78},
-            {"year": 2024, "value": 70},
-            {"year": 2025, "value": 65, "is_current": true, "label": "est. 2025"}
+            {
+              "year": 1990,
+              "value": 98
+            },
+            {
+              "year": 1991,
+              "value": 89
+            },
+            {
+              "year": 1992,
+              "value": 112
+            },
+            {
+              "year": 1993,
+              "value": 101
+            },
+            {
+              "year": 1994,
+              "value": 93
+            },
+            {
+              "year": 1995,
+              "value": 107
+            },
+            {
+              "year": 1996,
+              "value": 103
+            },
+            {
+              "year": 1997,
+              "value": 115
+            },
+            {
+              "year": 1998,
+              "value": 118
+            },
+            {
+              "year": 1999,
+              "value": 96
+            },
+            {
+              "year": 2000,
+              "value": 88
+            },
+            {
+              "year": 2001,
+              "value": 97
+            },
+            {
+              "year": 2002,
+              "value": 108
+            },
+            {
+              "year": 2003,
+              "value": 102
+            },
+            {
+              "year": 2004,
+              "value": 91
+            },
+            {
+              "year": 2005,
+              "value": 99
+            },
+            {
+              "year": 2006,
+              "value": 104
+            },
+            {
+              "year": 2007,
+              "value": 97
+            },
+            {
+              "year": 2008,
+              "value": 88
+            },
+            {
+              "year": 2009,
+              "value": 79
+            },
+            {
+              "year": 2010,
+              "value": 103
+            },
+            {
+              "year": 2011,
+              "value": 109
+            },
+            {
+              "year": 2012,
+              "value": 95
+            },
+            {
+              "year": 2013,
+              "value": 87
+            },
+            {
+              "year": 2014,
+              "value": 92
+            },
+            {
+              "year": 2015,
+              "value": 98
+            },
+            {
+              "year": 2016,
+              "value": 101
+            },
+            {
+              "year": 2017,
+              "value": 88
+            },
+            {
+              "year": 2018,
+              "value": 79
+            },
+            {
+              "year": 2019,
+              "value": 73
+            },
+            {
+              "year": 2020,
+              "value": 68
+            },
+            {
+              "year": 2021,
+              "value": 62
+            },
+            {
+              "year": 2022,
+              "value": 67
+            },
+            {
+              "year": 2023,
+              "value": 78
+            },
+            {
+              "year": 2024,
+              "value": 70
+            },
+            {
+              "year": 2025,
+              "value": 65,
+              "is_current": true,
+              "label": "est. 2025"
+            }
           ]
         }
       ]
@@ -583,42 +1793,152 @@
           "source": "INA / SNIH — Estación Río Gallegos",
           "note": "Caudal medio anual. Media histórica 1960-2010. Régimen pluvio-nival regulado por turbales (mallines) patagónicos. Tendencia declinante asociada a reducción de precipitaciones y degradación de turberas.",
           "data": [
-            {"year": 1990, "value": 178},
-            {"year": 1991, "value": 168},
-            {"year": 1992, "value": 201},
-            {"year": 1993, "value": 189},
-            {"year": 1994, "value": 174},
-            {"year": 1995, "value": 195},
-            {"year": 1996, "value": 188},
-            {"year": 1997, "value": 204},
-            {"year": 1998, "value": 216},
-            {"year": 1999, "value": 181},
-            {"year": 2000, "value": 171},
-            {"year": 2001, "value": 184},
-            {"year": 2002, "value": 198},
-            {"year": 2003, "value": 191},
-            {"year": 2004, "value": 177},
-            {"year": 2005, "value": 188},
-            {"year": 2006, "value": 194},
-            {"year": 2007, "value": 185},
-            {"year": 2008, "value": 172},
-            {"year": 2009, "value": 161},
-            {"year": 2010, "value": 196},
-            {"year": 2011, "value": 205},
-            {"year": 2012, "value": 188},
-            {"year": 2013, "value": 174},
-            {"year": 2014, "value": 182},
-            {"year": 2015, "value": 191},
-            {"year": 2016, "value": 198},
-            {"year": 2017, "value": 176},
-            {"year": 2018, "value": 164},
-            {"year": 2019, "value": 158},
-            {"year": 2020, "value": 149},
-            {"year": 2021, "value": 141},
-            {"year": 2022, "value": 148},
-            {"year": 2023, "value": 162},
-            {"year": 2024, "value": 155},
-            {"year": 2025, "value": 147, "is_current": true, "label": "est. 2025"}
+            {
+              "year": 1990,
+              "value": 178
+            },
+            {
+              "year": 1991,
+              "value": 168
+            },
+            {
+              "year": 1992,
+              "value": 201
+            },
+            {
+              "year": 1993,
+              "value": 189
+            },
+            {
+              "year": 1994,
+              "value": 174
+            },
+            {
+              "year": 1995,
+              "value": 195
+            },
+            {
+              "year": 1996,
+              "value": 188
+            },
+            {
+              "year": 1997,
+              "value": 204
+            },
+            {
+              "year": 1998,
+              "value": 216
+            },
+            {
+              "year": 1999,
+              "value": 181
+            },
+            {
+              "year": 2000,
+              "value": 171
+            },
+            {
+              "year": 2001,
+              "value": 184
+            },
+            {
+              "year": 2002,
+              "value": 198
+            },
+            {
+              "year": 2003,
+              "value": 191
+            },
+            {
+              "year": 2004,
+              "value": 177
+            },
+            {
+              "year": 2005,
+              "value": 188
+            },
+            {
+              "year": 2006,
+              "value": 194
+            },
+            {
+              "year": 2007,
+              "value": 185
+            },
+            {
+              "year": 2008,
+              "value": 172
+            },
+            {
+              "year": 2009,
+              "value": 161
+            },
+            {
+              "year": 2010,
+              "value": 196
+            },
+            {
+              "year": 2011,
+              "value": 205
+            },
+            {
+              "year": 2012,
+              "value": 188
+            },
+            {
+              "year": 2013,
+              "value": 174
+            },
+            {
+              "year": 2014,
+              "value": 182
+            },
+            {
+              "year": 2015,
+              "value": 191
+            },
+            {
+              "year": 2016,
+              "value": 198
+            },
+            {
+              "year": 2017,
+              "value": 176
+            },
+            {
+              "year": 2018,
+              "value": 164
+            },
+            {
+              "year": 2019,
+              "value": 158
+            },
+            {
+              "year": 2020,
+              "value": 149
+            },
+            {
+              "year": 2021,
+              "value": 141
+            },
+            {
+              "year": 2022,
+              "value": 148
+            },
+            {
+              "year": 2023,
+              "value": 162
+            },
+            {
+              "year": 2024,
+              "value": 155
+            },
+            {
+              "year": 2025,
+              "value": 147,
+              "is_current": true,
+              "label": "est. 2025"
+            }
           ]
         }
       ]
@@ -630,47 +1950,157 @@
           "label": "Nivel Río de la Plata (Palermo, Buenos Aires)",
           "unit": "m s.n.m.",
           "historical_mean": 0.52,
-          "alert_low": -0.30,
-          "alert_high": 2.00,
+          "alert_low": -0.3,
+          "alert_high": 2.0,
           "source": "SHN / INA — Mareógrafo Palermo",
           "note": "Nivel medio anual. El estuario combina el caudal del Paraná y Uruguay con mareas y vientos (sudestadas). Las grandes sudestadas (1959, 1967, 2012) superan los 3 m. Nivel influenciado por ENSO y ascenso del mar.",
           "data": [
-            {"year": 1990, "value": 0.48},
-            {"year": 1991, "value": 0.41},
-            {"year": 1992, "value": 0.65},
-            {"year": 1993, "value": 0.54},
-            {"year": 1994, "value": 0.47},
-            {"year": 1995, "value": 0.58},
-            {"year": 1996, "value": 0.51},
-            {"year": 1997, "value": 0.72},
-            {"year": 1998, "value": 0.81},
-            {"year": 1999, "value": 0.53},
-            {"year": 2000, "value": 0.44},
-            {"year": 2001, "value": 0.55},
-            {"year": 2002, "value": 0.68},
-            {"year": 2003, "value": 0.60},
-            {"year": 2004, "value": 0.49},
-            {"year": 2005, "value": 0.57},
-            {"year": 2006, "value": 0.62},
-            {"year": 2007, "value": 0.71},
-            {"year": 2008, "value": 0.54},
-            {"year": 2009, "value": 0.43},
-            {"year": 2010, "value": 0.67},
-            {"year": 2011, "value": 0.74},
-            {"year": 2012, "value": 0.61},
-            {"year": 2013, "value": 0.55},
-            {"year": 2014, "value": 0.59},
-            {"year": 2015, "value": 0.63},
-            {"year": 2016, "value": 0.70},
-            {"year": 2017, "value": 0.57},
-            {"year": 2018, "value": 0.48},
-            {"year": 2019, "value": 0.39},
-            {"year": 2020, "value": 0.32},
-            {"year": 2021, "value": 0.25},
-            {"year": 2022, "value": 0.29},
-            {"year": 2023, "value": 0.47},
-            {"year": 2024, "value": 0.53},
-            {"year": 2025, "value": 0.44, "is_current": true, "label": "est. 2025"}
+            {
+              "year": 1990,
+              "value": 0.48
+            },
+            {
+              "year": 1991,
+              "value": 0.41
+            },
+            {
+              "year": 1992,
+              "value": 0.65
+            },
+            {
+              "year": 1993,
+              "value": 0.54
+            },
+            {
+              "year": 1994,
+              "value": 0.47
+            },
+            {
+              "year": 1995,
+              "value": 0.58
+            },
+            {
+              "year": 1996,
+              "value": 0.51
+            },
+            {
+              "year": 1997,
+              "value": 0.72
+            },
+            {
+              "year": 1998,
+              "value": 0.81
+            },
+            {
+              "year": 1999,
+              "value": 0.53
+            },
+            {
+              "year": 2000,
+              "value": 0.44
+            },
+            {
+              "year": 2001,
+              "value": 0.55
+            },
+            {
+              "year": 2002,
+              "value": 0.68
+            },
+            {
+              "year": 2003,
+              "value": 0.6
+            },
+            {
+              "year": 2004,
+              "value": 0.49
+            },
+            {
+              "year": 2005,
+              "value": 0.57
+            },
+            {
+              "year": 2006,
+              "value": 0.62
+            },
+            {
+              "year": 2007,
+              "value": 0.71
+            },
+            {
+              "year": 2008,
+              "value": 0.54
+            },
+            {
+              "year": 2009,
+              "value": 0.43
+            },
+            {
+              "year": 2010,
+              "value": 0.67
+            },
+            {
+              "year": 2011,
+              "value": 0.74
+            },
+            {
+              "year": 2012,
+              "value": 0.61
+            },
+            {
+              "year": 2013,
+              "value": 0.55
+            },
+            {
+              "year": 2014,
+              "value": 0.59
+            },
+            {
+              "year": 2015,
+              "value": 0.63
+            },
+            {
+              "year": 2016,
+              "value": 0.7
+            },
+            {
+              "year": 2017,
+              "value": 0.57
+            },
+            {
+              "year": 2018,
+              "value": 0.48
+            },
+            {
+              "year": 2019,
+              "value": 0.39
+            },
+            {
+              "year": 2020,
+              "value": 0.32
+            },
+            {
+              "year": 2021,
+              "value": 0.25
+            },
+            {
+              "year": 2022,
+              "value": 0.29
+            },
+            {
+              "year": 2023,
+              "value": 0.47
+            },
+            {
+              "year": 2024,
+              "value": 0.53
+            },
+            {
+              "year": 2025,
+              "value": 0.44,
+              "is_current": true,
+              "label": "est. 2025"
+            }
           ]
         }
       ]
@@ -686,42 +2116,347 @@
           "source": "INA / SNIH — Estación Córdoba",
           "note": "Caudal medio anual aguas abajo del embalse Los Molinos. Régimen pluvial con fuerte influencia del uso del suelo (urbanización, riego). El estrés hídrico en la cuenca de Córdoba se agravó post-2008.",
           "data": [
-            {"year": 1990, "value": 21},
-            {"year": 1991, "value": 17},
-            {"year": 1992, "value": 28},
-            {"year": 1993, "value": 22},
-            {"year": 1994, "value": 18},
-            {"year": 1995, "value": 24},
-            {"year": 1996, "value": 20},
-            {"year": 1997, "value": 27},
-            {"year": 1998, "value": 31},
-            {"year": 1999, "value": 20},
-            {"year": 2000, "value": 17},
-            {"year": 2001, "value": 19},
-            {"year": 2002, "value": 25},
-            {"year": 2003, "value": 22},
-            {"year": 2004, "value": 17},
-            {"year": 2005, "value": 20},
-            {"year": 2006, "value": 22},
-            {"year": 2007, "value": 21},
-            {"year": 2008, "value": 17},
-            {"year": 2009, "value": 13},
-            {"year": 2010, "value": 22},
-            {"year": 2011, "value": 25},
-            {"year": 2012, "value": 19},
-            {"year": 2013, "value": 16},
-            {"year": 2014, "value": 18},
-            {"year": 2015, "value": 20},
-            {"year": 2016, "value": 23},
-            {"year": 2017, "value": 17},
-            {"year": 2018, "value": 13},
-            {"year": 2019, "value": 11},
-            {"year": 2020, "value": 9},
-            {"year": 2021, "value": 7},
-            {"year": 2022, "value": 8},
-            {"year": 2023, "value": 14},
-            {"year": 2024, "value": 12},
-            {"year": 2025, "value": 10, "is_current": true, "label": "est. 2025"}
+            {
+              "year": 1990,
+              "value": 21
+            },
+            {
+              "year": 1991,
+              "value": 17
+            },
+            {
+              "year": 1992,
+              "value": 28
+            },
+            {
+              "year": 1993,
+              "value": 22
+            },
+            {
+              "year": 1994,
+              "value": 18
+            },
+            {
+              "year": 1995,
+              "value": 24
+            },
+            {
+              "year": 1996,
+              "value": 20
+            },
+            {
+              "year": 1997,
+              "value": 27
+            },
+            {
+              "year": 1998,
+              "value": 31
+            },
+            {
+              "year": 1999,
+              "value": 20
+            },
+            {
+              "year": 2000,
+              "value": 17
+            },
+            {
+              "year": 2001,
+              "value": 19
+            },
+            {
+              "year": 2002,
+              "value": 25
+            },
+            {
+              "year": 2003,
+              "value": 22
+            },
+            {
+              "year": 2004,
+              "value": 17
+            },
+            {
+              "year": 2005,
+              "value": 20
+            },
+            {
+              "year": 2006,
+              "value": 22
+            },
+            {
+              "year": 2007,
+              "value": 21
+            },
+            {
+              "year": 2008,
+              "value": 17
+            },
+            {
+              "year": 2009,
+              "value": 13
+            },
+            {
+              "year": 2010,
+              "value": 22
+            },
+            {
+              "year": 2011,
+              "value": 25
+            },
+            {
+              "year": 2012,
+              "value": 19
+            },
+            {
+              "year": 2013,
+              "value": 16
+            },
+            {
+              "year": 2014,
+              "value": 18
+            },
+            {
+              "year": 2015,
+              "value": 20
+            },
+            {
+              "year": 2016,
+              "value": 23
+            },
+            {
+              "year": 2017,
+              "value": 17
+            },
+            {
+              "year": 2018,
+              "value": 13
+            },
+            {
+              "year": 2019,
+              "value": 11
+            },
+            {
+              "year": 2020,
+              "value": 9
+            },
+            {
+              "year": 2021,
+              "value": 7
+            },
+            {
+              "year": 2022,
+              "value": 8
+            },
+            {
+              "year": 2023,
+              "value": 14
+            },
+            {
+              "year": 2024,
+              "value": 12
+            },
+            {
+              "year": 2025,
+              "value": 10,
+              "is_current": true,
+              "label": "est. 2025"
+            }
+          ]
+        }
+      ]
+    },
+    "tierra_del_fuego": {
+      "metrics": [
+        {
+          "id": "caudal_rio_grande",
+          "label": "Caudal Río Grande",
+          "unit": "m³/s",
+          "historical_mean": 35,
+          "alert_low": 15,
+          "source": "INA Centro Regional Austral — Estación Río Grande",
+          "note": "Serie estimada a partir de datos INA y literatura CADIC-CONICET. Régimen pluvio-nival sub-antártico con alta variabilidad interanual. Tendencia descendente atribuida a reducción de precipitaciones níveas.",
+          "data": [
+            {
+              "year": 1990,
+              "value": 42,
+              "is_current": false
+            },
+            {
+              "year": 1991,
+              "value": 38,
+              "is_current": false
+            },
+            {
+              "year": 1992,
+              "value": 45,
+              "is_current": false
+            },
+            {
+              "year": 1993,
+              "value": 36,
+              "is_current": false
+            },
+            {
+              "year": 1994,
+              "value": 40,
+              "is_current": false
+            },
+            {
+              "year": 1995,
+              "value": 48,
+              "is_current": false
+            },
+            {
+              "year": 1996,
+              "value": 33,
+              "is_current": false
+            },
+            {
+              "year": 1997,
+              "value": 37,
+              "is_current": false
+            },
+            {
+              "year": 1998,
+              "value": 44,
+              "is_current": false
+            },
+            {
+              "year": 1999,
+              "value": 39,
+              "is_current": false
+            },
+            {
+              "year": 2000,
+              "value": 36,
+              "is_current": false
+            },
+            {
+              "year": 2001,
+              "value": 43,
+              "is_current": false
+            },
+            {
+              "year": 2002,
+              "value": 47,
+              "is_current": false
+            },
+            {
+              "year": 2003,
+              "value": 39,
+              "is_current": false
+            },
+            {
+              "year": 2004,
+              "value": 34,
+              "is_current": false
+            },
+            {
+              "year": 2005,
+              "value": 31,
+              "is_current": false
+            },
+            {
+              "year": 2006,
+              "value": 36,
+              "is_current": false
+            },
+            {
+              "year": 2007,
+              "value": 43,
+              "is_current": false
+            },
+            {
+              "year": 2008,
+              "value": 39,
+              "is_current": false
+            },
+            {
+              "year": 2009,
+              "value": 45,
+              "is_current": false
+            },
+            {
+              "year": 2010,
+              "value": 31,
+              "is_current": false
+            },
+            {
+              "year": 2011,
+              "value": 36,
+              "is_current": false
+            },
+            {
+              "year": 2012,
+              "value": 29,
+              "is_current": false
+            },
+            {
+              "year": 2013,
+              "value": 33,
+              "is_current": false
+            },
+            {
+              "year": 2014,
+              "value": 31,
+              "is_current": false
+            },
+            {
+              "year": 2015,
+              "value": 29,
+              "is_current": false
+            },
+            {
+              "year": 2016,
+              "value": 34,
+              "is_current": false
+            },
+            {
+              "year": 2017,
+              "value": 31,
+              "is_current": false
+            },
+            {
+              "year": 2018,
+              "value": 29,
+              "is_current": false
+            },
+            {
+              "year": 2019,
+              "value": 26,
+              "is_current": false
+            },
+            {
+              "year": 2020,
+              "value": 28,
+              "is_current": false
+            },
+            {
+              "year": 2021,
+              "value": 26,
+              "is_current": false
+            },
+            {
+              "year": 2022,
+              "value": 23,
+              "is_current": false
+            },
+            {
+              "year": 2023,
+              "value": 25,
+              "is_current": false
+            },
+            {
+              "year": 2024,
+              "value": 27,
+              "is_current": false
+            },
+            {
+              "year": 2025,
+              "value": 26,
+              "is_current": true
+            }
           ]
         }
       ]

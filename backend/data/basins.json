@@ -1680,5 +1680,115 @@
         "url": "https://www.aguascordobesas.com.ar/"
       }
     ]
+  },
+  {
+    "id": "tierra_del_fuego",
+    "name": "Río Grande — Tierra del Fuego",
+    "region": "Patagonia Sur — Tierra del Fuego, Antártida e Islas del Atlántico Sur",
+    "area_km2": 12000,
+    "length_km": 230,
+    "origin": "Cordillera Darwin y afluentes andinos; Lago Fagnano (Lago Cami, ~586 km²) como regulador principal",
+    "mouth": "Océano Atlántico — Bahía San Sebastián, frente a Río Grande",
+    "glaciers": [],
+    "status": {
+      "overall": "yellow",
+      "caudal": {
+        "level": "green",
+        "label": "Caudal estable",
+        "detail": "Régimen pluvio-nival sub-antártico; precipitaciones regulares de ~500 mm/año en el este. Caudal medio del Río Grande ~35 m³/s, con picos de deshielo en primavera austral"
+      },
+      "calidad": {
+        "level": "yellow",
+        "label": "Impacto castores y salmonicultura",
+        "detail": "La invasión de castores (Castor canadensis, introducidos en 1946) alteró la hidromorfología de cientos de ríos y arroyos. La salmonicultura en canales y arroyos introduce patógenos y compite con la fauna nativa (perca criolla). Turberas amenazadas por extracción de turba"
+      },
+      "glaciares": {
+        "level": "na",
+        "label": "Sin glaciares en cuenca atlántica",
+        "detail": "Los glaciares de Tierra del Fuego (Montes Martial, Cordillera Darwin) drenan principalmente hacia el Canal de Beagle (vertiente Pacífica). La cuenca atlántica del Río Grande carece de aporte glaciario directo significativo"
+      },
+      "legal": {
+        "level": "yellow",
+        "label": "Gestión provincial + convenios internacionales",
+        "detail": "Provincia de Tierra del Fuego administra los recursos hídricos insulares. Laguna Malenguena reconocida como Sitio Ramsar (2023). El problema del castor es objeto de un plan de erradicación binacional ARG-CHI aún inconcluso. Turberas sin legislación de protección nacional específica"
+      }
+    },
+    "facts": [
+      "Tierra del Fuego alberga el mayor banco de turberas (peatlands) del hemisferio sur fuera de la Antártida: ~1,2 millones de ha que almacenan CO₂ equivalente a décadas de emisiones industriales argentinas",
+      "Los castores canadienses (Castor canadensis) fueron introducidos en 1946 con fines peleteros. Se estima una población de 70.000–100.000 individuos que destruyeron ~74.000 ha de bosque nativo de lenga",
+      "Lago Fagnano (Lago Cami) es el mayor lago de la isla: ~586 km², compartido con Chile. Sus aguas se filtran subterráneamente hacia el Canal de Beagle por fallas tectónicas activas",
+      "El Río Grande es la ciudad más austral con más de 80.000 habitantes que depende de pozos de agua subterránea; la cuenca superficial abastece a establecimientos rurales y ganaderos",
+      "La trucha marrón y el salmón del Atlántico (introducidos) desplazan a la perca criolla (Percichthys trucha), especie endémica amenazada"
+    ],
+    "sources": [
+      "INA — Centro Regional Austral, datos de estaciones hidrológicas en Río Grande",
+      "CADIC-CONICET (Centro Austral de Investigaciones Científicas) — estudios de turberas y biodiversidad",
+      "Plan Binacional de Control del Castor Patagónico (Secretaría de Ambiente AR / CONAF CHI)",
+      "Convención Ramsar — Laguna Malenguena (AR-TDF, 2023)",
+      "IANIGLA — Glaciares de Tierra del Fuego (vertiente Pacífica)"
+    ],
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -68.5,
+            -53.8
+          ],
+          [
+            -68.5,
+            -52.9
+          ],
+          [
+            -67.5,
+            -52.7
+          ],
+          [
+            -66.0,
+            -52.6
+          ],
+          [
+            -64.8,
+            -52.8
+          ],
+          [
+            -63.8,
+            -53.2
+          ],
+          [
+            -63.5,
+            -53.8
+          ],
+          [
+            -63.8,
+            -54.5
+          ],
+          [
+            -64.5,
+            -54.9
+          ],
+          [
+            -65.5,
+            -55.0
+          ],
+          [
+            -66.5,
+            -54.8
+          ],
+          [
+            -67.5,
+            -54.7
+          ],
+          [
+            -68.5,
+            -54.5
+          ],
+          [
+            -68.5,
+            -53.8
+          ]
+        ]
+      ]
+    }
   }
 ]
