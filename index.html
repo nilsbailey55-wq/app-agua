@@ -1237,6 +1237,7 @@ document.getElementById('basemapIntensity').addEventListener('input', (e) => {
 // ── state ─────────────────────────────────────────────────────────────────
 let allBasins = [];          // GeoJSON features
 let basinLayers = {};        // id → leaflet layer
+let _activeBasinHL = null;   // highlight layer for selected basin
 let basinsLayerGroup = null; // overall L.geoJSON for show/hide
 let selectedId = null;
 
@@ -1391,20 +1392,40 @@ function refreshBasinStyles() {
   Object.entries(basinLayers).forEach(([bid, layer]) => {
     const feat = allBasins.find(f => f.id === bid);
     if (!feat) return;
-    layer.setStyle(basinStyle(feat.properties.status_overall, bid === selectedId));
+    // Always use unselected style — highlight is managed by _activeBasinHL overlay
+    layer.setStyle(basinStyle(feat.properties.status_overall, false));
   });
 }
 
 function highlightBasin(id) {
+  // 1. Reset all basin polygons to their default (unselected) style
   Object.entries(basinLayers).forEach(([bid, layer]) => {
     const feat = allBasins.find(f => f.id === bid);
-    if (!feat) return;
-    const status = feat.properties.status_overall;
-    layer.setStyle(basinStyle(status, bid === id));
-    // Selected basin sits on top of OTHER basins, small features stay above it
-    if (bid === id) layer.bringToFront();
+    if (feat) layer.setStyle(basinStyle(feat.properties.status_overall, false));
   });
-  // Re-elevate the small features after any basin re-styling
+
+  // 2. Remove previous highlight overlay
+  if (_activeBasinHL) { _activeBasinHL.remove(); _activeBasinHL = null; }
+
+  // 3. Add a clean highlight layer on top of just the selected basin
+  const feat = allBasins.find(f => f.id === id);
+  if (feat && feat.geometry) {
+    _activeBasinHL = L.geoJSON(feat, {
+      style: {
+        color: '#1565c0',
+        weight: 3,
+        opacity: 1,
+        fillColor: '#1a6fa8',
+        fillOpacity: 0.10,
+        dashArray: null,
+        lineCap: 'round',
+        lineJoin: 'round',
+      },
+      interactive: false,   // clicks pass through to the underlying layer
+    }).addTo(map);
+  }
+
+  // 4. Re-elevate small point layers so they stay on top
   [waterLayerGroup, wetlandsLayer, glaciersLayer, damsLayer, protectedLayer, citiesLayer, ramsarLayer].forEach(grp => {
     if (grp && grp.eachLayer) grp.eachLayer(l => l.bringToFront && l.bringToFront());
   });
