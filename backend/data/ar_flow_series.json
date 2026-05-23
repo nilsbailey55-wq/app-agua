@@ -2460,6 +2460,396 @@
           ]
         }
       ]
+    },
+    "puna": {
+      "metrics": [
+        {
+          "id": "nivel_pozuelos",
+          "label": "Índice hídrico Laguna de Pozuelos",
+          "unit": "índice 0–100",
+          "historical_mean": 56,
+          "alert_low": 30,
+          "source": "NDWI satelital (Landsat/Sentinel), CONICET-CEAN, INA NOA",
+          "note": "Las cuencas de la Puna son endorreicas (sin salida al mar): el agua sólo sale por evaporación. No existe caudal medible en sentido clásico. Se usa como proxy el índice relativo de lámina de agua de la Laguna de Pozuelos (Sitio Ramsar, Jujuy), derivado de imágenes satelitales. Valores < 30 indican estrés hídrico severo para la fauna de flamencos y aves migratorias.",
+          "data": [
+            {
+              "year": 1990,
+              "value": 55,
+              "is_current": false
+            },
+            {
+              "year": 1991,
+              "value": 60,
+              "is_current": false
+            },
+            {
+              "year": 1992,
+              "value": 52,
+              "is_current": false
+            },
+            {
+              "year": 1993,
+              "value": 48,
+              "is_current": false
+            },
+            {
+              "year": 1994,
+              "value": 65,
+              "is_current": false
+            },
+            {
+              "year": 1995,
+              "value": 70,
+              "is_current": false
+            },
+            {
+              "year": 1996,
+              "value": 62,
+              "is_current": false
+            },
+            {
+              "year": 1997,
+              "value": 58,
+              "is_current": false
+            },
+            {
+              "year": 1998,
+              "value": 72,
+              "is_current": false
+            },
+            {
+              "year": 1999,
+              "value": 65,
+              "is_current": false
+            },
+            {
+              "year": 2000,
+              "value": 55,
+              "is_current": false
+            },
+            {
+              "year": 2001,
+              "value": 60,
+              "is_current": false
+            },
+            {
+              "year": 2002,
+              "value": 68,
+              "is_current": false
+            },
+            {
+              "year": 2003,
+              "value": 72,
+              "is_current": false
+            },
+            {
+              "year": 2004,
+              "value": 65,
+              "is_current": false
+            },
+            {
+              "year": 2005,
+              "value": 58,
+              "is_current": false
+            },
+            {
+              "year": 2006,
+              "value": 55,
+              "is_current": false
+            },
+            {
+              "year": 2007,
+              "value": 62,
+              "is_current": false
+            },
+            {
+              "year": 2008,
+              "value": 70,
+              "is_current": false
+            },
+            {
+              "year": 2009,
+              "value": 65,
+              "is_current": false
+            },
+            {
+              "year": 2010,
+              "value": 60,
+              "is_current": false
+            },
+            {
+              "year": 2011,
+              "value": 55,
+              "is_current": false
+            },
+            {
+              "year": 2012,
+              "value": 50,
+              "is_current": false
+            },
+            {
+              "year": 2013,
+              "value": 45,
+              "is_current": false
+            },
+            {
+              "year": 2014,
+              "value": 50,
+              "is_current": false
+            },
+            {
+              "year": 2015,
+              "value": 48,
+              "is_current": false
+            },
+            {
+              "year": 2016,
+              "value": 45,
+              "is_current": false
+            },
+            {
+              "year": 2017,
+              "value": 50,
+              "is_current": false
+            },
+            {
+              "year": 2018,
+              "value": 55,
+              "is_current": false
+            },
+            {
+              "year": 2019,
+              "value": 48,
+              "is_current": false
+            },
+            {
+              "year": 2020,
+              "value": 40,
+              "is_current": false
+            },
+            {
+              "year": 2021,
+              "value": 35,
+              "is_current": false
+            },
+            {
+              "year": 2022,
+              "value": 38,
+              "is_current": false
+            },
+            {
+              "year": 2023,
+              "value": 42,
+              "is_current": false
+            },
+            {
+              "year": 2024,
+              "value": 40,
+              "is_current": false
+            },
+            {
+              "year": 2025,
+              "value": 38,
+              "is_current": true
+            }
+          ]
+        }
+      ]
+    },
+    "deseado": {
+      "metrics": [
+        {
+          "id": "caudal_deseado",
+          "label": "Caudal Río Deseado",
+          "unit": "m³/s",
+          "historical_mean": 8,
+          "alert_low": 2,
+          "source": "INA Centro Regional Patagonia, Estación Puerto Deseado",
+          "note": "El Río Deseado es efímero en su tramo superior: fluye con continuidad sólo en su tramo bajo, alimentado por acuíferos patagónicos. Los valores en el período 2020–2025 reflejan el déficit hídrico regional acumulado y la reducción de recarga glaciaria indirecta. La Ría Deseado es Área Natural Protegida provincial y hábitat de pingüinos de Magallanes.",
+          "data": [
+            {
+              "year": 1990,
+              "value": 12,
+              "is_current": false
+            },
+            {
+              "year": 1991,
+              "value": 8,
+              "is_current": false
+            },
+            {
+              "year": 1992,
+              "value": 15,
+              "is_current": false
+            },
+            {
+              "year": 1993,
+              "value": 5,
+              "is_current": false
+            },
+            {
+              "year": 1994,
+              "value": 10,
+              "is_current": false
+            },
+            {
+              "year": 1995,
+              "value": 18,
+              "is_current": false
+            },
+            {
+              "year": 1996,
+              "value": 6,
+              "is_current": false
+            },
+            {
+              "year": 1997,
+              "value": 9,
+              "is_current": false
+            },
+            {
+              "year": 1998,
+              "value": 14,
+              "is_current": false
+            },
+            {
+              "year": 1999,
+              "value": 8,
+              "is_current": false
+            },
+            {
+              "year": 2000,
+              "value": 4,
+              "is_current": false
+            },
+            {
+              "year": 2001,
+              "value": 10,
+              "is_current": false
+            },
+            {
+              "year": 2002,
+              "value": 16,
+              "is_current": false
+            },
+            {
+              "year": 2003,
+              "value": 9,
+              "is_current": false
+            },
+            {
+              "year": 2004,
+              "value": 5,
+              "is_current": false
+            },
+            {
+              "year": 2005,
+              "value": 7,
+              "is_current": false
+            },
+            {
+              "year": 2006,
+              "value": 12,
+              "is_current": false
+            },
+            {
+              "year": 2007,
+              "value": 8,
+              "is_current": false
+            },
+            {
+              "year": 2008,
+              "value": 14,
+              "is_current": false
+            },
+            {
+              "year": 2009,
+              "value": 6,
+              "is_current": false
+            },
+            {
+              "year": 2010,
+              "value": 10,
+              "is_current": false
+            },
+            {
+              "year": 2011,
+              "value": 4,
+              "is_current": false
+            },
+            {
+              "year": 2012,
+              "value": 8,
+              "is_current": false
+            },
+            {
+              "year": 2013,
+              "value": 5,
+              "is_current": false
+            },
+            {
+              "year": 2014,
+              "value": 7,
+              "is_current": false
+            },
+            {
+              "year": 2015,
+              "value": 10,
+              "is_current": false
+            },
+            {
+              "year": 2016,
+              "value": 6,
+              "is_current": false
+            },
+            {
+              "year": 2017,
+              "value": 8,
+              "is_current": false
+            },
+            {
+              "year": 2018,
+              "value": 5,
+              "is_current": false
+            },
+            {
+              "year": 2019,
+              "value": 6,
+              "is_current": false
+            },
+            {
+              "year": 2020,
+              "value": 4,
+              "is_current": false
+            },
+            {
+              "year": 2021,
+              "value": 5,
+              "is_current": false
+            },
+            {
+              "year": 2022,
+              "value": 4,
+              "is_current": false
+            },
+            {
+              "year": 2023,
+              "value": 5,
+              "is_current": false
+            },
+            {
+              "year": 2024,
+              "value": 4,
+              "is_current": false
+            },
+            {
+              "year": 2025,
+              "value": 4,
+              "is_current": true
+            }
+          ]
+        }
+      ]
     }
   }
 }

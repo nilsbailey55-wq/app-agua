@@ -138,6 +138,51 @@
     .light-val.yellow { color: var(--yellow); }
     .light-val.red    { color: var(--red); }
     .light-val.na     { color: #aaa; }
+    .light-val.orange { color: #e65100; }
+    .dot-orange { background: #e65100; box-shadow: 0 0 5px rgba(230,81,0,.45); }
+
+    /* WQI — dynamic water quality index */
+    .wqi-badge {
+      display: inline-block; font-size: 0.55rem; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      background: #e3f2fd; color: #0d47a1; border: 1px solid #90caf9;
+      border-radius: 99px; padding: 1px 6px; margin-left: 6px;
+      vertical-align: middle;
+    }
+    .wqi-bar-wrap { margin: 5px 0 3px; }
+    .wqi-bar-bg {
+      height: 6px; background: #e8f0f8; border-radius: 3px;
+      overflow: hidden; position: relative;
+    }
+    .wqi-bar-fill {
+      height: 100%; border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+    .wqi-bar-fill.green  { background: var(--green); }
+    .wqi-bar-fill.yellow { background: var(--yellow); }
+    .wqi-bar-fill.orange { background: #e65100; }
+    .wqi-bar-fill.red    { background: var(--red); }
+    .wqi-bar-labels {
+      display: flex; justify-content: space-between;
+      font-size: 0.59rem; color: var(--text-muted); margin-top: 2px;
+    }
+    .wqi-pressures {
+      display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px;
+    }
+    .wqi-pressure-chip {
+      font-size: 0.6rem; background: #f0f4f8;
+      border: 1px solid var(--border); border-radius: 4px;
+      padding: 2px 6px; color: var(--text-muted);
+    }
+    .wqi-dilution {
+      font-size: 0.68rem; color: var(--text-muted);
+      margin-top: 4px; line-height: 1.4;
+      border-left: 2px solid #b3d4f5; padding-left: 6px;
+    }
+    .wqi-model-note {
+      font-size: 0.6rem; color: var(--text-muted);
+      margin-top: 6px; font-style: italic;
+    }
 
     /* glaciers */
     .glacier-list { display: flex; flex-direction: column; gap: 8px; }
@@ -1400,6 +1445,8 @@ async function selectBasin(id, panTo = false) {
     renderDetail(b);
     // Cargar serie histórica async (oculta el contenedor si no hay datos)
     loadFlowChart(b.id, 'flow-chart-container');
+    // Cargar índice de calidad dinámico async
+    loadWQI(b.id);
   } catch {
     detailEl.innerHTML = '<div class="error-box">No se pudo cargar el detalle.</div>';
   }
@@ -1419,11 +1466,12 @@ function renderDetail(b) {
   const lightsHtml = indicators.map(ind => {
     const v = s[ind.key];
     if (!v) return '';
+    const rowId = ind.key === 'calidad' ? ' id="wqi-row"' : '';
     return `
-      <div class="light-row">
+      <div class="light-row"${rowId}>
         <div class="dot dot-${v.level}"></div>
         <div class="light-info">
-          <div class="light-label">${ind.label}</div>
+          <div class="light-label">${ind.label}${ind.key === 'calidad' ? ' <span class="wqi-badge">cargando ICA…</span>' : ''}</div>
           <div class="light-desc">${v.detail}</div>
         </div>
         <div class="light-val ${v.level}">${v.label}</div>
@@ -3854,6 +3902,79 @@ function renderAquiferResult(d, el) {
     ${aquiferHtml}
     ${rcHtml}
     ${d.note ? `<div class="tool-result-note">⚠ ${d.note}</div>` : ''}
+  `;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  CALIDAD DEL AGUA — Índice ICA dinámico
+// ══════════════════════════════════════════════════════════════════
+
+async function loadWQI(basinId) {
+  const row = document.getElementById('wqi-row');
+  if (!row) return;
+  try {
+    const res = await fetch(`${API}/api/water/quality-index?basin=${basinId}`);
+    if (!res.ok) throw new Error(res.status);
+    const d = await res.json();
+    row.innerHTML = _renderWqiRow(d);
+  } catch(e) {
+    // On error: just remove the loading badge, keep static content
+    const badge = row.querySelector('.wqi-badge');
+    if (badge) badge.remove();
+  }
+}
+
+function _renderWqiRow(d) {
+  const levelColors = {
+    green:  { text: 'var(--green)',  dot: 'dot-green'  },
+    yellow: { text: 'var(--yellow)', dot: 'dot-yellow' },
+    orange: { text: '#e65100',       dot: 'dot-orange' },
+    red:    { text: 'var(--red)',    dot: 'dot-red'    },
+  };
+  const c = levelColors[d.level] || levelColors.yellow;
+
+  // Score bar color transition: red(0)→orange(35)→yellow(55)→green(75)
+  const scoreColor = d.level === 'green' ? '#2d9b5a'
+                   : d.level === 'yellow' ? '#d4a017'
+                   : d.level === 'orange' ? '#e65100'
+                   : '#c0392b';
+
+  // Flow effect chip
+  const flowChip = d.flow_z != null
+    ? `<span class="wqi-pressure-chip" style="background:#e8f4fb;border-color:#90caf9;color:#0d47a1">
+         💧 caudal ${d.flow_pct >= 0 ? '+' : ''}${d.flow_pct}% (z=${d.flow_z})
+       </span>`
+    : '';
+
+  const pressureChips = (d.pressures || [])
+    .map(p => `<span class="wqi-pressure-chip">${p}</span>`)
+    .join('');
+
+  return `
+    <div class="dot ${c.dot}"></div>
+    <div class="light-info">
+      <div class="light-label">
+        Calidad del agua
+        <span class="wqi-badge">ICA dinámico</span>
+      </div>
+      <div class="wqi-bar-wrap">
+        <div class="wqi-bar-bg">
+          <div class="wqi-bar-fill ${d.level}" style="width:${d.score}%;background:${scoreColor}"></div>
+        </div>
+        <div class="wqi-bar-labels">
+          <span>Crítica</span>
+          <span style="font-weight:700;color:${scoreColor}">${d.score} / 100</span>
+          <span>Buena</span>
+        </div>
+      </div>
+      <div class="wqi-dilution">${d.dilution_note}</div>
+      <div class="wqi-pressures">
+        ${flowChip}
+        ${pressureChips}
+      </div>
+      <div class="wqi-model-note">${d.model_note}</div>
+    </div>
+    <div class="light-val ${d.level}" style="color:${c.text}">${d.label}</div>
   `;
 }
 

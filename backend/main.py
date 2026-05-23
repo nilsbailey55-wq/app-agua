@@ -602,6 +602,146 @@ def get_flow_series(basin: str = Query(None, description="basin_id para filtrar 
     }
 
 
+# ── Water Quality Index model ──────────────────────────────────────────────
+# Base pressure score per basin (0–100, higher = better baseline quality).
+# Derived from curated expert assessment in basins.json (calidad field) +
+# land use context. These are stable anchors; flow anomaly shifts them.
+_WQ_BASE: dict[str, int] = {
+    "rio_de_la_plata":     14,   # crítica: AMBA + Riachuelo + agroquímicos
+    "alto_parana":         35,   # deficiente: deforestación + agro intensivo
+    "sierras_pampeanas":   38,   # deficiente: Suquía/Primero + Córdoba urbana
+    "salado_bonaerense":   46,   # regular: agroquímicos + mal drenaje
+    "paraguay_pilcomayo":  42,   # regular: ganadería + extracción petróleo Chaco
+    "bermejo":             50,   # regular: erosión severa + sedimentos
+    "salado_norte":        53,   # regular: agro + ciudades medias
+    "cuyo":                52,   # regular: riego intensivo + salinización
+    "colorado":            64,   # aceptable: tensión agro pero dilución OK
+    "uruguay":             62,   # aceptable: algo de agro/papel
+    "negro_limay":         67,   # aceptable: central hidroeléctrica regula
+    "chubut":              71,   # buena: baja densidad urbana/agro
+    "puna":                68,   # buena pero minería: litio + boratos
+    "santa_cruz":          80,   # buena: casi sin presión antrópica
+    "deseado":             74,   # buena: escasa actividad, ría protegida
+    "gallegos":            76,   # buena: ganadería extensiva baja carga
+    "tierra_del_fuego":    70,   # buena pero castores + salmonicultura
+}
+
+# Pressure labels for frontend (what drives quality pressure in this basin)
+_WQ_PRESSURE: dict[str, list[str]] = {
+    "rio_de_la_plata":    ["Efluentes AMBA (12M hab.)", "Riachuelo / ACUMAR", "Agroquímicos deltaicos"],
+    "alto_parana":        ["Deforestación cuenca alta", "Soja + agroquímicos", "Presa Yacyretá (cianobact.)"],
+    "sierras_pampeanas":  ["Efluentes Córdoba urbana", "Río Suquía contaminado", "Agroquímicos pampeanos"],
+    "salado_bonaerense":  ["Agroquímicos bonaerenses", "Feedlots ganaderos", "Drenaje lento / acumulación"],
+    "paraguay_pilcomayo": ["Ganadería extensiva Chaco", "Petróleo Formosa/Salta", "Sedimentos Pilcomayo"],
+    "bermejo":            ["Erosión severa (turbidez)", "Deforestación NOA/Bolivia", "Agro subtropical"],
+    "salado_norte":       ["Ciudades medias (Salta/Jujuy)", "Agricultura cañera", "Embalse Cabra Corral"],
+    "cuyo":               ["Riego intensivo vitivinícola", "Salinización progresiva", "Aguas residuales Mendoza"],
+    "colorado":           ["Riego agrícola alto/bajo", "Salinización deltaica", "Extracción petróleo Neuquén"],
+    "uruguay":            ["Papeleras (Fray Bentos)", "Agro sojero litoral", "Efluentes Concordia/Salto"],
+    "negro_limay":        ["Regulación hidroeléctrica", "Fruticultura Alto Valle", "Residuos urbanos Neuquén"],
+    "chubut":             ["Extracción petróleo cuenca", "Ciudad de Trelew efluentes", "Pesca en ría"],
+    "puna":               ["Minería litio/boratos", "Salinización natural alta", "Sin tratamiento cloacal"],
+    "santa_cruz":         ["Mínima presión antrópica", "Turismo Calafate creciente", "Sedimentos glaciarios"],
+    "deseado":            ["Efímero: mínima dilución", "Puerto Deseado efluentes", "Acuífero vulnerable"],
+    "gallegos":           ["Ganadería ovina extensiva", "Ciudad Río Gallegos", "Turba/peatlands"],
+    "tierra_del_fuego":   ["Invasión castores (300+ ríos)", "Salmonicultura tramos medios", "Sin tratamiento rural"],
+}
+
+def _compute_wqi(basin_id: str) -> dict | None:
+    """Computa el Water Quality Index dinámico para una cuenca.
+    Combina score base (presión antrópica estática) con modificador de
+    caudal actual (efecto de dilución/escorrentía de contaminantes)."""
+    import math
+
+    base = _WQ_BASE.get(basin_id)
+    if base is None:
+        return None
+
+    # Get current flow anomaly from FLOW_SERIES
+    flow_z: float | None = None
+    flow_label: str | None = None
+    flow_pct: float | None = None
+    series = FLOW_SERIES.get("series", {}).get(basin_id)
+    if series and series.get("metrics"):
+        m = series["metrics"][0]
+        enriched = _flow_series_stats(m)
+        an = enriched.get("anomaly")
+        if an:
+            flow_z     = an["z_score"]
+            flow_label = an["status"]
+            flow_pct   = an["pct_vs_mean"]
+
+    # Flow dilution modifier (scientific basis: dilution ∝ Q; pollutant
+    # concentration ≈ load/Q, so low Q → worse quality)
+    dilution_delta = 0
+    dilution_note  = "Caudal en rango normal — dilución sin cambios respecto al promedio histórico"
+    if flow_z is not None:
+        if   flow_z <= -2.5:
+            dilution_delta = -20
+            dilution_note  = f"Sequía severa (z={flow_z:.1f}): dilución muy reducida, concentración de contaminantes aumenta fuertemente"
+        elif flow_z <= -1.5:
+            dilution_delta = -12
+            dilution_note  = f"Déficit hídrico (z={flow_z:.1f}): menor dilución, calidad degradada respecto al promedio"
+        elif flow_z <= -0.5:
+            dilution_delta = -5
+            dilution_note  = f"Caudal levemente bajo (z={flow_z:.1f}): ligera reducción en dilución de contaminantes"
+        elif flow_z >= 2.5:
+            dilution_delta = -10
+            dilution_note  = f"Crecida severa (z={flow_z:.1f}): arrastre de sedimentos y agroquímicos por escorrentía superficial"
+        elif flow_z >= 1.5:
+            dilution_delta = -4
+            dilution_note  = f"Caudal elevado (z={flow_z:.1f}): mayor dilución pero leve aumento de turbidez y escorrentía agrícola"
+        else:
+            dilution_delta = 0
+            dilution_note  = f"Caudal normal (z={flow_z:.1f}): dilución en valores históricos típicos"
+
+    score = max(0, min(100, base + dilution_delta))
+
+    # Classify
+    if   score >= 75: level, qlabel = "green",  "Buena"
+    elif score >= 55: level, qlabel = "yellow", "Regular"
+    elif score >= 35: level, qlabel = "orange", "Deficiente"
+    else:             level, qlabel = "red",    "Crítica"
+
+    return {
+        "basin_id":       basin_id,
+        "score":          score,
+        "level":          level,
+        "label":          qlabel,
+        "base_score":     base,
+        "dilution_delta": dilution_delta,
+        "dilution_note":  dilution_note,
+        "flow_z":         flow_z,
+        "flow_status":    flow_label,
+        "flow_pct":       flow_pct,
+        "pressures":      _WQ_PRESSURE.get(basin_id, []),
+        "model_note":     (
+            "Índice estimado mediante modelo ICA simplificado: score base (presión antrópica curada) "
+            "± modificador de dilución por caudal actual. No sustituye monitoreo fisicoquímico oficial (INA/CONICET). "
+            "Fuentes: INA, ACUMAR, CONICET, UNESCO-PHI."
+        ),
+    }
+
+
+@app.get("/api/water/quality-index")
+def get_quality_index(basin: str = Query(None, description="basin_id (ej: negro_limay). Sin parámetro → todos")):
+    """Índice de Calidad del Agua dinámico (ICA simplificado).
+    Combina score de presión antrópica base con modificador por anomalía
+    de caudal actual (efecto dilución). Devuelve nivel, score 0–100, factores
+    y nota metodológica."""
+    if basin:
+        result = _compute_wqi(basin)
+        if result is None:
+            raise HTTPException(status_code=404, detail=f"Sin datos de calidad para '{basin}'")
+        return result
+    # All basins
+    return {
+        "basins": [r for r in (_compute_wqi(bid) for bid in _WQ_BASE) if r],
+        "model_version": "1.0-simplified",
+        "note": "Modelo ICA simplificado: presión antrópica base + dilución por caudal actual.",
+    }
+
+
 def _enrich_water_body(wb_id: str, wb: dict) -> dict:
     """Enriquece un cuerpo de agua con tendencia lineal, estadísticas y anomalía actual."""
     import math, copy
