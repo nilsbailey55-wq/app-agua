@@ -52,6 +52,7 @@ INDIGENOUS_PATH   = os.path.join(DATA_DIR, "ar_indigenous.geojson")  # Territori
 RAMSAR_PATH       = os.path.join(DATA_DIR, "ar_ramsar.geojson")      # 23 Sitios Ramsar oficiales (Convención 1971)
 FLOW_SERIES_PATH  = os.path.join(DATA_DIR, "ar_flow_series.json")   # Series históricas caudal/nivel por cuenca
 WATER_BODY_PATH   = os.path.join(DATA_DIR, "water_body_area.json")  # Monitoreo superficie cuerpos de agua (Landsat/GSW-JRC)
+CHIRPS_PATH       = os.path.join(DATA_DIR, "chirps_basin_precip.json")  # CHIRPS v2.0 precipitación anual por cuenca 1981-2024
 PRECIP_GRID_PATH  = os.path.join(DATA_DIR, "ar_precip_grid.json")   # Grid ERA5 pre-computado (build_precip_grid.py)
 
 with open(DATA_PATH, encoding="utf-8") as f:
@@ -108,6 +109,8 @@ with open(FLOW_SERIES_PATH, encoding="utf-8") as f:
     FLOW_SERIES = json.load(f)
 with open(WATER_BODY_PATH, encoding="utf-8") as f:
     WATER_BODIES = json.load(f)
+with open(CHIRPS_PATH, encoding="utf-8") as f:
+    CHIRPS = json.load(f)
 
 # Grid de precipitación ERA5 pre-computado (opcional — generado por build_precip_grid.py)
 _PRECIP_GRID: dict = {}
@@ -821,6 +824,58 @@ def get_water_surface_change(id: str = Query(None, description="ID del cuerpo de
             for k, v in bodies.items()
         ],
         "metadata": WATER_BODIES.get("metadata", {}),
+    }
+
+
+@app.get("/api/climate/chirps")
+def get_chirps(basin: str = Query(None, description="basin_id (ej: negro_limay). Sin param → índice de todas las cuencas")):
+    """Precipitación anual por cuenca derivada de CHIRPS v2.0 (CHC/UCSB), 1981–2024.
+    - Sin parámetros: índice liviano con media base y anomalía 2024.
+    - Con ?basin=: serie completa + estadísticas para la cuenca seleccionada."""
+    basins_data = CHIRPS.get("basins", {})
+    if basin:
+        if basin not in basins_data:
+            raise HTTPException(status_code=404, detail=f"Cuenca '{basin}' sin datos CHIRPS")
+        bd = basins_data[basin]
+        years = CHIRPS["metadata"]["years"]
+        # Quintiles para clasificar el año actual
+        vals = sorted(bd["data"])
+        n = len(vals)
+        pct_2024 = sum(1 for v in vals if v < bd["data"][-1]) / n * 100
+        return {
+            "basin": basin,
+            "name": bd["name"],
+            "metadata": CHIRPS["metadata"],
+            "mean_base": bd["mean_base"],
+            "std_base": bd["std_base"],
+            "anomaly_2024_mm": bd["anomaly_2024_mm"],
+            "anomaly_2024_pct": bd["anomaly_2024_pct"],
+            "z_2024": bd["z_2024"],
+            "percentile_2024": round(pct_2024),
+            "series": [{"year": y, "precip_mm": v} for y, v in zip(years, bd["data"])],
+        }
+    # Índice liviano
+    def _classify(z):
+        if z <= -1.5: return "muy_seco"
+        if z <= -0.5: return "seco"
+        if z <   0.5: return "normal"
+        if z <   1.5: return "húmedo"
+        return "muy_húmedo"
+
+    return {
+        "metadata": CHIRPS["metadata"],
+        "basins": [
+            {
+                "id": bid,
+                "name": bd["name"],
+                "mean_base": bd["mean_base"],
+                "anomaly_2024_mm": bd["anomaly_2024_mm"],
+                "anomaly_2024_pct": bd["anomaly_2024_pct"],
+                "z_2024": bd["z_2024"],
+                "status_2024": _classify(bd["z_2024"]),
+            }
+            for bid, bd in basins_data.items()
+        ],
     }
 
 

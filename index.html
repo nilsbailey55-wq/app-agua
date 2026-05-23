@@ -1531,6 +1531,8 @@ async function selectBasin(id, panTo = false) {
     loadFlowChart(b.id, 'flow-chart-container');
     // Cargar índice de calidad dinámico async
     loadWQI(b.id);
+    // Cargar precipitación CHIRPS async
+    loadCHIRPS(b.id);
   } catch {
     detailEl.innerHTML = '<div class="error-box">No se pudo cargar el detalle.</div>';
   }
@@ -1751,6 +1753,15 @@ function renderDetail(b) {
           <div class="flow-chart-loading">Cargando serie histórica…</div>
         </div>
         <div id="precip-chart-container" class="flow-chart-wrap" style="display:none;margin-top:8px"></div>
+      </div>
+    </details>
+
+    <details class="section" open>
+      <summary>🌧 Precipitación CHIRPS <span class="summary-preview"><span class="preview-meta" id="chirps-summary-preview">cargando…</span></span></summary>
+      <div class="section-body">
+        <div id="chirps-panel" class="flow-chart-wrap">
+          <div class="flow-chart-loading">Cargando datos CHIRPS…</div>
+        </div>
       </div>
     </details>
 
@@ -2628,6 +2639,14 @@ async function buildWaterLayers() {
       </button>` +
       section('Marcos') +
         btn('basins',   '#1a6fa8', '📐', 'cuencas',     '#e8f4fb') +
+        `<button id="precipToggle" title="Coropleta de precipitación media anual CHIRPS (1991–2020) por cuenca" data-bg-off="#fff" style="
+          background:#fff;border:1.6px solid #1565c0;border-radius:5px;
+          padding:4px 8px;font-size:0.7rem;font-weight:700;
+          color:#1565c0;cursor:pointer;display:flex;align-items:center;gap:5px;
+          white-space:nowrap;width:100%;">
+          <span style="font-size:0.85rem;">🌧</span>
+          <span id="precipToggleLabel">Mostrar lluvia</span>
+        </button>` +
       section('Hidrografía') +
         btn('water',    '#0d47a1', '💧', 'agua',        '#e8f4fb') +
         btn('wetlands', '#33691e', '🌾', 'humedales',   '#f1f8e9') +
@@ -2731,6 +2750,9 @@ async function buildWaterLayers() {
          'Ocultar áreas prot.', 'Mostrar áreas prot.');
     wire('ramsar',    () => ramsarLayer,      () => ramsarVisible,   v => ramsarVisible = v,
          'Ocultar sitios Ramsar','Mostrar sitios Ramsar');
+
+    // Precipitación CHIRPS toggle (async — usa su propia lógica)
+    d.querySelector('#precipToggle')?.addEventListener('click', () => togglePrecipLayer());
 
     // "Otras áreas" group expander
     const expBtn = d.querySelector('#otherAreasExpander');
@@ -3691,6 +3713,187 @@ async function loadFlowChart(basinId, containerId) {
       </div>`;
   } catch(e) {
     el.style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CHIRPS — Precipitación por cuenca (panel sidebar + capa coropleta)
+// ══════════════════════════════════════════════════════════════════════════
+
+let _chirpsIndex   = null;   // índice liviano cargado una vez
+let _precipLayer   = null;   // Leaflet layer (choropleth)
+let _precipVisible = false;
+
+// Escala de color mm/año → color hex
+function _precipColor(mm) {
+  if (mm <  200) return '#fff7bc';
+  if (mm <  350) return '#fee391';
+  if (mm <  500) return '#fec44f';
+  if (mm <  700) return '#fe9929';
+  if (mm <  900) return '#ec7014';
+  if (mm < 1100) return '#cc4c02';
+  if (mm < 1300) return '#8c2d04';
+  return '#4a0e00';
+}
+
+// Carga el índice CHIRPS una vez (para coropleta y sidebar)
+async function _ensureCHIRPSIndex() {
+  if (_chirpsIndex) return _chirpsIndex;
+  try {
+    const res = await fetch(`${API}/api/climate/chirps`);
+    if (!res.ok) return null;
+    _chirpsIndex = await res.json();
+    return _chirpsIndex;
+  } catch { return null; }
+}
+
+// Toggle capa coropleta en el mapa
+async function togglePrecipLayer() {
+  const btn = document.getElementById('precipToggle');
+  const lbl = document.getElementById('precipToggleLabel');
+
+  if (_precipVisible && _precipLayer) {
+    _precipLayer.remove();
+    _precipLayer   = null;
+    _precipVisible = false;
+    if (btn) { btn.style.background = btn.dataset.bgOff || '#fff'; }
+    if (lbl) lbl.textContent = 'Mostrar lluvia';
+    _removePrecipLegend();
+    return;
+  }
+
+  const idx = await _ensureCHIRPSIndex();
+  if (!idx) return;
+
+  // Construir mapa basin_id → mean_base
+  const byId = {};
+  idx.basins.forEach(b => { byId[b.id] = b; });
+
+  // Crear layer GeoJSON coloreando cada cuenca
+  const features = allBasins
+    .filter(f => byId[f.id] && f.geometry)
+    .map(f => ({
+      type: 'Feature',
+      properties: { ...f.properties, _id: f.id, _mm: byId[f.id].mean_base,
+                    _anom: byId[f.id].anomaly_2024_pct, _z: byId[f.id].z_2024 },
+      geometry: f.geometry,
+    }));
+
+  _precipLayer = L.geoJSON({ type: 'FeatureCollection', features }, {
+    style: feat => ({
+      fillColor: _precipColor(feat.properties._mm),
+      fillOpacity: 0.55,
+      color: '#fff',
+      weight: 0.8,
+      opacity: 0.5,
+    }),
+    interactive: false,
+  }).addTo(map);
+
+  // Llevar capas de agua al frente
+  [waterLayerGroup, wetlandsLayer, glaciersLayer].forEach(g => {
+    if (g && g.eachLayer) g.eachLayer(l => l.bringToFront && l.bringToFront());
+  });
+
+  _precipVisible = true;
+  if (btn) { btn.style.background = '#bbdefb'; }
+  if (lbl) lbl.textContent = 'Ocultar lluvia';
+  _renderPrecipLegend();
+}
+
+// Leyenda de precipitación
+function _renderPrecipLegend() {
+  if (document.getElementById('precip-legend')) return;
+  const steps = [
+    { mm: '<200',     color: '#fff7bc' },
+    { mm: '200–350',  color: '#fee391' },
+    { mm: '350–500',  color: '#fec44f' },
+    { mm: '500–700',  color: '#fe9929' },
+    { mm: '700–900',  color: '#ec7014' },
+    { mm: '900–1100', color: '#cc4c02' },
+    { mm: '1100–1300',color: '#8c2d04' },
+    { mm: '>1300',    color: '#4a0e00' },
+  ];
+  const el = document.createElement('div');
+  el.id = 'precip-legend';
+  el.style.cssText = 'position:absolute;bottom:106px;right:12px;z-index:800;background:rgba(255,255,255,0.95);border-radius:8px;padding:8px 10px;font-size:0.62rem;box-shadow:0 2px 8px rgba(0,0,0,.15);min-width:110px;';
+  el.innerHTML = `<div style="font-weight:700;margin-bottom:5px;color:#1565c0;">🌧 mm/año</div>` +
+    steps.map(s => `<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
+      <div style="width:14px;height:10px;border-radius:2px;background:${s.color};border:1px solid rgba(0,0,0,.15);flex-shrink:0;"></div>
+      <span>${s.mm}</span></div>`).join('');
+  document.getElementById('map').appendChild(el);
+  L.DomEvent.disableClickPropagation(el);
+}
+function _removePrecipLegend() {
+  const el = document.getElementById('precip-legend');
+  if (el) el.remove();
+}
+
+// Función llamada al cargar el panel de una cuenca
+async function loadCHIRPS(basinId) {
+  const panel   = document.getElementById('chirps-panel');
+  const preview = document.getElementById('chirps-summary-preview');
+  if (!panel) return;
+
+  try {
+    const res = await fetch(`${API}/api/climate/chirps?basin=${basinId}`);
+    if (!res.ok) { panel.innerHTML = '<div class="flow-chart-note">Sin datos CHIRPS para esta cuenca.</div>'; return; }
+    const d = await res.json();
+
+    const anom    = d.anomaly_2024_mm;
+    const anomPct = d.anomaly_2024_pct;
+    const z       = d.z_2024;
+    const signStr = anom >= 0 ? `+${anom}` : `${anom}`;
+    const color   = anom >= 0 ? '#1565c0' : '#b71c1c';
+    const label   = z <= -1.5 ? 'Muy seco' : z <= -0.5 ? 'Seco' : z < 0.5 ? 'Normal' : z < 1.5 ? 'Húmedo' : 'Muy húmedo';
+    const bgLabel = z <= -1.5 ? '#fde8e8' : z <= -0.5 ? '#fff3e0' : z < 0.5 ? '#e8f5e9' : z < 1.5 ? '#e3f2fd' : '#e8eaf6';
+    const colLabel= z <= -1.5 ? '#b71c1c' : z <= -0.5 ? '#e65100' : z < 0.5 ? '#2e7d32' : z < 1.5 ? '#1565c0' : '#283593';
+
+    if (preview) preview.textContent = `${d.mean_base} mm/año · 2024: ${signStr} mm`;
+
+    // Mini chart SVG (barra anual)
+    const years  = d.series.map(s => s.year);
+    const vals   = d.series.map(s => s.precip_mm);
+    const minV   = Math.min(...vals);
+    const maxV   = Math.max(...vals);
+    const W = 290, H = 60, PAD = { l:6, r:6, t:4, b:4 };
+    const cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
+    const xScale = i => PAD.l + (i / (vals.length - 1)) * cW;
+    const yScale = v => PAD.t + cH - ((v - minV) / (maxV - minV)) * cH;
+
+    const barW  = Math.max(2, (cW / vals.length) - 1);
+    const bars  = vals.map((v, i) => {
+      const bH  = ((v - minV) / (maxV - minV)) * cH;
+      const bY  = PAD.t + cH - bH;
+      const fill= (i === vals.length - 1) ? (anom >= 0 ? '#1565c0' : '#b71c1c') : _precipColor(v);
+      return `<rect x="${(xScale(i) - barW/2).toFixed(1)}" y="${bY.toFixed(1)}" width="${barW}" height="${bH.toFixed(1)}" fill="${fill}" opacity="${i === vals.length - 1 ? 1 : 0.75}"/>`;
+    });
+
+    // Media line
+    const meanY  = yScale(d.mean_base);
+    const meanLine = `<line x1="${PAD.l}" y1="${meanY.toFixed(1)}" x2="${W-PAD.r}" y2="${meanY.toFixed(1)}" stroke="#444" stroke-width="0.8" stroke-dasharray="3,2" opacity="0.6"/>`;
+
+    // Year labels (cada 10 años)
+    const yLabels = years.filter((y,i) => y % 10 === 0).map(y => {
+      const i = years.indexOf(y);
+      return `<text x="${xScale(i).toFixed(1)}" y="${H-0.5}" font-size="6" fill="#999" text-anchor="middle">${y}</text>`;
+    });
+
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-size:0.72rem;font-weight:700;color:#333;">Media anual: <b>${d.mean_base} mm</b></div>
+        <span style="font-size:0.62rem;font-weight:700;padding:2px 7px;border-radius:99px;background:${bgLabel};color:${colLabel};">${label} 2024</span>
+      </div>
+      <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible;">
+        ${bars.join('')}${meanLine}${yLabels.join('')}
+      </svg>
+      <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:0.65rem;color:#666;">
+        <span>2024: <b style="color:${color};">${signStr} mm (${anomPct > 0 ? '+':''}${anomPct}%) vs media</b></span>
+        <span>z = ${z}</span>
+      </div>
+      <div style="font-size:0.6rem;color:#aaa;margin-top:4px;">CHIRPS v2.0 · 1981–2024 · Media base 1991–2020</div>`;
+  } catch(e) {
+    if (panel) panel.innerHTML = '<div class="flow-chart-note">Error cargando precipitación.</div>';
   }
 }
 
