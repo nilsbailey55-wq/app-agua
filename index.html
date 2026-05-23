@@ -3741,10 +3741,17 @@ async function _ensureCHIRPSIndex() {
   if (_chirpsIndex) return _chirpsIndex;
   try {
     const res = await fetch(`${API}/api/climate/chirps`);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn('[CHIRPS] fetch failed:', res.status, res.statusText);
+      return null;
+    }
     _chirpsIndex = await res.json();
+    console.log('[CHIRPS] index loaded:', _chirpsIndex.basins?.length, 'cuencas');
     return _chirpsIndex;
-  } catch { return null; }
+  } catch(e) {
+    console.warn('[CHIRPS] error:', e);
+    return null;
+  }
 }
 
 // Toggle capa coropleta en el mapa
@@ -3762,10 +3769,17 @@ async function togglePrecipLayer() {
     return;
   }
 
-  const idx = await _ensureCHIRPSIndex();
-  if (!idx) return;
+  if (lbl) lbl.textContent = 'Cargando…';
+  toast('Cargando precipitación CHIRPS…');
 
-  // Construir mapa basin_id → mean_base
+  const idx = await _ensureCHIRPSIndex();
+  if (!idx) {
+    toast('No se pudo cargar datos CHIRPS');
+    if (lbl) lbl.textContent = 'Mostrar lluvia';
+    return;
+  }
+
+  // Construir mapa basin_id → datos
   const byId = {};
   idx.basins.forEach(b => { byId[b.id] = b; });
 
@@ -3778,6 +3792,12 @@ async function togglePrecipLayer() {
                     _anom: byId[f.id].anomaly_2024_pct, _z: byId[f.id].z_2024 },
       geometry: f.geometry,
     }));
+
+  if (!features.length) {
+    toast('Sin geometrías para coropleta');
+    if (lbl) lbl.textContent = 'Mostrar lluvia';
+    return;
+  }
 
   _precipLayer = L.geoJSON({ type: 'FeatureCollection', features }, {
     style: feat => ({
