@@ -3873,11 +3873,11 @@ function _build2DGrid(points) {
 }
 
 function _bilinear(lat, lon, g) {
-  const xf = (lon - _GRID_LON_MIN) / _GRID_STEP;
-  const yf = (lat - _GRID_LAT_MIN) / _GRID_STEP;
+  // Clamp para permitir extrapolación por nearest en los bordes (padding de media celda)
+  const xf = Math.max(0, Math.min(_GRID_NLON - 1.001, (lon - _GRID_LON_MIN) / _GRID_STEP));
+  const yf = Math.max(0, Math.min(_GRID_NLAT - 1.001, (lat - _GRID_LAT_MIN) / _GRID_STEP));
   const x0 = Math.floor(xf), x1 = Math.min(x0 + 1, _GRID_NLON - 1);
   const y0 = Math.floor(yf), y1 = Math.min(y0 + 1, _GRID_NLAT - 1);
-  if (x0 < 0 || y0 < 0 || x0 >= _GRID_NLON || y0 >= _GRID_NLAT) return null;
   const u = xf - x0, t = yf - y0;
   const v00 = g[y0 * _GRID_NLON + x0];
   const v01 = g[y0 * _GRID_NLON + x1];
@@ -3891,18 +3891,45 @@ function _bilinear(lat, lon, g) {
   return wSum > 0.05 ? vSum / wSum : null;
 }
 
-// ── Máscara cacheada de Argentina (rasterizada a la resolución del canvas) ─
+// Rellena puntos faltantes (NaN) en la grilla 2D con IDW de los 4 vecinos más cercanos
+function _fillMissingGrid(g) {
+  const out = new Float32Array(g.length);
+  for (let i = 0; i < g.length; i++) out[i] = g[i];
+  for (let iy = 0; iy < _GRID_NLAT; iy++) {
+    for (let ix = 0; ix < _GRID_NLON; ix++) {
+      const idx = iy * _GRID_NLON + ix;
+      if (!isNaN(g[idx])) continue;
+      // Vecinos conocidos
+      const neigh = [];
+      for (let jy = 0; jy < _GRID_NLAT; jy++) {
+        for (let jx = 0; jx < _GRID_NLON; jx++) {
+          const v = g[jy * _GRID_NLON + jx];
+          if (isNaN(v)) continue;
+          neigh.push({ d2: (jy - iy)**2 + (jx - ix)**2, v });
+        }
+      }
+      if (!neigh.length) continue;
+      neigh.sort((a, b) => a.d2 - b.d2);
+      const top = neigh.slice(0, 4);
+      let wSum = 0, vSum = 0;
+      for (const n of top) { const w = 1 / (n.d2 + 0.1); wSum += w; vSum += n.v * w; }
+      out[idx] = vSum / wSum;
+    }
+  }
+  return out;
+}
+
+// ── Máscara cacheada de Argentina (rasterizada al canvas, en Mercator) ────
 let _argMaskCache = null;
-async function _getArgMask(W, H) {
+async function _getArgMask(W, H, latsArr, lonsArr) {
   if (_argMaskCache && _argMaskCache.W === W && _argMaskCache.H === H) return _argMaskCache;
   const border = await _ensureArgBorder();
   if (!border) return null;
   const mask = new Uint8Array(W * H);
   for (let py = 0; py < H; py++) {
-    const lat = _GRID_LAT_MAX - (py / H) * (_GRID_LAT_MAX - _GRID_LAT_MIN);
+    const lat = latsArr[py];
     for (let px = 0; px < W; px++) {
-      const lon = _GRID_LON_MIN + (px / W) * (_GRID_LON_MAX - _GRID_LON_MIN);
-      if (_pointInGeoJSON(lon, lat, border)) mask[py * W + px] = 1;
+      if (_pointInGeoJSON(lonsArr[px], lat, border)) mask[py * W + px] = 1;
     }
   }
   _argMaskCache = { W, H, mask };
@@ -3965,13 +3992,40 @@ async function _buildHeatLayer(period) {
     map.getPane('heatPane').style.pointerEvents = 'none';
   }
 
-  // Renderizar a canvas: 1 pixel = 0.1° → grilla fina con bilinear
-  const PX_PER_DEG = 10;
-  const W = Math.round((_GRID_LON_MAX - _GRID_LON_MIN) * PX_PER_DEG);
-  const H = Math.round((_GRID_LAT_MAX - _GRID_LAT_MIN) * PX_PER_DEG);
+  // Padding de media celda para que el heatmap cubra el área completa de los
+  // centros de la grilla (cada punto representa un cell de 2°×2°).
+  const PAD = _GRID_STEP / 2;
+  const latMax = _GRID_LAT_MAX + PAD;
+  const latMin = _GRID_LAT_MIN - PAD;
+  const lonMin = _GRID_LON_MIN - PAD;
+  const lonMax = _GRID_LON_MAX + PAD;
 
-  const grid = _build2DGrid(points);
-  const mask = await _getArgMask(W, H);
+  // Proyección de las esquinas al CRS del mapa (Web Mercator) — esto evita
+  // el desfase que aparece cuando se renderiza un canvas equirectangular
+  // y se sobrepone sobre tiles Mercator (~1.5° en el centro del país).
+  const nwM = map.options.crs.project(L.latLng(latMax, lonMin));
+  const seM = map.options.crs.project(L.latLng(latMin, lonMax));
+  const mercW = seM.x - nwM.x;
+  const mercH = seM.y - nwM.y;
+
+  // Resolución de canvas: ~0.1° equivalente a longitud
+  const W = 240;
+  const H = Math.round(W * mercH / mercW);
+
+  // Precomputar lat/lon de cada pixel (centro) en coordenadas Mercator
+  const latsArr = new Float32Array(H);
+  for (let py = 0; py < H; py++) {
+    const my = nwM.y + (py + 0.5) / H * mercH;
+    latsArr[py] = map.options.crs.unproject(L.point(0, my)).lat;
+  }
+  const lonsArr = new Float32Array(W);
+  for (let px = 0; px < W; px++) {
+    const mx = nwM.x + (px + 0.5) / W * mercW;
+    lonsArr[px] = map.options.crs.unproject(L.point(mx, 0)).lng;
+  }
+
+  const grid       = _fillMissingGrid(_build2DGrid(points));
+  const mask       = await _getArgMask(W, H, latsArr, lonsArr);
 
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
@@ -3980,11 +4034,10 @@ async function _buildHeatLayer(period) {
 
   let drawn = 0;
   for (let py = 0; py < H; py++) {
-    const lat = _GRID_LAT_MAX - (py / H) * (_GRID_LAT_MAX - _GRID_LAT_MIN);
+    const lat = latsArr[py];
     for (let px = 0; px < W; px++) {
       if (mask && !mask.mask[py * W + px]) continue;
-      const lon = _GRID_LON_MIN + (px / W) * (_GRID_LON_MAX - _GRID_LON_MIN);
-      const val = _bilinear(lat, lon, grid);
+      const val = _bilinear(lat, lonsArr[px], grid);
       if (val == null) continue;
       const t = Math.min(val / maxV, 1.0);
       const rgb = _precipColorRGB(t);
@@ -3992,19 +4045,15 @@ async function _buildHeatLayer(period) {
       img.data[i]   = rgb[0];
       img.data[i+1] = rgb[1];
       img.data[i+2] = rgb[2];
-      img.data[i+3] = 200;   // alpha ~78%
+      img.data[i+3] = 200;
       drawn++;
     }
   }
   ctx.putImageData(img, 0, 0);
 
-  console.log(`[heatmap] ${points.length} puntos · canvas ${W}×${H} · ${drawn} pixeles dibujados · max ${maxV}mm`);
+  console.log(`[heatmap] ${points.length} pts NASA POWER · canvas ${W}×${H} Mercator · ${drawn} px dibujados · max ${maxV}mm`);
 
-  // ImageOverlay (mucho más performante que miles de rectángulos)
-  _precipLayer = L.imageOverlay(canvas.toDataURL(), [
-    [_GRID_LAT_MAX, _GRID_LON_MIN],
-    [_GRID_LAT_MIN, _GRID_LON_MAX],
-  ], {
+  _precipLayer = L.imageOverlay(canvas.toDataURL(), [[latMax, lonMin], [latMin, lonMax]], {
     opacity: 1.0,
     pane: 'heatPane',
     interactive: false,
