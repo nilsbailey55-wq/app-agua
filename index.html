@@ -3852,11 +3852,90 @@ function _heatPoints(data, period) {
 }
 
 // ── Construye y muestra el heatmap ────────────────────────────────────────
+// ── Grilla 2D y bilinear lookup ────────────────────────────────────────────
+const _GRID_LAT_MIN = -55, _GRID_LAT_MAX = -21;
+const _GRID_LON_MIN = -74, _GRID_LON_MAX = -52;
+const _GRID_STEP    = 2;
+const _GRID_NLAT    = (_GRID_LAT_MAX - _GRID_LAT_MIN) / _GRID_STEP + 1;
+const _GRID_NLON    = (_GRID_LON_MAX - _GRID_LON_MIN) / _GRID_STEP + 1;
+
+function _build2DGrid(points) {
+  const g = new Float32Array(_GRID_NLAT * _GRID_NLON);
+  g.fill(NaN);
+  for (const [la, lo, v] of points) {
+    const iLat = Math.round((la - _GRID_LAT_MIN) / _GRID_STEP);
+    const iLon = Math.round((lo - _GRID_LON_MIN) / _GRID_STEP);
+    if (iLat >= 0 && iLat < _GRID_NLAT && iLon >= 0 && iLon < _GRID_NLON) {
+      g[iLat * _GRID_NLON + iLon] = v;
+    }
+  }
+  return g;
+}
+
+function _bilinear(lat, lon, g) {
+  const xf = (lon - _GRID_LON_MIN) / _GRID_STEP;
+  const yf = (lat - _GRID_LAT_MIN) / _GRID_STEP;
+  const x0 = Math.floor(xf), x1 = Math.min(x0 + 1, _GRID_NLON - 1);
+  const y0 = Math.floor(yf), y1 = Math.min(y0 + 1, _GRID_NLAT - 1);
+  if (x0 < 0 || y0 < 0 || x0 >= _GRID_NLON || y0 >= _GRID_NLAT) return null;
+  const u = xf - x0, t = yf - y0;
+  const v00 = g[y0 * _GRID_NLON + x0];
+  const v01 = g[y0 * _GRID_NLON + x1];
+  const v10 = g[y1 * _GRID_NLON + x0];
+  const v11 = g[y1 * _GRID_NLON + x1];
+  let wSum = 0, vSum = 0;
+  if (!isNaN(v00)) { const w = (1-u)*(1-t); wSum += w; vSum += v00 * w; }
+  if (!isNaN(v01)) { const w = u*(1-t);     wSum += w; vSum += v01 * w; }
+  if (!isNaN(v10)) { const w = (1-u)*t;     wSum += w; vSum += v10 * w; }
+  if (!isNaN(v11)) { const w = u*t;         wSum += w; vSum += v11 * w; }
+  return wSum > 0.05 ? vSum / wSum : null;
+}
+
+// ── Máscara cacheada de Argentina (rasterizada a la resolución del canvas) ─
+let _argMaskCache = null;
+async function _getArgMask(W, H) {
+  if (_argMaskCache && _argMaskCache.W === W && _argMaskCache.H === H) return _argMaskCache;
+  const border = await _ensureArgBorder();
+  if (!border) return null;
+  const mask = new Uint8Array(W * H);
+  for (let py = 0; py < H; py++) {
+    const lat = _GRID_LAT_MAX - (py / H) * (_GRID_LAT_MAX - _GRID_LAT_MIN);
+    for (let px = 0; px < W; px++) {
+      const lon = _GRID_LON_MIN + (px / W) * (_GRID_LON_MAX - _GRID_LON_MIN);
+      if (_pointInGeoJSON(lon, lat, border)) mask[py * W + px] = 1;
+    }
+  }
+  _argMaskCache = { W, H, mask };
+  console.log(`[heatmap] máscara Argentina rasterizada ${W}×${H}`);
+  return _argMaskCache;
+}
+
+// Versión RGB del color (para escritura directa al canvas)
+function _precipColorRGB(t) {
+  t = Math.max(0, Math.min(1, t));
+  const stops = [
+    [0.00, [255, 255, 217]],
+    [0.15, [237, 248, 177]],
+    [0.30, [199, 233, 180]],
+    [0.45, [127, 205, 187]],
+    [0.60, [ 65, 182, 196]],
+    [0.75, [ 29, 145, 192]],
+    [0.90, [ 34,  94, 168]],
+    [1.00, [ 37,  52, 148]],
+  ];
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (t <= stops[i+1][0]) {
+      const f = (t - stops[i][0]) / (stops[i+1][0] - stops[i][0]);
+      return stops[i][1].map((c1, j) => Math.round(c1 + f * (stops[i+1][1][j] - c1)));
+    }
+  }
+  return [37, 52, 148];
+}
+
 async function _buildHeatLayer(period) {
   if (_precipLayer) { _precipLayer.remove(); _precipLayer = null; }
 
   let points;
-
   if (period.type === 'recent') {
     try {
       const res = await fetch(`${API}/api/climate/precip-recent`);
@@ -3875,47 +3954,61 @@ async function _buildHeatLayer(period) {
 
   if (!points.length) { toast('Sin datos para este período'); return; }
 
-  // Filtrar a frontera de Argentina (excluye océano y países vecinos)
-  const border = await _ensureArgBorder();
-  if (border) {
-    const before = points.length;
-    points = points.filter(p => _pointInGeoJSON(p[1], p[0], border));
-    console.log(`[heatmap] clip a Argentina: ${before} → ${points.length} puntos`);
-  } else {
-    console.warn('[heatmap] sin frontera Argentina, mostrando grilla completa');
-  }
-
-  if (!points.length) { toast('Sin puntos dentro de Argentina'); return; }
-
-  // Escala: normaliza al percentil 97 para evitar outliers andinos
+  // Escala: percentil 97 para evitar outliers andinos
   const vals = [...points.map(p => p[2])].sort((a, b) => a - b);
   const maxV = vals[Math.min(Math.floor(vals.length * 0.97), vals.length - 1)] || vals[vals.length - 1] || 1;
 
-  console.log(`[heatmap] ${points.length} celdas · max real=${vals[vals.length-1]}mm · escala 0-${maxV}mm`);
-
-  // Pane dedicado sobre polígonos (z-450), debajo de marcadores (z-600)
+  // Pane sobre polígonos (z-450)
   if (!map.getPane('heatPane')) {
     map.createPane('heatPane');
     map.getPane('heatPane').style.zIndex = 450;
     map.getPane('heatPane').style.pointerEvents = 'none';
   }
 
-  // L.layerGroup de celdas 2°×2° coloreadas según valor del centro
-  _precipLayer = L.layerGroup();
-  const HALF = 1.0;  // medio paso de grilla (2° / 2)
-  points.forEach(([lat, lon, val]) => {
-    const t = Math.min(val / maxV, 1.0);
-    const cell = L.rectangle([[lat - HALF, lon - HALF], [lat + HALF, lon + HALF]], {
-      fillColor: _precipColor(t),
-      fillOpacity: 0.68,
-      stroke: false,
-      pane: 'heatPane',
-      interactive: false,
-      smoothFactor: 0,
-    });
-    _precipLayer.addLayer(cell);
-  });
-  _precipLayer.addTo(map);
+  // Renderizar a canvas: 1 pixel = 0.1° → grilla fina con bilinear
+  const PX_PER_DEG = 10;
+  const W = Math.round((_GRID_LON_MAX - _GRID_LON_MIN) * PX_PER_DEG);
+  const H = Math.round((_GRID_LAT_MAX - _GRID_LAT_MIN) * PX_PER_DEG);
+
+  const grid = _build2DGrid(points);
+  const mask = await _getArgMask(W, H);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(W, H);
+
+  let drawn = 0;
+  for (let py = 0; py < H; py++) {
+    const lat = _GRID_LAT_MAX - (py / H) * (_GRID_LAT_MAX - _GRID_LAT_MIN);
+    for (let px = 0; px < W; px++) {
+      if (mask && !mask.mask[py * W + px]) continue;
+      const lon = _GRID_LON_MIN + (px / W) * (_GRID_LON_MAX - _GRID_LON_MIN);
+      const val = _bilinear(lat, lon, grid);
+      if (val == null) continue;
+      const t = Math.min(val / maxV, 1.0);
+      const rgb = _precipColorRGB(t);
+      const i = (py * W + px) * 4;
+      img.data[i]   = rgb[0];
+      img.data[i+1] = rgb[1];
+      img.data[i+2] = rgb[2];
+      img.data[i+3] = 200;   // alpha ~78%
+      drawn++;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+
+  console.log(`[heatmap] ${points.length} puntos · canvas ${W}×${H} · ${drawn} pixeles dibujados · max ${maxV}mm`);
+
+  // ImageOverlay (mucho más performante que miles de rectángulos)
+  _precipLayer = L.imageOverlay(canvas.toDataURL(), [
+    [_GRID_LAT_MAX, _GRID_LON_MIN],
+    [_GRID_LAT_MIN, _GRID_LON_MAX],
+  ], {
+    opacity: 1.0,
+    pane: 'heatPane',
+    interactive: false,
+  }).addTo(map);
 
   _updatePrecipLegend(period, maxV);
 }
