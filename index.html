@@ -3819,24 +3819,29 @@ async function _buildHeatLayer(period) {
   }
 
   if (!points.length) { toast('Sin datos para este período'); return; }
+  console.log(`[heatmap] ${points.length} puntos, max=${Math.max(...points.map(p=>p[2]))}mm`);
 
-  // Normaliza intensidad (0–1) según rango del período
-  const vals = points.map(p => p[2]);
-  const maxV = Math.max(...vals);
-  const normalized = points.map(([la, lo, v]) => [la, lo, v / maxV]);
+  // Normaliza al percentil 95 (evita que outliers altos aplasten el contraste)
+  const vals = points.map(p => p[2]).sort((a, b) => a - b);
+  const p95  = vals[Math.floor(vals.length * 0.95)] || vals[vals.length - 1];
+  const normalized = points.map(([la, lo, v]) => [la, lo, Math.min(v / p95, 1.0)]);
+
+  // Radio dinámico según zoom: grilla 2° ≈ 220 km → a zoom 4 cada grado ≈ 70px
+  const z = map.getZoom();
+  const radius = Math.max(30, Math.min(120, Math.round(22 * Math.pow(2, z - 4))));
 
   _precipLayer = L.heatLayer(normalized, {
-    radius: 35,
-    blur: 25,
-    maxZoom: 8,
-    max: 1.0,
+    radius,
+    blur: Math.round(radius * 0.7),
+    minOpacity: 0.35,
     gradient: {
-      0.0: '#ffffcc',
-      0.2: '#a1dab4',
-      0.4: '#41b6c4',
-      0.6: '#2c7fb8',
-      0.8: '#253494',
-      1.0: '#081d58',
+      0.0:  '#f7fbff',
+      0.15: '#deebf7',
+      0.3:  '#9ecae1',
+      0.5:  '#4292c6',
+      0.7:  '#2171b5',
+      0.85: '#084594',
+      1.0:  '#08306b',
     },
   }).addTo(map);
 
