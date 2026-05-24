@@ -3833,17 +3833,24 @@ async function _buildHeatLayer(period) {
   _precipLayer = L.heatLayer(normalized, {
     radius,
     blur: Math.round(radius * 0.7),
-    minOpacity: 0.35,
+    minOpacity: 0.4,
     gradient: {
-      0.0:  '#f7fbff',
-      0.15: '#deebf7',
-      0.3:  '#9ecae1',
+      0.0:  '#deebf7',
+      0.25: '#9ecae1',
       0.5:  '#4292c6',
       0.7:  '#2171b5',
       0.85: '#084594',
       1.0:  '#08306b',
     },
   }).addTo(map);
+
+  // Leaflet.heat agrega el canvas al overlayPane (z-400), que queda debajo
+  // del SVG de los polígonos. Lo movemos al shadowPane (z-500) para que
+  // aparezca encima de los polígonos pero debajo de marcadores y popups.
+  const _heatCanvas = _precipLayer._canvas;
+  if (_heatCanvas) {
+    map.getPanes().shadowPane.appendChild(_heatCanvas);
+  }
 
   _updatePrecipLegend(period, Math.max(...vals));
 }

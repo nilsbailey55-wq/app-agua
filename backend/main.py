@@ -892,44 +892,55 @@ def get_precip_heatmap():
 
 
 @app.get("/api/climate/precip-recent")
-async def get_precip_recent():
-    """Precipitación acumulada últimos 7 días para la grilla 2° (Open-Meteo on-demand).
-    Lag típico ERA5-Land: ~5-6 días. Los últimos 1-2 días pueden no estar disponibles."""
+def get_precip_recent():
+    """Precipitación acumulada últimos 7 días — NASA POWER (MERRA-2), síncrono con threadpool."""
     from datetime import date, timedelta
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    import calendar as _cal
+
     today    = date.today()
-    end_dt   = today - timedelta(days=1)
-    start_dt = today - timedelta(days=8)
+    end_yr   = today.year
+    # NASA POWER mensual: traemos el mes actual y el anterior, recortamos a 7 días
+    # Aproximación: usamos la lluvia del mes actual / días_del_mes * 7
+    start_yr = today.year if today.month > 1 else today.year - 1
 
     LAT_MIN, LAT_MAX, LON_MIN, LON_MAX, STEP = -55.0, -21.0, -74.0, -52.0, 2.0
     lats = [round(LAT_MIN + i * STEP, 1) for i in range(int((LAT_MAX - LAT_MIN) / STEP) + 1)]
     lons = [round(LON_MIN + j * STEP, 1) for j in range(int((LON_MAX - LON_MIN) / STEP) + 1)]
 
-    import urllib.parse
-    BASE = "https://archive-api.open-meteo.com/v1/archive"
-    results = []
+    BASE = "https://power.larc.nasa.gov/api/temporal/monthly/point"
+    days_in_month = _cal.monthrange(today.year, today.month)[1]
 
-    async def fetch_one(lat, lon):
+    def fetch_one(lat, lon):
         params = urllib.parse.urlencode({
-            "latitude": lat, "longitude": lon,
-            "start_date": start_dt.isoformat(), "end_date": end_dt.isoformat(),
-            "daily": "precipitation_sum", "timezone": "UTC",
+            "parameters": "PRECTOTCORR", "community": "RE",
+            "longitude": lon, "latitude": lat,
+            "start": today.year, "end": today.year, "format": "JSON",
         })
         try:
-            url = f"{BASE}?{params}"
-            data = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: json.loads(urllib.request.urlopen(url, timeout=15).read())
-            )
-            vals = [v for v in data["daily"]["precipitation_sum"] if v is not None]
-            total = round(sum(vals), 1)
-            if total > 0:
-                results.append({"lat": lat, "lon": lon, "precip_7d": total})
+            ctx = _SSL_CTX  # usa el SSL context global con certs del sistema
+            with urllib.request.urlopen(f"{BASE}?{params}", timeout=15, context=ctx) as r:
+                d = json.loads(r.read())
+            raw = d["properties"]["parameter"]["PRECTOTCORR"]
+            mo_key = f"{today.year}{today.month:02d}"
+            mm_day = raw.get(mo_key)
+            if mm_day and mm_day > 0:
+                # mm/día × 7 días = estimación 7d
+                return {"lat": lat, "lon": lon, "precip_7d": round(mm_day * 7, 1)}
         except Exception:
             pass
+        return None
 
-    tasks = [fetch_one(la, lo) for la in lats for lo in lons]
-    await asyncio.gather(*tasks)
+    results = []
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        futs = {ex.submit(fetch_one, la, lo): (la, lo) for la in lats for lo in lons}
+        for fut in as_completed(futs):
+            res = fut.result()
+            if res:
+                results.append(res)
+
     return {
-        "period": f"{start_dt.isoformat()} → {end_dt.isoformat()}",
+        "period": f"estimación 7d al {today.isoformat()}",
         "unit": "mm",
         "points": results,
     }
