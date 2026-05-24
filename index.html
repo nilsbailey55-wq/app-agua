@@ -3749,9 +3749,65 @@ async function loadFlowChart(basinId, containerId) {
 
 let _chirpsIndex   = null;   // índice liviano cuencas (sidebar)
 let _heatmapData   = null;   // grilla precalculada (precip_heatmap.json)
-let _precipLayer   = null;   // Leaflet.heat layer activo
+let _argBorder     = null;   // GeoJSON frontera Argentina (para clip)
+let _precipLayer   = null;   // L.layerGroup con celdas de color
 let _precipVisible = false;
 let _precipPeriod  = { type: 'annual', year: '2024', month: 0 };
+
+// ── Frontera Argentina + point-in-polygon (para clip del heatmap) ─────────
+async function _ensureArgBorder() {
+  if (_argBorder) return _argBorder;
+  try {
+    const res = await fetch(`${API}/api/argentina-border`);
+    if (!res.ok) return null;
+    _argBorder = await res.json();
+    return _argBorder;
+  } catch { return null; }
+}
+function _pip(x, y, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1];
+    const xj = ring[j][0], yj = ring[j][1];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function _pointInGeoJSON(lng, lat, gj) {
+  const feats = gj.features || [gj];
+  for (const f of feats) {
+    const g = f.geometry || f;
+    if (g.type === 'Polygon') {
+      if (_pip(lng, lat, g.coordinates[0])) return true;
+    } else if (g.type === 'MultiPolygon') {
+      for (const poly of g.coordinates) if (_pip(lng, lat, poly[0])) return true;
+    }
+  }
+  return false;
+}
+
+// ── Color scale YlGnBu: seco (amarillo) → húmedo (azul oscuro) ───────────
+function _precipColor(t) {
+  t = Math.max(0, Math.min(1, t));
+  const stops = [
+    [0.00, [255, 255, 217]],
+    [0.15, [237, 248, 177]],
+    [0.30, [199, 233, 180]],
+    [0.45, [127, 205, 187]],
+    [0.60, [ 65, 182, 196]],
+    [0.75, [ 29, 145, 192]],
+    [0.90, [ 34,  94, 168]],
+    [1.00, [ 37,  52, 148]],
+  ];
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (t <= stops[i+1][0]) {
+      const f = (t - stops[i][0]) / (stops[i+1][0] - stops[i][0]);
+      const c = stops[i][1].map((c1, j) => Math.round(c1 + f * (stops[i+1][1][j] - c1)));
+      return `rgb(${c[0]},${c[1]},${c[2]})`;
+    }
+  }
+  return 'rgb(37,52,148)';
+}
 
 // ── Carga del índice CHIRPS (sidebar) ─────────────────────────────────────
 async function _ensureCHIRPSIndex() {
@@ -3802,14 +3858,13 @@ async function _buildHeatLayer(period) {
   let points;
 
   if (period.type === 'recent') {
-    // On-demand del backend
     try {
       const res = await fetch(`${API}/api/climate/precip-recent`);
       if (!res.ok) throw new Error(res.status);
       const d = await res.json();
-      points = d.points.map(p => [p.lat, p.lon, p.precip_7d]).filter(p => p[2] > 0);
+      points = d.points.map(p => [p.lat, p.lon, p.precip_7d]).filter(p => p[2] >= 0);
     } catch(e) {
-      toast('Error cargando datos recientes');
+      toast('Error cargando últimos 7 días');
       return;
     }
   } else {
@@ -3819,40 +3874,50 @@ async function _buildHeatLayer(period) {
   }
 
   if (!points.length) { toast('Sin datos para este período'); return; }
-  console.log(`[heatmap] ${points.length} puntos, max=${Math.max(...points.map(p=>p[2]))}mm`);
 
-  // Normaliza al percentil 95 (evita que outliers altos aplasten el contraste)
-  const vals = points.map(p => p[2]).sort((a, b) => a - b);
-  const p95  = vals[Math.floor(vals.length * 0.95)] || vals[vals.length - 1];
-  const normalized = points.map(([la, lo, v]) => [la, lo, Math.min(v / p95, 1.0)]);
+  // Filtrar a frontera de Argentina (excluye océano y países vecinos)
+  const border = await _ensureArgBorder();
+  if (border) {
+    const before = points.length;
+    points = points.filter(p => _pointInGeoJSON(p[1], p[0], border));
+    console.log(`[heatmap] clip a Argentina: ${before} → ${points.length} puntos`);
+  } else {
+    console.warn('[heatmap] sin frontera Argentina, mostrando grilla completa');
+  }
 
-  // Pane dedicado encima del SVG de polígonos (overlayPane=400) pero
-  // debajo de marcadores (markerPane=600). Se crea una sola vez.
+  if (!points.length) { toast('Sin puntos dentro de Argentina'); return; }
+
+  // Escala: normaliza al percentil 97 para evitar outliers andinos
+  const vals = [...points.map(p => p[2])].sort((a, b) => a - b);
+  const maxV = vals[Math.min(Math.floor(vals.length * 0.97), vals.length - 1)] || vals[vals.length - 1] || 1;
+
+  console.log(`[heatmap] ${points.length} celdas · max real=${vals[vals.length-1]}mm · escala 0-${maxV}mm`);
+
+  // Pane dedicado sobre polígonos (z-450), debajo de marcadores (z-600)
   if (!map.getPane('heatPane')) {
     map.createPane('heatPane');
     map.getPane('heatPane').style.zIndex = 450;
     map.getPane('heatPane').style.pointerEvents = 'none';
   }
 
-  // Radio dinámico según zoom actual
-  const z = map.getZoom();
-  const radius = Math.max(35, Math.min(130, Math.round(25 * Math.pow(2, z - 4))));
+  // L.layerGroup de celdas 2°×2° coloreadas según valor del centro
+  _precipLayer = L.layerGroup();
+  const HALF = 1.0;  // medio paso de grilla (2° / 2)
+  points.forEach(([lat, lon, val]) => {
+    const t = Math.min(val / maxV, 1.0);
+    const cell = L.rectangle([[lat - HALF, lon - HALF], [lat + HALF, lon + HALF]], {
+      fillColor: _precipColor(t),
+      fillOpacity: 0.68,
+      stroke: false,
+      pane: 'heatPane',
+      interactive: false,
+      smoothFactor: 0,
+    });
+    _precipLayer.addLayer(cell);
+  });
+  _precipLayer.addTo(map);
 
-  _precipLayer = L.heatLayer(normalized, {
-    pane: 'heatPane',
-    radius,
-    blur: Math.round(radius * 0.65),
-    minOpacity: 0.45,
-    gradient: {
-      0.0:  '#ffffb2',
-      0.25: '#fecc5c',
-      0.5:  '#fd8d3c',
-      0.75: '#e31a1c',
-      1.0:  '#800026',
-    },
-  }).addTo(map);
-
-  _updatePrecipLegend(period, Math.max(...vals));
+  _updatePrecipLegend(period, maxV);
 }
 
 // ── Toggle principal ───────────────────────────────────────────────────────
@@ -3916,8 +3981,8 @@ function _updatePrecipLegend(period, maxVal) {
   _removePrecipLegend();
   const unit  = period.type === 'monthly' ? 'mm/mes' : 'mm/año';
   const title = period.type === 'recent'  ? 'mm · últimos 7d' : unit;
-  const steps = [0, 0.25, 0.5, 0.75, 1.0];
-  const colors = ['#ffffb2','#fecc5c','#fd8d3c','#e31a1c','#800026'];
+  const steps  = [0, 0.15, 0.30, 0.45, 0.60, 0.75, 0.90, 1.0];
+  const colors = steps.map(s => _precipColor(s));
 
   const el = document.createElement('div');
   el.id = 'precip-legend';

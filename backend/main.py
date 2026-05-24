@@ -893,54 +893,58 @@ def get_precip_heatmap():
 
 @app.get("/api/climate/precip-recent")
 def get_precip_recent():
-    """Precipitación acumulada últimos 7 días — NASA POWER (MERRA-2), síncrono con threadpool."""
+    """Precipitación acumulada últimos 7 días — NASA POWER daily (PRECTOTCORR).
+    Ventana 14 días, agrega los últimos 7 con datos válidos. Lag típico: 2-3 días."""
     from datetime import date, timedelta
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    import calendar as _cal
 
     today    = date.today()
-    end_yr   = today.year
-    # NASA POWER mensual: traemos el mes actual y el anterior, recortamos a 7 días
-    # Aproximación: usamos la lluvia del mes actual / días_del_mes * 7
-    start_yr = today.year if today.month > 1 else today.year - 1
+    end_dt   = today - timedelta(days=2)
+    start_dt = end_dt  - timedelta(days=13)
 
     LAT_MIN, LAT_MAX, LON_MIN, LON_MAX, STEP = -55.0, -21.0, -74.0, -52.0, 2.0
     lats = [round(LAT_MIN + i * STEP, 1) for i in range(int((LAT_MAX - LAT_MIN) / STEP) + 1)]
     lons = [round(LON_MIN + j * STEP, 1) for j in range(int((LON_MAX - LON_MIN) / STEP) + 1)]
 
-    BASE = "https://power.larc.nasa.gov/api/temporal/monthly/point"
-    days_in_month = _cal.monthrange(today.year, today.month)[1]
+    BASE = "https://power.larc.nasa.gov/api/temporal/daily/point"
+    # SSL context tolerante (Railway puede no tener todos los CA roots)
+    import ssl as _ssl
+    ctx = _ssl._create_unverified_context()
 
     def fetch_one(lat, lon):
         params = urllib.parse.urlencode({
             "parameters": "PRECTOTCORR", "community": "RE",
             "longitude": lon, "latitude": lat,
-            "start": today.year, "end": today.year, "format": "JSON",
+            "start": start_dt.strftime("%Y%m%d"),
+            "end":   end_dt.strftime("%Y%m%d"),
+            "format": "JSON",
         })
         try:
-            ctx = _SSL_CTX  # usa el SSL context global con certs del sistema
             with urllib.request.urlopen(f"{BASE}?{params}", timeout=15, context=ctx) as r:
                 d = json.loads(r.read())
             raw = d["properties"]["parameter"]["PRECTOTCORR"]
-            mo_key = f"{today.year}{today.month:02d}"
-            mm_day = raw.get(mo_key)
-            if mm_day and mm_day > 0:
-                # mm/día × 7 días = estimación 7d
-                return {"lat": lat, "lon": lon, "precip_7d": round(mm_day * 7, 1)}
+            # Valores válidos (NASA POWER usa -999 para faltantes)
+            valid = sorted([(k, v) for k, v in raw.items() if v is not None and v > -100], reverse=True)
+            # Últimos 7 días válidos
+            last7 = valid[:7]
+            if last7:
+                total = round(sum(v for _, v in last7), 1)
+                return {"lat": lat, "lon": lon, "precip_7d": max(0, total),
+                        "days_used": len(last7)}
         except Exception:
             pass
         return None
 
     results = []
-    with ThreadPoolExecutor(max_workers=8) as ex:
-        futs = {ex.submit(fetch_one, la, lo): (la, lo) for la in lats for lo in lons}
+    with ThreadPoolExecutor(max_workers=10) as ex:
+        futs = [ex.submit(fetch_one, la, lo) for la in lats for lo in lons]
         for fut in as_completed(futs):
             res = fut.result()
             if res:
                 results.append(res)
 
     return {
-        "period": f"estimación 7d al {today.isoformat()}",
+        "period": f"{start_dt.isoformat()} → {end_dt.isoformat()}",
         "unit": "mm",
         "points": results,
     }
