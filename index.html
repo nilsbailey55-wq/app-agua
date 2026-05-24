@@ -3826,31 +3826,31 @@ async function _buildHeatLayer(period) {
   const p95  = vals[Math.floor(vals.length * 0.95)] || vals[vals.length - 1];
   const normalized = points.map(([la, lo, v]) => [la, lo, Math.min(v / p95, 1.0)]);
 
-  // Radio dinámico según zoom: grilla 2° ≈ 220 km → a zoom 4 cada grado ≈ 70px
+  // Pane dedicado encima del SVG de polígonos (overlayPane=400) pero
+  // debajo de marcadores (markerPane=600). Se crea una sola vez.
+  if (!map.getPane('heatPane')) {
+    map.createPane('heatPane');
+    map.getPane('heatPane').style.zIndex = 450;
+    map.getPane('heatPane').style.pointerEvents = 'none';
+  }
+
+  // Radio dinámico según zoom actual
   const z = map.getZoom();
-  const radius = Math.max(30, Math.min(120, Math.round(22 * Math.pow(2, z - 4))));
+  const radius = Math.max(35, Math.min(130, Math.round(25 * Math.pow(2, z - 4))));
 
   _precipLayer = L.heatLayer(normalized, {
+    pane: 'heatPane',
     radius,
-    blur: Math.round(radius * 0.7),
-    minOpacity: 0.4,
+    blur: Math.round(radius * 0.65),
+    minOpacity: 0.45,
     gradient: {
-      0.0:  '#deebf7',
-      0.25: '#9ecae1',
-      0.5:  '#4292c6',
-      0.7:  '#2171b5',
-      0.85: '#084594',
-      1.0:  '#08306b',
+      0.0:  '#ffffb2',
+      0.25: '#fecc5c',
+      0.5:  '#fd8d3c',
+      0.75: '#e31a1c',
+      1.0:  '#800026',
     },
   }).addTo(map);
-
-  // Leaflet.heat agrega el canvas al overlayPane (z-400), que queda debajo
-  // del SVG de los polígonos. Lo movemos al shadowPane (z-500) para que
-  // aparezca encima de los polígonos pero debajo de marcadores y popups.
-  const _heatCanvas = _precipLayer._canvas;
-  if (_heatCanvas) {
-    map.getPanes().shadowPane.appendChild(_heatCanvas);
-  }
 
   _updatePrecipLegend(period, Math.max(...vals));
 }
@@ -3916,8 +3916,8 @@ function _updatePrecipLegend(period, maxVal) {
   _removePrecipLegend();
   const unit  = period.type === 'monthly' ? 'mm/mes' : 'mm/año';
   const title = period.type === 'recent'  ? 'mm · últimos 7d' : unit;
-  const steps = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
-  const colors = ['#ffffcc','#a1dab4','#41b6c4','#2c7fb8','#253494','#081d58'];
+  const steps = [0, 0.25, 0.5, 0.75, 1.0];
+  const colors = ['#ffffb2','#fecc5c','#fd8d3c','#e31a1c','#800026'];
 
   const el = document.createElement('div');
   el.id = 'precip-legend';
@@ -3926,7 +3926,7 @@ function _updatePrecipLegend(period, maxVal) {
     steps.map((s, i) => `<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px;">
       <div style="width:14px;height:10px;border-radius:2px;background:${colors[i]};border:1px solid rgba(0,0,0,.1);flex-shrink:0;"></div>
       <span>${Math.round(s * maxVal)}</span></div>`).join('') +
-    `<div style="color:#aaa;margin-top:4px;font-size:0.58rem;">ERA5-Land · Open-Meteo</div>`;
+    `<div style="color:#aaa;margin-top:4px;font-size:0.58rem;">NASA POWER MERRA-2</div>`;
   document.getElementById('map').appendChild(el);
   L.DomEvent.disableClickPropagation(el);
 }
