@@ -3919,21 +3919,51 @@ function _fillMissingGrid(g) {
   return out;
 }
 
-// ── Máscara cacheada de Argentina (rasterizada al canvas, en Mercator) ────
+// ── Máscara Argentina rasterizada con canvas (hardware-accelerated) ───────
+// Mucho más rápida que point-in-polygon por pixel. Cacheada por dimensiones.
 let _argMaskCache = null;
-async function _getArgMask(W, H, latsArr, lonsArr) {
+async function _getArgMask(W, H, mercBounds) {
   if (_argMaskCache && _argMaskCache.W === W && _argMaskCache.H === H) return _argMaskCache;
   const border = await _ensureArgBorder();
   if (!border) return null;
-  const mask = new Uint8Array(W * H);
-  for (let py = 0; py < H; py++) {
-    const lat = latsArr[py];
-    for (let px = 0; px < W; px++) {
-      if (_pointInGeoJSON(lonsArr[px], lat, border)) mask[py * W + px] = 1;
+
+  const { minX, maxY, mercW, mercH } = mercBounds;
+  const maskCanvas = document.createElement('canvas');
+  maskCanvas.width = W; maskCanvas.height = H;
+  const mCtx = maskCanvas.getContext('2d');
+  mCtx.fillStyle = '#fff';
+  mCtx.beginPath();
+
+  const tracer = (ring) => {
+    for (let i = 0; i < ring.length; i++) {
+      const [lng, lat] = ring[i];
+      const merc = map.options.crs.project(L.latLng(lat, lng));
+      const px = (merc.x - minX) / mercW * W;
+      const py = (maxY - merc.y) / mercH * H;
+      if (i === 0) mCtx.moveTo(px, py);
+      else         mCtx.lineTo(px, py);
+    }
+    mCtx.closePath();
+  };
+
+  const feats = border.features || [border];
+  for (const f of feats) {
+    const g = f.geometry || f;
+    if (g.type === 'Polygon') {
+      g.coordinates.forEach(tracer);
+    } else if (g.type === 'MultiPolygon') {
+      g.coordinates.forEach(poly => poly.forEach(tracer));
     }
   }
+  mCtx.fill();
+
+  const imgData = mCtx.getImageData(0, 0, W, H);
+  const mask = new Uint8Array(W * H);
+  for (let i = 0; i < mask.length; i++) {
+    mask[i] = imgData.data[i * 4 + 3] > 0 ? 1 : 0;
+  }
   _argMaskCache = { W, H, mask };
-  console.log(`[heatmap] máscara Argentina rasterizada ${W}×${H}`);
+  console.log(`[heatmap] máscara Argentina rasterizada ${W}×${H} via canvas`);
   return _argMaskCache;
 }
 
@@ -4000,32 +4030,34 @@ async function _buildHeatLayer(period) {
   const lonMin = _GRID_LON_MIN - PAD;
   const lonMax = _GRID_LON_MAX + PAD;
 
-  // Proyección de las esquinas al CRS del mapa (Web Mercator) — esto evita
-  // el desfase que aparece cuando se renderiza un canvas equirectangular
-  // y se sobrepone sobre tiles Mercator (~1.5° en el centro del país).
-  const nwM = map.options.crs.project(L.latLng(latMax, lonMin));
-  const seM = map.options.crs.project(L.latLng(latMin, lonMax));
-  const mercW = seM.x - nwM.x;
-  const mercH = seM.y - nwM.y;
+  // Proyección de las esquinas al CRS del mapa (Web Mercator) — evita el
+  // desfase ~1.5° de un canvas equirectangular sobre tiles Mercator.
+  // En Web Mercator de Leaflet, Y es positivo hacia el norte → nwM.y > seM.y.
+  const nwM   = map.options.crs.project(L.latLng(latMax, lonMin));
+  const seM   = map.options.crs.project(L.latLng(latMin, lonMax));
+  const mercW = Math.abs(seM.x - nwM.x);
+  const mercH = Math.abs(seM.y - nwM.y);
+  const minX  = Math.min(nwM.x, seM.x);
+  const maxY  = Math.max(nwM.y, seM.y);
 
-  // Resolución de canvas: ~0.1° equivalente a longitud
+  // Resolución del canvas: ~240px de ancho, alto proporcional a Mercator
   const W = 240;
-  const H = Math.round(W * mercH / mercW);
+  const H = Math.max(50, Math.round(W * mercH / mercW));
 
-  // Precomputar lat/lon de cada pixel (centro) en coordenadas Mercator
+  // Precomputar lat/lon de cada pixel (centro) usando Mercator inverso
   const latsArr = new Float32Array(H);
   for (let py = 0; py < H; py++) {
-    const my = nwM.y + (py + 0.5) / H * mercH;
+    const my = maxY - (py + 0.5) / H * mercH;
     latsArr[py] = map.options.crs.unproject(L.point(0, my)).lat;
   }
   const lonsArr = new Float32Array(W);
   for (let px = 0; px < W; px++) {
-    const mx = nwM.x + (px + 0.5) / W * mercW;
+    const mx = minX + (px + 0.5) / W * mercW;
     lonsArr[px] = map.options.crs.unproject(L.point(mx, 0)).lng;
   }
 
-  const grid       = _fillMissingGrid(_build2DGrid(points));
-  const mask       = await _getArgMask(W, H, latsArr, lonsArr);
+  const grid = _fillMissingGrid(_build2DGrid(points));
+  const mask = await _getArgMask(W, H, { minX, maxY, mercW, mercH });
 
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
