@@ -2651,9 +2651,9 @@ async function buildWaterLayers() {
           </button>
           <div id="precipPeriodRow" style="display:none;padding-left:4px;gap:3px;flex-direction:column;">
             <select id="precipPeriodType" style="font-size:0.65rem;border:1px solid #bcd;border-radius:4px;padding:2px 4px;width:100%;color:#1565c0;background:#f0f6ff;">
+              <option value="daily">Diario (CONAE)</option>
               <option value="annual">Anual</option>
               <option value="monthly">Mensual</option>
-              <option value="recent">Últimos 7 días</option>
             </select>
             <select id="precipYear" style="font-size:0.65rem;border:1px solid #bcd;border-radius:4px;padding:2px 4px;width:100%;color:#333;display:none;">
               <option value="2024">2024</option>
@@ -2668,6 +2668,15 @@ async function buildWaterLayers() {
               <option value="6">Julio</option><option value="7">Agosto</option>
               <option value="8">Septiembre</option><option value="9">Octubre</option>
               <option value="10">Noviembre</option><option value="11">Diciembre</option>
+            </select>
+            <select id="precipDay" style="font-size:0.65rem;border:1px solid #bcd;border-radius:4px;padding:2px 4px;width:100%;color:#333;">
+              <option value="1">Más reciente (–1d)</option>
+              <option value="2">Hace 2 días</option>
+              <option value="3">Hace 3 días</option>
+              <option value="4">Hace 4 días</option>
+              <option value="5">Hace 5 días</option>
+              <option value="6">Hace 6 días</option>
+              <option value="7">Hace 7 días</option>
             </select>
           </div>
         </div>` +
@@ -2780,6 +2789,7 @@ async function buildWaterLayers() {
     d.querySelector('#precipPeriodType')?.addEventListener('change', () => _onPrecipPeriodChange());
     d.querySelector('#precipYear')?.addEventListener('change',       () => _onPrecipPeriodChange());
     d.querySelector('#precipMonth')?.addEventListener('change',      () => _onPrecipPeriodChange());
+    d.querySelector('#precipDay')?.addEventListener('change',        () => _onPrecipPeriodChange());
 
     // "Otras áreas" group expander
     const expBtn = d.querySelector('#otherAreasExpander');
@@ -3752,7 +3762,7 @@ let _heatmapData   = null;   // grilla precalculada (precip_heatmap.json)
 let _argBorder     = null;   // GeoJSON frontera Argentina (para clip)
 let _precipLayer   = null;   // L.layerGroup con celdas de color
 let _precipVisible = false;
-let _precipPeriod  = { type: 'annual', year: '2024', month: 0 };
+let _precipPeriod  = { type: 'daily', year: '2024', month: 0, day: 1 };
 
 // ── Frontera Argentina + point-in-polygon (para clip del heatmap) ─────────
 async function _ensureArgBorder() {
@@ -3843,8 +3853,6 @@ function _heatPoints(data, period) {
     } else if (period.type === 'monthly') {
       const src = period.year === '2023' ? p.monthly_2023 : p.monthly_2024;
       val = src?.[period.month] ?? null;
-    } else if (period.type === 'recent') {
-      val = p.recent_7d ?? null;
     }
     if (val != null && val > 0) pts.push([p.lat, p.lon, val]);
   }
@@ -3992,23 +4000,37 @@ function _precipColorRGB(t) {
 async function _buildHeatLayer(period) {
   if (_precipLayer) { _precipLayer.remove(); _precipLayer = null; }
 
-  let points;
-  if (period.type === 'recent') {
-    try {
-      const res = await fetch(`${API}/api/climate/precip-recent`);
-      if (!res.ok) throw new Error(res.status);
-      const d = await res.json();
-      points = d.points.map(p => [p.lat, p.lon, p.precip_7d]).filter(p => p[2] >= 0);
-    } catch(e) {
-      toast('Error cargando últimos 7 días');
-      return;
+  // ─── Branch CONAE WMS (datos oficiales casi en tiempo real) ─────────────
+  if (period.type === 'daily') {
+    if (!map.getPane('heatPane')) {
+      map.createPane('heatPane');
+      map.getPane('heatPane').style.zIndex = 450;
+      map.getPane('heatPane').style.pointerEvents = 'none';
     }
-  } else {
-    const data = await _ensureHeatmapData();
-    if (!data) { toast('No se pudo cargar la grilla de precipitación'); return; }
-    points = _heatPoints(data, period);
+    const dayIdx = Math.max(1, Math.min(7, period.day || 1));
+    const layerName = `MOM_GPMIMERG_PA1D_${dayIdx}`;
+    _precipLayer = L.tileLayer.wms(
+      'https://geoservicios2.conae.gov.ar/geoserver/PrecipitacionAcumulada/wms',
+      {
+        layers: layerName,
+        format: 'image/png',
+        transparent: true,
+        version: '1.3.0',
+        opacity: 0.78,
+        pane: 'heatPane',
+        attribution: 'CONAE · GPM-IMERG',
+      }
+    ).addTo(map);
+
+    // La fecha real del layer viene del título WMS — la consultamos para mostrarla
+    _updateConaeLegend(dayIdx);
+    return;
   }
 
+  // ─── Branch NASA POWER (climatología histórica) ──────────────────────────
+  const data = await _ensureHeatmapData();
+  if (!data) { toast('No se pudo cargar la grilla de precipitación'); return; }
+  const points = _heatPoints(data, period);
   if (!points.length) { toast('Sin datos para este período'); return; }
 
   // Escala: percentil 97 para evitar outliers andinos
@@ -4113,8 +4135,8 @@ async function togglePrecipLayer() {
   if (lbl) lbl.textContent = 'Cargando…';
   toast('Cargando heatmap de precipitación…');
 
-  // Pre-carga grilla (salvo "recent" que va on-demand)
-  if (_precipPeriod.type !== 'recent') {
+  // Pre-carga grilla NASA POWER si vamos a usar datos históricos
+  if (_precipPeriod.type === 'annual' || _precipPeriod.type === 'monthly') {
     const ok = await _ensureHeatmapData();
     if (!ok) { if (lbl) lbl.textContent = 'Mostrar lluvia'; return; }
   }
@@ -4132,30 +4154,70 @@ function _onPrecipPeriodChange() {
   const type  = document.getElementById('precipPeriodType')?.value  ?? 'annual';
   const year  = document.getElementById('precipYear')?.value        ?? '2024';
   const month = parseInt(document.getElementById('precipMonth')?.value ?? '0');
+  const day   = parseInt(document.getElementById('precipDay')?.value   ?? '1');
   const ysel  = document.getElementById('precipYear');
   const msel  = document.getElementById('precipMonth');
+  const dsel  = document.getElementById('precipDay');
 
   if (ysel) ysel.style.display = (type === 'annual' || type === 'monthly') ? 'block' : 'none';
   if (msel) msel.style.display = (type === 'monthly') ? 'block' : 'none';
-  // Ocultar "normal 91-20" en vista mensual (no tenemos ese desglose)
+  if (dsel) dsel.style.display = (type === 'daily') ? 'block' : 'none';
+  // Ocultar "normal 91-20" en vista mensual
   if (ysel) {
     const normalOpt = ysel.querySelector('option[value="normal"]');
     if (normalOpt) normalOpt.style.display = (type === 'monthly') ? 'none' : '';
   }
 
-  _precipPeriod = { type, year, month };
+  _precipPeriod = { type, year, month, day };
   if (_precipVisible) {
     toast('Actualizando mapa…');
     _buildHeatLayer(_precipPeriod);
   }
 }
 
+// ── Leyenda CONAE (imagen oficial GetLegendGraphic) ────────────────────────
+function _updateConaeLegend(dayIdx) {
+  _removePrecipLegend();
+
+  // Fecha real del layer: hoy - dayIdx días (NASA reporta hasta ayer mínimo)
+  const dt = new Date();
+  dt.setDate(dt.getDate() - dayIdx);
+  const dateStr = dt.toLocaleDateString('es-AR', { day:'2-digit', month:'long', year:'numeric' });
+
+  const legendUrl = `https://geoservicios2.conae.gov.ar/geoserver/PrecipitacionAcumulada/wms` +
+    `?REQUEST=GetLegendGraphic&VERSION=1.3.0&FORMAT=image/png` +
+    `&LAYER=MOM_GPMIMERG_PA1D_${dayIdx}&LEGEND_OPTIONS=fontSize:9;fontAntiAliasing:true`;
+
+  const el = document.createElement('div');
+  el.id = 'precip-legend';
+  el.style.cssText = [
+    'position:absolute', 'bottom:96px',
+    'left:50%', 'transform:translateX(-50%)',
+    'z-index:800',
+    'background:rgba(255,255,255,0.97)', 'backdrop-filter:blur(10px)',
+    'border:1px solid rgba(0,0,0,0.10)', 'border-radius:12px',
+    'padding:8px 14px', 'box-shadow:0 4px 16px rgba(0,0,0,0.14)',
+    'font-size:0.66rem', 'max-width:320px',
+  ].join(';');
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;gap:10px;">
+      <span style="font-weight:700;color:#1565c0;">🌧 Lluvia diaria</span>
+      <span style="font-size:0.62rem;color:#444;">${dateStr}</span>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;">
+      <img src="${legendUrl}" alt="leyenda CONAE" style="max-height:90px;display:block;"
+           onerror="this.style.display='none'"/>
+    </div>
+    <div style="text-align:center;margin-top:4px;font-size:0.55rem;color:#aaa;">CONAE · GPM-IMERG (NASA) · mm</div>
+  `;
+  document.getElementById('map').appendChild(el);
+  L.DomEvent.disableClickPropagation(el);
+}
+
 // ── Leyenda del heatmap ────────────────────────────────────────────────────
 function _updatePrecipLegend(period, maxVal) {
   _removePrecipLegend();
-  const unit  = period.type === 'monthly' ? 'mm / mes'
-              : period.type === 'recent'  ? 'mm · últimos 7 días'
-              : 'mm / año';
+  const unit  = period.type === 'monthly' ? 'mm / mes' : 'mm / año';
 
   // Gradiente CSS construido desde la misma paleta YlGnBu del heatmap
   const stops = [0, 0.15, 0.30, 0.45, 0.60, 0.75, 0.90, 1.0];
