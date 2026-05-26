@@ -2640,6 +2640,7 @@ async function buildWaterLayers() {
       </button>` +
       section('Marcos') +
         btn('basins',   '#1a6fa8', '📐', 'cuencas',     '#e8f4fb') +
+      section('Satélite (CONAE)') +
         `<div id="precipControl" style="display:flex;flex-direction:column;gap:3px;">
           <button id="precipToggle" data-bg-off="#fff" style="
             background:#fff;border:1.6px solid #1565c0;border-radius:5px;
@@ -2671,6 +2672,27 @@ async function buildWaterLayers() {
             </select>
             <select id="precipDay" style="font-size:0.65rem;border:1px solid #bcd;border-radius:4px;padding:2px 4px;width:100%;color:#333;">
               <option value="1">Más reciente (–1d)</option>
+              <option value="2">Hace 2 días</option>
+              <option value="3">Hace 3 días</option>
+              <option value="4">Hace 4 días</option>
+              <option value="5">Hace 5 días</option>
+              <option value="6">Hace 6 días</option>
+              <option value="7">Hace 7 días</option>
+            </select>
+          </div>
+        </div>` +
+        `<div id="saocomControl" style="display:flex;flex-direction:column;gap:3px;">
+          <button id="saocomToggle" data-bg-off="#fff" style="
+            background:#fff;border:1.6px solid #6d4c41;border-radius:5px;
+            padding:4px 8px;font-size:0.7rem;font-weight:700;
+            color:#6d4c41;cursor:pointer;display:flex;align-items:center;gap:5px;
+            white-space:nowrap;width:100%;">
+            <span style="font-size:0.85rem;">🟫</span>
+            <span id="saocomToggleLabel">Humedad de suelo</span>
+          </button>
+          <div id="saocomDayRow" style="display:none;padding-left:4px;">
+            <select id="saocomDay" style="font-size:0.65rem;border:1px solid #d3bdb3;border-radius:4px;padding:2px 4px;width:100%;color:#6d4c41;background:#fff8f5;">
+              <option value="1">Más reciente</option>
               <option value="2">Hace 2 días</option>
               <option value="3">Hace 3 días</option>
               <option value="4">Hace 4 días</option>
@@ -2790,6 +2812,10 @@ async function buildWaterLayers() {
     d.querySelector('#precipYear')?.addEventListener('change',       () => _onPrecipPeriodChange());
     d.querySelector('#precipMonth')?.addEventListener('change',      () => _onPrecipPeriodChange());
     d.querySelector('#precipDay')?.addEventListener('change',        () => _onPrecipPeriodChange());
+
+    // Humedad de suelo SAOCOM (CONAE WMS)
+    d.querySelector('#saocomToggle')?.addEventListener('click', () => toggleSaocomLayer());
+    d.querySelector('#saocomDay')?.addEventListener('change',   () => _onSaocomDayChange());
 
     // "Otras áreas" group expander
     const expBtn = d.querySelector('#otherAreasExpander');
@@ -4328,6 +4354,122 @@ async function loadCHIRPS(basinId) {
   } catch(e) {
     if (panel) panel.innerHTML = '<div class="flow-chart-note">Error cargando precipitación.</div>';
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// SAOCOM — Humedad de suelo (CONAE WMS, satélite SAR L-band argentino)
+// ══════════════════════════════════════════════════════════════════════════
+
+let _saocomLayer   = null;
+let _saocomVisible = false;
+let _saocomDay     = 1;   // 1 = más reciente, 7 = hace 7 días
+
+const SAOCOM_WMS = 'https://geoservicios3.conae.gov.ar/geoserver/HumedadDeSuelos/wms';
+// Usamos la versión krigeada (KR) para un gradiente espacial continuo.
+// MSM* = humedad absoluta del perfil (0-50cm). PSM* = percentil vs histórico.
+const SAOCOM_LAYER_PREFIX = 'DSS_MSMKR';
+
+function _buildSaocomLayer(dayIdx) {
+  if (_saocomLayer) { _saocomLayer.remove(); _saocomLayer = null; }
+
+  // Reusa el pane heatPane (mismo z-index 450, encima de polígonos)
+  if (!map.getPane('heatPane')) {
+    map.createPane('heatPane');
+    map.getPane('heatPane').style.zIndex = 450;
+    map.getPane('heatPane').style.pointerEvents = 'none';
+  }
+
+  const layerName = `${SAOCOM_LAYER_PREFIX}_${Math.max(1, Math.min(7, dayIdx))}`;
+  _saocomLayer = L.tileLayer.wms(SAOCOM_WMS, {
+    layers:    layerName,
+    format:    'image/png',
+    transparent: true,
+    version:   '1.3.0',
+    opacity:   0.78,
+    pane:      'heatPane',
+    attribution: 'CONAE · SAOCOM',
+  }).addTo(map);
+}
+
+async function toggleSaocomLayer() {
+  const btn = document.getElementById('saocomToggle');
+  const lbl = document.getElementById('saocomToggleLabel');
+  const row = document.getElementById('saocomDayRow');
+
+  if (_saocomVisible) {
+    if (_saocomLayer) { _saocomLayer.remove(); _saocomLayer = null; }
+    _saocomVisible = false;
+    if (btn) btn.style.background = '#fff';
+    if (lbl) lbl.textContent = 'Humedad de suelo';
+    if (row) row.style.display = 'none';
+    _removeSaocomLegend();
+    return;
+  }
+
+  if (lbl) lbl.textContent = 'Cargando…';
+  toast('Cargando humedad de suelo SAOCOM…');
+  _buildSaocomLayer(_saocomDay);
+  _updateSaocomLegend(_saocomDay);
+
+  _saocomVisible = true;
+  if (btn) btn.style.background = '#efebe9';
+  if (lbl) lbl.textContent = 'Ocultar humedad';
+  if (row) row.style.display = 'block';
+}
+
+function _onSaocomDayChange() {
+  const d = parseInt(document.getElementById('saocomDay')?.value ?? '1');
+  _saocomDay = d;
+  if (_saocomVisible) {
+    toast('Actualizando humedad de suelo…');
+    _buildSaocomLayer(d);
+    _updateSaocomLegend(d);
+  }
+}
+
+function _updateSaocomLegend(dayIdx) {
+  _removeSaocomLegend();
+
+  const dt = new Date();
+  dt.setDate(dt.getDate() - dayIdx);
+  const dateStr = dt.toLocaleDateString('es-AR', { day:'2-digit', month:'long', year:'numeric' });
+
+  const legendUrl = `${SAOCOM_WMS}?REQUEST=GetLegendGraphic&VERSION=1.3.0&FORMAT=image/png` +
+    `&LAYER=${SAOCOM_LAYER_PREFIX}_${dayIdx}` +
+    `&LEGEND_OPTIONS=fontSize:13;dpi:108;fontAntiAliasing:true;forceLabels:on`;
+
+  // Posicionada arriba de la leyenda de precipitación (si está visible).
+  // Si precip no está visible, queda en el mismo lugar.
+  const precipLegend = document.getElementById('precip-legend');
+  const offsetBottom = precipLegend ? (48 + precipLegend.offsetHeight + 8) : 48;
+
+  const el = document.createElement('div');
+  el.id = 'saocom-legend';
+  el.style.cssText = [
+    'position:absolute', `bottom:${offsetBottom}px`, 'right:12px',
+    'z-index:600',
+    'background:rgba(255,255,255,0.97)', 'backdrop-filter:blur(10px)',
+    'border:1px solid rgba(0,0,0,0.10)', 'border-radius:12px',
+    'padding:10px 12px 8px', 'box-shadow:0 4px 16px rgba(0,0,0,0.14)',
+    'font-family:Segoe UI, system-ui, sans-serif',
+    'max-height:calc(100vh - 160px)', 'overflow-y:auto',
+  ].join(';');
+  el.innerHTML = `
+    <div style="font-weight:700;color:#6d4c41;font-size:0.82rem;margin-bottom:2px;">🟫 Humedad suelo</div>
+    <div style="font-size:0.7rem;color:#444;margin-bottom:8px;">${dateStr}</div>
+    <div style="display:flex;align-items:center;justify-content:center;">
+      <img src="${legendUrl}" alt="leyenda SAOCOM" style="display:block;height:auto;max-height:55vh;"
+           onerror="this.style.display='none'"/>
+    </div>
+    <div style="text-align:center;margin-top:6px;font-size:0.62rem;color:#888;">CONAE · SAOCOM (0-50cm)</div>
+  `;
+  document.getElementById('map').appendChild(el);
+  L.DomEvent.disableClickPropagation(el);
+}
+
+function _removeSaocomLegend() {
+  const el = document.getElementById('saocom-legend');
+  if (el) el.remove();
 }
 
 // ── init ──────────────────────────────────────────────────────────────────
