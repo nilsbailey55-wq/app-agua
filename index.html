@@ -381,7 +381,7 @@
 
     /* clean-mode toggle button */
     .clean-mode-btn {
-      position: absolute; bottom: 28px; left: 12px;
+      position: absolute; top: 14px; right: 263px;
       z-index: 600;
       background: rgba(255, 255, 255, 0.94);
       border: none;
@@ -4179,36 +4179,35 @@ function _onPrecipPeriodChange() {
 function _updateConaeLegend(dayIdx) {
   _removePrecipLegend();
 
-  // Fecha real del layer: hoy - dayIdx días (NASA reporta hasta ayer mínimo)
   const dt = new Date();
   dt.setDate(dt.getDate() - dayIdx);
   const dateStr = dt.toLocaleDateString('es-AR', { day:'2-digit', month:'long', year:'numeric' });
 
+  // Leyenda CONAE en alta resolución y fuente grande
   const legendUrl = `https://geoservicios2.conae.gov.ar/geoserver/PrecipitacionAcumulada/wms` +
     `?REQUEST=GetLegendGraphic&VERSION=1.3.0&FORMAT=image/png` +
-    `&LAYER=MOM_GPMIMERG_PA1D_${dayIdx}&LEGEND_OPTIONS=fontSize:9;fontAntiAliasing:true`;
+    `&LAYER=MOM_GPMIMERG_PA1D_${dayIdx}` +
+    `&LEGEND_OPTIONS=fontSize:16;dpi:120;fontAntiAliasing:true;forceLabels:on`;
 
   const el = document.createElement('div');
   el.id = 'precip-legend';
   el.style.cssText = [
-    'position:absolute', 'bottom:96px',
-    'left:50%', 'transform:translateX(-50%)',
-    'z-index:800',
+    'position:absolute', 'bottom:96px', 'left:12px',
+    'z-index:600',
     'background:rgba(255,255,255,0.97)', 'backdrop-filter:blur(10px)',
     'border:1px solid rgba(0,0,0,0.10)', 'border-radius:12px',
-    'padding:8px 14px', 'box-shadow:0 4px 16px rgba(0,0,0,0.14)',
-    'font-size:0.66rem', 'max-width:320px',
+    'padding:10px 12px 8px', 'box-shadow:0 4px 16px rgba(0,0,0,0.14)',
+    'font-family:Segoe UI, system-ui, sans-serif',
+    'max-height:calc(100vh - 200px)', 'overflow-y:auto',
   ].join(';');
   el.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;gap:10px;">
-      <span style="font-weight:700;color:#1565c0;">🌧 Lluvia diaria</span>
-      <span style="font-size:0.62rem;color:#444;">${dateStr}</span>
-    </div>
+    <div style="font-weight:700;color:#1565c0;font-size:0.82rem;margin-bottom:2px;">🌧 Lluvia diaria</div>
+    <div style="font-size:0.7rem;color:#444;margin-bottom:8px;">${dateStr}</div>
     <div style="display:flex;align-items:center;justify-content:center;">
-      <img src="${legendUrl}" alt="leyenda CONAE" style="max-height:90px;display:block;"
+      <img src="${legendUrl}" alt="leyenda CONAE" style="display:block;height:auto;max-height:60vh;"
            onerror="this.style.display='none'"/>
     </div>
-    <div style="text-align:center;margin-top:4px;font-size:0.55rem;color:#aaa;">CONAE · GPM-IMERG (NASA) · mm</div>
+    <div style="text-align:center;margin-top:6px;font-size:0.62rem;color:#888;">CONAE · GPM-IMERG · mm</div>
   `;
   document.getElementById('map').appendChild(el);
   L.DomEvent.disableClickPropagation(el);
@@ -4231,31 +4230,28 @@ function _updatePrecipLegend(period, maxVal) {
   el.id = 'precip-legend';
   el.style.cssText = [
     'position:absolute',
-    'bottom:96px',                                    // arriba del toolbar (bottom:28 + ~60)
-    'left:50%', 'transform:translateX(-50%)',         // centrado
-    'z-index:800',
+    'bottom:96px', 'left:12px',
+    'z-index:600',
     'background:rgba(255,255,255,0.97)',
     'backdrop-filter:blur(10px)',
     'border:1px solid rgba(0,0,0,0.10)',
     'border-radius:12px',
-    'padding:8px 14px 6px',
+    'padding:10px 14px 9px',
     'box-shadow:0 4px 16px rgba(0,0,0,0.14)',
-    'font-size:0.66rem',
-    'min-width:280px',
+    'min-width:200px',
+    'font-family:Segoe UI, system-ui, sans-serif',
   ].join(';');
 
   el.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
-      <span style="font-weight:700;color:#1565c0;">🌧 Precipitación</span>
-      <span style="font-size:0.6rem;color:#777;">${unit}</span>
-    </div>
-    <div style="position:relative;height:12px;border-radius:6px;
+    <div style="font-weight:700;color:#1565c0;font-size:0.78rem;margin-bottom:2px;">🌧 Precipitación</div>
+    <div style="font-size:0.66rem;color:#444;margin-bottom:7px;">${unit}</div>
+    <div style="position:relative;height:14px;border-radius:6px;
                 background:linear-gradient(to right, ${gradientCss});
                 border:1px solid rgba(0,0,0,0.12);"></div>
-    <div style="display:flex;justify-content:space-between;margin-top:3px;font-size:0.6rem;color:#555;">
+    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:0.72rem;color:#333;font-weight:600;">
       ${tickLabels.map(v => `<span>${v.toLocaleString('es-AR')}</span>`).join('')}
     </div>
-    <div style="text-align:center;margin-top:2px;font-size:0.55rem;color:#aaa;">NASA POWER · MERRA-2</div>
+    <div style="text-align:center;margin-top:5px;font-size:0.6rem;color:#888;">NASA POWER · MERRA-2</div>
   `;
   document.getElementById('map').appendChild(el);
   L.DomEvent.disableClickPropagation(el);
