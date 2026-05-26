@@ -6,6 +6,7 @@ Run: uvicorn main:app --reload --port 8000
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from shapely.geometry import shape, Point
 from shapely.ops import nearest_points as _shp_nearest_points
 import json
@@ -263,6 +264,13 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+
+# GZip compression — crítico para los endpoints grandes:
+#   - /api/water/lakes (~3 MB → ~500 KB)
+#   - /api/water/rivers_graph_geom (~11 MB → ~2 MB)
+#   - /api/basins (~80 KB → ~20 KB)
+# minimum_size=500 evita comprimir respuestas chicas donde overhead no compensa.
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Disable browser caching for the geo endpoints — we regenerate them
 # while developing and need clients to fetch fresh data on each reload.
