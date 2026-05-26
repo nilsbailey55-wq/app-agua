@@ -4183,11 +4183,12 @@ function _updateConaeLegend(dayIdx) {
   dt.setDate(dt.getDate() - dayIdx);
   const dateStr = dt.toLocaleDateString('es-AR', { day:'2-digit', month:'long', year:'numeric' });
 
-  // Leyenda CONAE en alta resolución y fuente grande
+  // Leyenda CONAE — fontSize/dpi calibrados para legibilidad sin ocupar
+  // demasiado espacio (~142×433 px nativo)
   const legendUrl = `https://geoservicios2.conae.gov.ar/geoserver/PrecipitacionAcumulada/wms` +
     `?REQUEST=GetLegendGraphic&VERSION=1.3.0&FORMAT=image/png` +
     `&LAYER=MOM_GPMIMERG_PA1D_${dayIdx}` +
-    `&LEGEND_OPTIONS=fontSize:16;dpi:120;fontAntiAliasing:true;forceLabels:on`;
+    `&LEGEND_OPTIONS=fontSize:13;dpi:108;fontAntiAliasing:true;forceLabels:on`;
 
   const el = document.createElement('div');
   el.id = 'precip-legend';
