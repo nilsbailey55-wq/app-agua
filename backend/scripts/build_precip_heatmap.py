@@ -91,6 +91,17 @@ def process(lat, lon):
         return None
     normal_91_20 = round(sum(annual_sums_clm) / len(annual_sums_clm))
 
+    # Climatología mensual 1991-2020 (promedio mes a mes)
+    monthly_normal = [0.0] * 12
+    monthly_count  = [0] * 12
+    for yr, months in monthly_clm.items():
+        for i, v in enumerate(months):
+            if v is not None and v >= 0:
+                monthly_normal[i] += v
+                monthly_count[i] += 1
+    monthly_normal_91_20 = [round(monthly_normal[i] / monthly_count[i], 1) if monthly_count[i] > 0 else 0
+                            for i in range(12)]
+
     # Anual reciente
     annual = {}
     for yr, months in monthly_rec.items():
@@ -108,8 +119,9 @@ def process(lat, lon):
 
     return {
         "lat": lat, "lon": lon,
-        "normal_91_20":   normal_91_20,
-        "annual":         annual,
+        "normal_91_20":         normal_91_20,
+        "monthly_normal_91_20": monthly_normal_91_20,
+        "annual":               annual,
         "monthly_2024":   [round(v) if v else 0 for v in (monthly_rec.get("2024") or [0]*12)],
         "monthly_2023":   [round(v) if v else 0 for v in (monthly_rec.get("2023") or [0]*12)],
         "anom_2024_mm":   anom_2024,

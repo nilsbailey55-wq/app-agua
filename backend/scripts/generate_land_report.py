@@ -178,16 +178,149 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
     nearby_bodies.sort(key=lambda x: x['dist_km'])
     growing_count = sum(1 for b in nearby_bodies if b['growth_pct'] > 30)
 
-    # 6) Scores
+    # 6) Climatología mensual (NASA POWER 1991-2020)
+    monthly_normal = [interp_value(lat, lng, corners, lambda p, i=i: p.get('monthly_normal_91_20', [None]*12)[i])
+                      for i in range(12)]
+    monthly_normal = [round(m, 1) if m else None for m in monthly_normal]
+    # Estacionalidad: % en trimestre húmedo (DEF) vs seco (JJA)
+    if all(m is not None for m in monthly_normal):
+        total = sum(monthly_normal)
+        wet_q  = (monthly_normal[11] + monthly_normal[0] + monthly_normal[1]) / total * 100
+        dry_q  = (monthly_normal[5]  + monthly_normal[6] + monthly_normal[7]) / total * 100
+        wet_month_idx = max(range(12), key=lambda i: monthly_normal[i])
+        dry_month_idx = min(range(12), key=lambda i: monthly_normal[i])
+    else:
+        wet_q, dry_q, wet_month_idx, dry_month_idx = None, None, None, None
+
+    # 7) Acuíferos subyacentes (point-in-polygon)
+    aquifers_gj = load('ar_aquifers.geojson')
+    subjacent_aquifers = []
+    for f in aquifers_gj['features']:
+        try:
+            if shape(f['geometry']).contains(pt):
+                subjacent_aquifers.append(f['properties'])
+        except Exception:
+            pass
+
+    # 8) Comparables vs cuenca: posición en el ranking de lluvia
+    cuenca_points = []
+    for p in heatmap['points']:
+        # Filtrar puntos dentro de la cuenca (point-in-polygon contra basin geom)
+        try:
+            basin_geom = shape(geoms.get(basin['id']) or basin.get('geometry'))
+            if basin_geom.contains(Point(p['lon'], p['lat'])):
+                cuenca_points.append(p['normal_91_20'])
+        except Exception:
+            pass
+    if cuenca_points and normal_91_20:
+        cuenca_points.sort()
+        percentile_in_basin = sum(1 for v in cuenca_points if v < normal_91_20) / len(cuenca_points) * 100
+        cuenca_mean = sum(cuenca_points) / len(cuenca_points)
+        diff_pct = (normal_91_20 - cuenca_mean) / cuenca_mean * 100
+    else:
+        percentile_in_basin, cuenca_mean, diff_pct = None, None, None
+
+    # 9) SPEI-like: frecuencia de sequías por umbrales (sobre CHIRPS cuenca)
+    if chirps_basin:
+        mean, std = chirps_basin['mean_base'], chirps_basin['std_base']
+        # Eventos por categoría (z-score)
+        droughts_mild     = sum(1 for v in series if -1.0 >= (v - mean)/std > -1.5)
+        droughts_severe   = sum(1 for v in series if -1.5 >= (v - mean)/std > -2.0)
+        droughts_extreme  = sum(1 for v in series if (v - mean)/std <= -2.0)
+        # Frecuencia (1 cada X años)
+        n_years = len(series)
+        freq_drought_any = (droughts_mild + droughts_severe + droughts_extreme)
+        years_per_dry    = n_years / freq_drought_any if freq_drought_any > 0 else None
+        # Última sequía severa o peor
+        last_severe_idx = next((i for i in range(len(series)-1, -1, -1)
+                                if (series[i] - mean)/std <= -1.5), None)
+        last_severe_year = chirps['metadata']['years'][last_severe_idx] if last_severe_idx is not None else None
+    else:
+        droughts_mild = droughts_severe = droughts_extreme = 0
+        years_per_dry = None
+        last_severe_year = None
+
+    # 10) Scores
     anom_2024 = ((annual_2024 - normal_91_20) / normal_91_20 * 100) if (annual_2024 and normal_91_20) else 0
     drought_score = drought_risk_score(slope, cv, anom_2024, normal_91_20 or 800)
     excess_score  = excess_risk_score(extreme_wet, growing_count)
     composite     = round(drought_score * 0.55 + excess_score * 0.45)
 
+    # 11) Recomendaciones por reglas (árbol de decisión simple)
+    recommendations = []
+    # Cultivos sugeridos
+    if normal_91_20:
+        if normal_91_20 >= 1100:
+            recommendations.append(('Cultivos', 'Soja, maíz, trigo en rotación. Aptitud para arroz en partes bajas. Pasturas perennes viables todo el año.'))
+        elif normal_91_20 >= 800:
+            recommendations.append(('Cultivos', 'Soja y maíz con rendimientos estables. Trigo en rotación. Cebada/girasol como opciones de menor demanda hídrica.'))
+        elif normal_91_20 >= 500:
+            recommendations.append(('Cultivos', 'Trigo, cebada, girasol. Soja y maíz solo con riego complementario. Pastoreo extensivo apropiado.'))
+        elif normal_91_20 >= 250:
+            recommendations.append(('Cultivos', 'Producción de secano marginal. Riego obligatorio para horticultura/fruticultura. Pastoreo de baja carga.'))
+        else:
+            recommendations.append(('Cultivos', 'Sin riego de transferencia: solo ganadería de baja carga o forestal. Con riego: vid, olivo, frutales.'))
+    # Seguro recomendado
+    if drought_score >= 50:
+        recommendations.append(('Seguro', 'Seguro paramétrico contra sequía recomendado (cobertura indexada a lluvia o NDVI). Cobertura multiriesgo tradicional suele ser cara o restrictiva en esta zona.'))
+    elif drought_score >= 30:
+        recommendations.append(('Seguro', 'Seguro multiriesgo agrícola estándar adecuado. Considerar add-on paramétrico de sequía para años extremos.'))
+    else:
+        recommendations.append(('Seguro', 'Seguro multiriesgo agrícola estándar suficiente.'))
+    # Inversión hídrica
+    if excess_score >= 50:
+        recommendations.append(('Infraestructura', 'Drenajes y canalizaciones internas críticos. Evaluar bombas de evacuación. Considerar topografía detallada antes de planeo de siembra.'))
+    elif drought_score >= 50:
+        recommendations.append(('Infraestructura', 'Evaluar perforación de pozos para riego complementario. Estudio hidrogeológico recomendado antes de inversión.'))
+    # Estudios complementarios
+    studies = []
+    if subjacent_aquifers:
+        studies.append('estudio de calidad del agua subterránea (salinidad, nitratos)')
+    if excess_score >= 40:
+        studies.append('relevamiento topográfico con DEM de 1-2 m para mapa de susceptibilidad a anegamiento')
+    studies.append('verificación de pluviómetro/estación meteorológica más cercana')
+    recommendations.append(('Estudios sugeridos', ' · '.join(s.capitalize() for s in studies)))
+
     # ─── HTML ──────────────────────────────────────────────────────────────
     today_str = date.today().strftime('%d/%m/%Y')
     chirps_series_recent = list(zip(chirps['metadata']['years'][-15:],
                                      chirps_basin['data'][-15:])) if chirps_basin else []
+
+    # SVG: barras de climatología mensual con normal vs 2024
+    def monthly_chart(normal, actual_2024, w=520, h=140):
+        months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+        all_vals = [v for v in (normal or []) + (actual_2024 or []) if v is not None]
+        if not all_vals: return ''
+        mx = max(all_vals) * 1.1
+        bar_w = (w - 60) / 12
+        pad_l, pad_b = 32, 22
+        plot_h = h - pad_b - 8
+        bars = []
+        for i in range(12):
+            x = pad_l + i * bar_w
+            n = normal[i] if normal and i < len(normal) and normal[i] is not None else 0
+            a = actual_2024[i] if actual_2024 and i < len(actual_2024) and actual_2024[i] is not None else 0
+            # Barra normal (gris)
+            n_h = (n / mx) * plot_h
+            bars.append(f'<rect x="{x+2:.1f}" y="{8+plot_h-n_h:.1f}" width="{bar_w/2-2:.1f}" height="{n_h:.1f}" fill="#90a4ae" opacity="0.7"/>')
+            # Barra 2024 (azul/rojo según anomalía)
+            a_h = (a / mx) * plot_h
+            color = '#1565c0' if a >= n else '#c0392b'
+            bars.append(f'<rect x="{x+bar_w/2:.1f}" y="{8+plot_h-a_h:.1f}" width="{bar_w/2-2:.1f}" height="{a_h:.1f}" fill="{color}" opacity="0.85"/>')
+            # Mes label
+            bars.append(f'<text x="{x+bar_w/2:.1f}" y="{h-6}" font-size="9" fill="#666" text-anchor="middle">{months[i]}</text>')
+            # Valor normal sobre la barra (solo en barras altas)
+            if n > mx * 0.3:
+                bars.append(f'<text x="{x+bar_w/4:.1f}" y="{8+plot_h-n_h-3:.1f}" font-size="8" fill="#555" text-anchor="middle">{round(n)}</text>')
+        # Y axis labels
+        axes = ''
+        for frac in [0.25, 0.5, 0.75, 1.0]:
+            y = 8 + plot_h - frac * plot_h
+            axes += f'<line x1="{pad_l}" y1="{y}" x2="{w-5}" y2="{y}" stroke="#e0e0e0" stroke-width="0.5"/>'
+            axes += f'<text x="{pad_l-4}" y="{y+3}" font-size="8" fill="#888" text-anchor="end">{round(frac*mx)}</text>'
+        # Legend
+        legend = f'<g transform="translate({w-160},2)"><rect width="14" height="9" fill="#90a4ae" opacity="0.7"/><text x="18" y="8" font-size="9" fill="#444">Normal 91-20</text><rect x="80" y="0" width="14" height="9" fill="#1565c0" opacity="0.85"/><text x="98" y="8" font-size="9" fill="#444">2024</text></g>'
+        return f'<svg viewBox="0 0 {w} {h}" width="100%" style="display:block">{axes}{"".join(bars)}{legend}</svg>'
 
     # mini SVG sparkline para la serie histórica
     def sparkline(series, w=520, h=80):
@@ -278,11 +411,45 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
   <tr><td>Años con exceso extremo (z &gt; +1.5σ)</td><td class="val">{extreme_wet} de {len(chirps_basin['data']) if chirps_basin else '—'}</td></tr>
 </table>
 
-<h2>3 · Serie histórica 2010–2024 (CHIRPS · {basin['name']})</h2>
+<h2>3 · Distribución mensual de lluvia (1991–2020 vs 2024)</h2>
+{monthly_chart(monthly_normal, monthly_2024)}
+<table style="margin-top:8px">
+  <tr><td>Trimestre más lluvioso (Dic–Feb)</td><td class="val">{round(wet_q)}% del total anual</td></tr>
+  <tr><td>Trimestre más seco (Jun–Ago)</td><td class="val">{round(dry_q)}% del total anual</td></tr>
+  <tr><td>Mes más lluvioso (normal)</td><td class="val">{['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][wet_month_idx] if wet_month_idx is not None else '—'} ({round(monthly_normal[wet_month_idx]) if wet_month_idx is not None else '—'} mm)</td></tr>
+  <tr><td>Mes más seco (normal)</td><td class="val">{['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][dry_month_idx] if dry_month_idx is not None else '—'} ({round(monthly_normal[dry_month_idx]) if dry_month_idx is not None else '—'} mm)</td></tr>
+</table>
+
+<h2>4 · Serie histórica 2010–2024 (CHIRPS · {basin['name']})</h2>
 {sparkline(chirps_series_recent)}
 <div class="small">Barras azules = año con lluvia sobre la media · Barras rojas = año bajo la media · Línea punteada = media histórica {chirps_basin['mean_base'] if chirps_basin else '—'} mm</div>
 
-<h2>4 · Estado actual</h2>
+<h2>5 · Comparables: posición en la cuenca</h2>
+<table>
+  <tr><td>Lluvia media de esta parcela</td><td class="val">{round(normal_91_20) if normal_91_20 else '—'} mm</td></tr>
+  <tr><td>Lluvia media de la cuenca {basin['name']}</td><td class="val">{round(cuenca_mean) if cuenca_mean else '—'} mm</td></tr>
+  <tr><td>Diferencia vs cuenca</td><td class="val" style="color:{'#2e7d32' if (diff_pct or 0) > 5 else '#c62828' if (diff_pct or 0) < -5 else '#1c2b3a'}">{('+' if (diff_pct or 0) > 0 else '') + f'{diff_pct:.1f} %' if diff_pct is not None else '—'}</td></tr>
+  <tr><td>Percentil dentro de la cuenca</td><td class="val">{round(percentile_in_basin) if percentile_in_basin is not None else '—'} (0 = más seco, 100 = más húmedo)</td></tr>
+</table>
+<div class="small">Comparación calculada sobre {len(cuenca_points) if cuenca_points else 0} puntos NASA POWER dentro de la cuenca.</div>
+
+<h2>6 · Frecuencia histórica de sequías</h2>
+<table>
+  <tr><th>Categoría</th><th>Eventos 1981–2024</th><th>Frecuencia esperada</th></tr>
+  <tr><td>Sequía moderada (−1.0 a −1.5σ)</td><td class="val">{droughts_mild}</td><td class="val">{f"1 cada {round(len(series)/droughts_mild)} años" if (chirps_basin and droughts_mild > 0) else '—'}</td></tr>
+  <tr><td>Sequía severa (−1.5 a −2.0σ)</td><td class="val">{droughts_severe}</td><td class="val">{f"1 cada {round(len(series)/droughts_severe)} años" if (chirps_basin and droughts_severe > 0) else '—'}</td></tr>
+  <tr><td>Sequía extrema (≤ −2.0σ)</td><td class="val">{droughts_extreme}</td><td class="val">{f"1 cada {round(len(series)/droughts_extreme)} años" if (chirps_basin and droughts_extreme > 0) else '—'}</td></tr>
+  <tr><td>Última sequía severa o peor</td><td class="val" colspan="2">{last_severe_year if last_severe_year else 'Sin eventos severos en el período'}</td></tr>
+</table>
+
+<h2>7 · Acuíferos subyacentes</h2>
+{('<table><tr><th>Acuífero</th><th>Tipo</th><th>Prof. típica</th><th>Estado</th></tr>'
+ + ''.join(f"""<tr><td><b>{a.get('name','?')}</b><div class='small'>{a.get('uses','—')}</div></td><td>{a.get('type','—')}</td><td class='val'>{a.get('depth_m','—')} m</td><td><span class='badge b-{a.get('status','green')}'>{a.get('status_label','—')}</span></td></tr>""" for a in subjacent_aquifers)
+ + '</table>'
+ + (f"<div class='small' style='margin-top:6px'>{subjacent_aquifers[0].get('status_detail','')}</div>" if subjacent_aquifers and subjacent_aquifers[0].get('status_detail') else '')
+ ) if subjacent_aquifers else '<div class="small">No hay acuíferos importantes mapeados directamente bajo esta coordenada. Puede haber freática local; recomendado pozo de prueba para confirmar.</div>'}
+
+<h2>8 · Estado actual</h2>
 <table>
   <tr><td>Lluvia 2024 (estimada NASA POWER)</td><td class="val">{round(annual_2024) if annual_2024 else '—'} mm</td></tr>
   <tr><td>Anomalía 2024 vs media 1991–2020</td><td class="val" style="color:{'#c62828' if anom_2024<-5 else '#2e7d32' if anom_2024>5 else '#1c2b3a'}">{'+'if anom_2024>0 else ''}{anom_2024:.0f} %</td></tr>
@@ -291,7 +458,7 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
   <tr><td>Humedad de suelo SAOCOM últimos 7 días</td><td class="val"><a href="https://geoservicios3.conae.gov.ar/geoserver/HumedadDeSuelos/wms?REQUEST=GetMap&LAYERS=DSS_MSMKR_1&BBOX={lng-3},{lat-3},{lng+3},{lat+3}&WIDTH=400&HEIGHT=400&FORMAT=image/png&SRS=EPSG:4326&VERSION=1.1.1" target="_blank">Ver mapa →</a></td></tr>
 </table>
 
-<h2>5 · Tendencia 1981–2024</h2>
+<h2>9 · Tendencia 1981–2024</h2>
 <table>
   <tr><td>Pendiente lineal de lluvia anual</td><td class="val" style="color:{'#c62828' if slope<-1 else '#2e7d32' if slope>1 else '#1c2b3a'}">{'+'if slope>0 else ''}{slope:.2f} mm/año</td></tr>
   <tr><td>Cambio acumulado 1981 → 2024</td><td class="val">{slope*43:+.0f} mm ({slope*43/(chirps_basin['mean_base'] if chirps_basin else 1)*100:+.0f}%)</td></tr>
@@ -299,7 +466,7 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
   <tr><td>Diagnóstico</td><td class="val">{'Aridización moderada' if slope < -1 else 'Humidificación leve' if slope > 1 else 'Estable, alta variabilidad interanual'}</td></tr>
 </table>
 
-<h2>6 · Caudal y cuerpos de agua cercanos</h2>
+<h2>10 · Caudal y cuerpos de agua cercanos</h2>
 {'<table><tr><th>Métrica caudal cuenca</th><th>Media histórica</th><th>Último valor</th><th>Estado</th></tr>'+f'<tr><td>{flow_metric["label"]}</td><td class="val">{flow_metric["historical_mean"]} {flow_metric["unit"]}</td><td class="val">{flow_metric["data"][-1]["value"]} {flow_metric["unit"]}</td><td><span class="badge b-{"red" if flow_metric["data"][-1]["value"] < flow_metric["historical_mean"]*0.7 else "yellow" if flow_metric["data"][-1]["value"] < flow_metric["historical_mean"]*0.9 else "green"}">{flow_metric["data"][-1]["year"]}</span></td></tr></table>' if flow_metric else '<div class="small">Sin estación de caudal medida en esta cuenca</div>'}
 
 <table>
@@ -307,7 +474,7 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
   {''.join(f'<tr><td>{b["name"]}</td><td class="val">{b["dist_km"]} km</td><td>{b["type"]}</td><td><span class="badge b-{"red" if b["trend"]=="critico" else "orange" if b["trend"]=="descendente" else "blue" if b["trend"]=="variable" else "green"}">{b["trend"]}</span></td><td class="val" style="color:{"#c62828" if b["growth_pct"]>30 else "#2e7d32" if b["growth_pct"]<-30 else "#1c2b3a"}">{"+"if b["growth_pct"]>0 else ""}{b["growth_pct"]}%</td></tr>' for b in nearby_bodies[:6])}
 </table>
 
-<h2>7 · Score de riesgo hídrico</h2>
+<h2>11 · Score de riesgo hídrico</h2>
 <div class="scorebox">
   <div class="score" style="background:{color_for_score(drought_score)}">
     <div class="lbl">Riesgo de sequía</div>
@@ -327,7 +494,12 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
 </div>
 <div class="small">Score 0–100. Sequía: combina aridización (tendencia), variabilidad interanual (CV) y estado actual (anomalía). Exceso: combina años de lluvia extrema (z&gt;+1.5) y cuerpos de agua cercanos en crecimiento &gt;30% en 10 años. Score agregado: 55% sequía + 45% exceso (calibración inicial — ajustable por uso).</div>
 
-<h2>8 · Lectura ejecutiva</h2>
+<h2>12 · Recomendaciones técnicas</h2>
+<table>
+  {''.join(f'<tr><td style="width:140px;vertical-align:top"><b>{label}</b></td><td>{text}</td></tr>' for label, text in recommendations)}
+</table>
+
+<h2>13 · Lectura ejecutiva</h2>
 <div style="background:#f0f6fc;padding:16px;border-radius:6px;font-size:13px;line-height:1.6">
 {
   'El campo se ubica en una zona con <b>tendencia a aridización moderada</b> y alta variabilidad interanual típica de la pampa deprimida. ' if slope < -1 else
