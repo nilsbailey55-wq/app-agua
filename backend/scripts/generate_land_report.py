@@ -18,6 +18,7 @@ import json
 import math
 import argparse
 import sys
+import urllib.parse
 from datetime import date
 from pathlib import Path
 from shapely.geometry import shape, Point
@@ -308,6 +309,66 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
         with open(cmip_path) as f:
             cmip = json.load(f)
 
+    # 11b) NDVI Sentinel-2 vía Microsoft Planetary Computer (sin auth)
+    import base64 as _b64
+    ndvi_b64, ndvi_meta = None, None
+    try:
+        # 1. STAC search: imagen Sentinel-2 reciente con poca nubosidad
+        from datetime import timedelta as _td
+        today = date.today()
+        # Buscar últimos 90 días
+        date_range = f"{(today - _td(days=90)).isoformat()}/{today.isoformat()}"
+        bbox = [lng-0.025, lat-0.025, lng+0.025, lat+0.025]   # ~5 km × 5 km
+        body = {
+            "collections": ["sentinel-2-l2a"],
+            "bbox": bbox,
+            "datetime": date_range,
+            "query": {"eo:cloud_cover": {"lt": 20}},
+            "sortby": [{"field": "properties.datetime", "direction": "desc"}],
+            "limit": 1,
+        }
+        stac_req = urllib.request.Request(
+            "https://planetarycomputer.microsoft.com/api/stac/v1/search",
+            method="POST",
+            data=json.dumps(body).encode(),
+            headers={"Content-Type": "application/json", "User-Agent": "AppAgua/1.0"}
+        )
+        with urllib.request.urlopen(stac_req, timeout=20, context=_topo_ctx) as _resp:
+            sd = json.loads(_resp.read())
+        feats = sd.get('features', [])
+        if feats:
+            item = feats[0]
+            item_id = item['id']
+            cloud  = item['properties'].get('eo:cloud_cover', 0)
+            img_dt = item['properties']['datetime'][:10]
+
+            # 2. Build URL del NDVI cropped
+            params = urllib.parse.urlencode({
+                'collection': 'sentinel-2-l2a',
+                'item': item_id,
+                'assets': 'B08',
+                'asset_as_band': 'true',
+                'expression': '(B08-B04)/(B08+B04)',
+                'rescale': '-0.2,0.8',
+                'colormap_name': 'rdylgn',
+            }, doseq=False)
+            # assets debe aparecer dos veces (B08 + B04) — agrego manualmente
+            params += '&assets=B04'
+            ndvi_url = (f"https://planetarycomputer.microsoft.com/api/data/v1/item/bbox/"
+                        f"{bbox[0]},{bbox[1]},{bbox[2]},{bbox[3]}/600x600.png?{params}")
+            ndvi_req = urllib.request.Request(ndvi_url, headers={"User-Agent": "AppAgua/1.0"})
+            with urllib.request.urlopen(ndvi_req, timeout=30, context=_topo_ctx) as _resp:
+                ndvi_bytes = _resp.read()
+            ndvi_b64 = _b64.b64encode(ndvi_bytes).decode('ascii')
+            ndvi_meta = {
+                'date': img_dt,
+                'cloud_cover': round(cloud, 1),
+                'platform': 'Sentinel-2 L2A',
+                'pixel_resolution_m': 10,
+            }
+    except Exception as e:
+        print(f"[warn] NDVI no disponible: {e}", file=sys.stderr)
+
     # 12) Mapa de la parcela con contexto (CARTO Voyager tiles)
     map_b64 = None
     if MAP_AVAILABLE:
@@ -560,7 +621,22 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
   <tr><td>Humedad de suelo SAOCOM últimos 7 días</td><td class="val"><a href="https://geoservicios3.conae.gov.ar/geoserver/HumedadDeSuelos/wms?REQUEST=GetMap&LAYERS=DSS_MSMKR_1&BBOX={lng-3},{lat-3},{lng+3},{lat+3}&WIDTH=400&HEIGHT=400&FORMAT=image/png&SRS=EPSG:4326&VERSION=1.1.1" target="_blank">Ver mapa →</a></td></tr>
 </table>
 
-<h2>10 · Tendencia 1981–2024</h2>
+{f'''<h2>10 · Productividad satelital reciente (NDVI Sentinel-2)</h2>
+<table>
+  <tr><td>Fecha de la imagen</td><td class="val">{ndvi_meta['date']}</td></tr>
+  <tr><td>Plataforma</td><td class="val">{ndvi_meta['platform']}</td></tr>
+  <tr><td>Cobertura nubosa</td><td class="val">{ndvi_meta['cloud_cover']:.1f}%</td></tr>
+  <tr><td>Resolución espacial</td><td class="val">{ndvi_meta['pixel_resolution_m']} m / pixel</td></tr>
+</table>
+<div style="margin:12px 0;border:1px solid #d0dce8;border-radius:6px;overflow:hidden;line-height:0;display:flex;justify-content:center;">
+  <img src="data:image/png;base64,{ndvi_b64}" alt="NDVI Sentinel-2" style="display:block;max-width:100%;"/>
+</div>
+<div class="small">
+  <b>NDVI = (NIR − Red) / (NIR + Red)</b> · valores típicos: rojo/amarillo ~0 (suelo desnudo, agua), verde claro 0.3-0.5 (vegetación rala), verde oscuro 0.6-0.9 (vegetación densa, cultivos en pleno crecimiento). El cuadrante muestra ~5 × 5 km centrados en la parcela; el patrón cuadricular típico de la pampa permite identificar los campos colindantes.
+</div>
+''' if ndvi_b64 else '<h2>10 · Productividad satelital reciente (NDVI Sentinel-2)</h2><div class="small">Imagen Sentinel-2 cloud-free temporalmente no disponible para esta zona en los últimos 90 días.</div>'}
+
+<h2>11 · Tendencia 1981–2024</h2>
 <table>
   <tr><td>Pendiente lineal de lluvia anual</td><td class="val" style="color:{'#c62828' if slope<-1 else '#2e7d32' if slope>1 else '#1c2b3a'}">{'+'if slope>0 else ''}{slope:.2f} mm/año</td></tr>
   <tr><td>Cambio acumulado 1981 → 2024</td><td class="val">{slope*43:+.0f} mm ({slope*43/(chirps_basin['mean_base'] if chirps_basin else 1)*100:+.0f}%)</td></tr>
@@ -568,7 +644,7 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
   <tr><td>Diagnóstico</td><td class="val">{'Aridización moderada' if slope < -1 else 'Humidificación leve' if slope > 1 else 'Estable, alta variabilidad interanual'}</td></tr>
 </table>
 
-<h2>11 · Proyecciones a futuro (CMIP6 · IPCC AR6)</h2>
+<h2>12 · Proyecciones a futuro (CMIP6 · IPCC AR6)</h2>
 {f'''<table>
   <tr><th>Variable</th><th>Histórico 1995–2014</th><th>2040–2059 SSP2-4.5</th><th>2040–2059 SSP5-8.5</th><th>2080–2099 SSP2-4.5</th><th>2080–2099 SSP5-8.5</th></tr>
   <tr>
@@ -595,7 +671,7 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
 </div>
 ''' if cmip else '<div class="small">Proyecciones futuras no disponibles.</div>'}
 
-<h2>12 · Caudal y cuerpos de agua cercanos</h2>
+<h2>13 · Caudal y cuerpos de agua cercanos</h2>
 {'<table><tr><th>Métrica caudal cuenca</th><th>Media histórica</th><th>Último valor</th><th>Estado</th></tr>'+f'<tr><td>{flow_metric["label"]}</td><td class="val">{flow_metric["historical_mean"]} {flow_metric["unit"]}</td><td class="val">{flow_metric["data"][-1]["value"]} {flow_metric["unit"]}</td><td><span class="badge b-{"red" if flow_metric["data"][-1]["value"] < flow_metric["historical_mean"]*0.7 else "yellow" if flow_metric["data"][-1]["value"] < flow_metric["historical_mean"]*0.9 else "green"}">{flow_metric["data"][-1]["year"]}</span></td></tr></table>' if flow_metric else '<div class="small">Sin estación de caudal medida en esta cuenca</div>'}
 
 <table>
@@ -603,7 +679,7 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
   {''.join(f'<tr><td>{b["name"]}</td><td class="val">{b["dist_km"]} km</td><td>{b["type"]}</td><td><span class="badge b-{"red" if b["trend"]=="critico" else "orange" if b["trend"]=="descendente" else "blue" if b["trend"]=="variable" else "green"}">{b["trend"]}</span></td><td class="val" style="color:{"#c62828" if b["growth_pct"]>30 else "#2e7d32" if b["growth_pct"]<-30 else "#1c2b3a"}">{"+"if b["growth_pct"]>0 else ""}{b["growth_pct"]}%</td></tr>' for b in nearby_bodies[:6])}
 </table>
 
-<h2>13 · Score de riesgo hídrico</h2>
+<h2>14 · Score de riesgo hídrico</h2>
 <div class="scorebox">
   <div class="score" style="background:{color_for_score(drought_score)}">
     <div class="lbl">Riesgo de sequía</div>
@@ -623,12 +699,12 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
 </div>
 <div class="small">Score 0–100. Sequía: combina aridización (tendencia), variabilidad interanual (CV) y estado actual (anomalía). Exceso: combina años de lluvia extrema (z&gt;+1.5) y cuerpos de agua cercanos en crecimiento &gt;30% en 10 años. Score agregado: 55% sequía + 45% exceso (calibración inicial — ajustable por uso).</div>
 
-<h2>14 · Recomendaciones técnicas</h2>
+<h2>15 · Recomendaciones técnicas</h2>
 <table>
   {''.join(f'<tr><td style="width:140px;vertical-align:top"><b>{label}</b></td><td>{text}</td></tr>' for label, text in recommendations)}
 </table>
 
-<h2>15 · Lectura ejecutiva</h2>
+<h2>16 · Lectura ejecutiva</h2>
 <div style="background:#f0f6fc;padding:16px;border-radius:6px;font-size:13px;line-height:1.6">
 {
   'El campo se ubica en una zona con <b>tendencia a aridización moderada</b> y alta variabilidad interanual típica de la pampa deprimida. ' if slope < -1 else
