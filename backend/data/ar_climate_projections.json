@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "source": "World Bank Climate Knowledge Portal · CMIP6 ensemble median",
+    "geo": "Argentina (país)",
+    "resolution": "0.25° native, promediado a nivel país",
+    "note": "Variabilidad intra-país no capturada. Direccional, no parcela-específico.",
+    "pr_unit": "mm/año",
+    "tas_unit": "°C"
+  },
+  "pr_baseline": 813.37,
+  "pr_2040-2059_ssp245": 824.15,
+  "pr_2040-2059_ssp585": 829.67,
+  "pr_2080-2099_ssp245": 832.19,
+  "pr_2080-2099_ssp585": 840.16,
+  "tas_baseline": 15.15,
+  "tas_2040-2059_ssp245": 16.24,
+  "tas_2040-2059_ssp585": 16.63,
+  "tas_2080-2099_ssp245": 16.95,
+  "tas_2080-2099_ssp585": 18.69,
+  "delta_pr_2040_ssp245_pct": 1.3,
+  "delta_pr_2040_ssp585_pct": 2.0,
+  "delta_pr_2080_ssp245_pct": 2.3,
+  "delta_pr_2080_ssp585_pct": 3.3,
+  "delta_tas_2040_ssp245_C": 1.09,
+  "delta_tas_2040_ssp585_C": 1.48,
+  "delta_tas_2080_ssp245_C": 1.8,
+  "delta_tas_2080_ssp585_C": 3.54
+}

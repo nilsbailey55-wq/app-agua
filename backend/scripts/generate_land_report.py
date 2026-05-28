@@ -17,11 +17,21 @@ Datos usados (todos reales del backend):
 import json
 import math
 import argparse
+import sys
 from datetime import date
 from pathlib import Path
 from shapely.geometry import shape, Point
 
 DATA = Path(__file__).parent.parent / "data"
+
+# Map renderer (Pillow + CARTO tiles)
+sys.path.insert(0, str(Path(__file__).parent))
+try:
+    from _map_renderer import render_to_base64
+    MAP_AVAILABLE = True
+except Exception as e:
+    MAP_AVAILABLE = False
+    print(f"[warn] Map renderer no disponible: {e}", file=sys.stderr)
 
 # ── helpers ────────────────────────────────────────────────────────────────
 def load(name):
@@ -246,6 +256,79 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
     excess_score  = excess_risk_score(extreme_wet, growing_count)
     composite     = round(drought_score * 0.55 + excess_score * 0.45)
 
+    # 10) Topografía (Open-Elevation: parcela + 8 vecinos a ~2 km)
+    import urllib.request, urllib.error, ssl as _ssl
+    _topo_ctx = _ssl._create_unverified_context()
+    topo = None
+    try:
+        d_lat = 0.018   # ~2 km
+        d_lng = 0.018 / max(math.cos(math.radians(lat)), 0.3)
+        pts = [(lat, lng)]
+        for dla, dln in [(0, 1), (0, -1), (1, 0), (-1, 0),
+                         (1, 1), (1, -1), (-1, 1), (-1, -1)]:
+            pts.append((lat + dla * d_lat, lng + dln * d_lng))
+        locs = '|'.join(f"{la},{ln}" for la, ln in pts)
+        url = f"https://api.open-elevation.com/api/v1/lookup?locations={locs}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'AppAgua/1.0'})
+        with urllib.request.urlopen(req, timeout=15, context=_topo_ctx) as _resp:
+            elev_data = json.loads(_resp.read())
+        elevs = [e['elevation'] for e in elev_data.get('results', [])]
+        if len(elevs) >= 5:
+            field_elev = elevs[0]
+            neighbors  = elevs[1:]
+            mean_neigh = sum(neighbors) / len(neighbors)
+            range_total = max(elevs) - min(elevs)
+            relative = field_elev - mean_neigh
+            slope_m_per_km = range_total / 2  # range sobre ~2km de radio → ~m/km estimado
+            if relative > 1.5:
+                topo_diag = 'Posición elevada — buen drenaje'
+                topo_anega = 'Bajo'
+            elif relative < -1.5:
+                topo_diag = 'Depresión local — agua converge'
+                topo_anega = 'Elevado'
+            else:
+                topo_diag = 'Topografía similar al entorno'
+                topo_anega = 'Medio'
+            topo = {
+                'field_elev': round(field_elev),
+                'mean_neigh': round(mean_neigh),
+                'relative':   round(relative, 1),
+                'range':      round(range_total),
+                'slope':      round(slope_m_per_km, 1),
+                'diagnostic': topo_diag,
+                'flood_risk': topo_anega,
+            }
+    except Exception as e:
+        print(f"[warn] Topografía no disponible: {e}", file=sys.stderr)
+
+    # 11) Proyecciones CMIP6 (precomputado, country-level Argentina)
+    cmip = None
+    cmip_path = DATA / 'ar_climate_projections.json'
+    if cmip_path.exists():
+        with open(cmip_path) as f:
+            cmip = json.load(f)
+
+    # 12) Mapa de la parcela con contexto (CARTO Voyager tiles)
+    map_b64 = None
+    if MAP_AVAILABLE:
+        try:
+            # Markers de cuerpos de agua cercanos
+            extra = []
+            for wb_id, wb in water_bodies['water_bodies'].items():
+                wlat, wlng = wb['coords']
+                dist_km = math.hypot((wlat-lat)*111, (wlng-lng)*111*math.cos(math.radians(lat)))
+                if dist_km <= 150:
+                    extra.append({'lat': wlat, 'lng': wlng, 'label': wb['name_short'],
+                                  'color': '#1565c0'})
+            # Zoom según extensión de la parcela (más chica = más zoom)
+            zoom = 10
+            if area_ha and area_ha < 200: zoom = 12
+            elif area_ha and area_ha < 800: zoom = 11
+            map_b64 = render_to_base64(lat, lng, zoom=zoom, width=620, height=380,
+                                        markers_extra=extra[:5])
+        except Exception as e:
+            print(f"[warn] Falló generación del mapa: {e}", file=sys.stderr)
+
     # 11) Recomendaciones por reglas (árbol de decisión simple)
     recommendations = []
     # Cultivos sugeridos
@@ -393,6 +476,12 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
   <span><dt>Generado:</dt><dd>{today_str}</dd></span>
 </div>
 
+{f'''<div style="margin:18px 0 8px;border:1px solid #d0dce8;border-radius:6px;overflow:hidden;line-height:0;">
+  <img src="data:image/png;base64,{map_b64}" alt="Mapa de ubicación" style="display:block;width:100%;"/>
+</div>
+<div class="small" style="margin-bottom:18px">📍 Campo (rojo) · 🔵 Cuerpos de agua relevantes en 150 km · Tiles © OpenStreetMap contributors, estilo CARTO Voyager</div>
+''' if map_b64 else ''}
+
 <h2>1 · Ubicación hídrica</h2>
 <table>
   <tr><td>Cuenca hidrográfica</td><td class="val">{basin['name']}</td></tr>
@@ -449,7 +538,20 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
  + (f"<div class='small' style='margin-top:6px'>{subjacent_aquifers[0].get('status_detail','')}</div>" if subjacent_aquifers and subjacent_aquifers[0].get('status_detail') else '')
  ) if subjacent_aquifers else '<div class="small">No hay acuíferos importantes mapeados directamente bajo esta coordenada. Puede haber freática local; recomendado pozo de prueba para confirmar.</div>'}
 
-<h2>8 · Estado actual</h2>
+<h2>8 · Topografía y susceptibilidad a anegamiento</h2>
+{f'''<table>
+  <tr><td>Elevación de la parcela (centro)</td><td class="val">{topo["field_elev"]} m s.n.m.</td></tr>
+  <tr><td>Elevación media del entorno (2 km radio)</td><td class="val">{topo["mean_neigh"]} m</td></tr>
+  <tr><td>Posición relativa de la parcela</td><td class="val" style="color:{'#2e7d32' if topo["relative"] > 1.5 else '#c62828' if topo["relative"] < -1.5 else '#1c2b3a'}">{('+' if topo["relative"] > 0 else '')}{topo["relative"]:.1f} m vs entorno</td></tr>
+  <tr><td>Rango altimétrico (entorno 2 km)</td><td class="val">{topo["range"]} m</td></tr>
+  <tr><td>Pendiente regional estimada</td><td class="val">{topo["slope"]} m/km</td></tr>
+  <tr><td>Diagnóstico topográfico</td><td class="val">{topo["diagnostic"]}</td></tr>
+  <tr><td>Susceptibilidad a anegamiento</td><td class="val"><span class="badge b-{'red' if topo['flood_risk']=='Elevado' else 'yellow' if topo['flood_risk']=='Medio' else 'green'}">{topo["flood_risk"]}</span></td></tr>
+</table>
+<div class="small">Elevación de SRTM-30m vía Open-Elevation. Diagnóstico simplificado por diferencia con vecinos a 2 km; complementar con DEM detallado si el riesgo de anegamiento es crítico.</div>
+''' if topo else '<div class="small">Datos de elevación temporalmente no disponibles.</div>'}
+
+<h2>9 · Estado actual</h2>
 <table>
   <tr><td>Lluvia 2024 (estimada NASA POWER)</td><td class="val">{round(annual_2024) if annual_2024 else '—'} mm</td></tr>
   <tr><td>Anomalía 2024 vs media 1991–2020</td><td class="val" style="color:{'#c62828' if anom_2024<-5 else '#2e7d32' if anom_2024>5 else '#1c2b3a'}">{'+'if anom_2024>0 else ''}{anom_2024:.0f} %</td></tr>
@@ -458,7 +560,7 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
   <tr><td>Humedad de suelo SAOCOM últimos 7 días</td><td class="val"><a href="https://geoservicios3.conae.gov.ar/geoserver/HumedadDeSuelos/wms?REQUEST=GetMap&LAYERS=DSS_MSMKR_1&BBOX={lng-3},{lat-3},{lng+3},{lat+3}&WIDTH=400&HEIGHT=400&FORMAT=image/png&SRS=EPSG:4326&VERSION=1.1.1" target="_blank">Ver mapa →</a></td></tr>
 </table>
 
-<h2>9 · Tendencia 1981–2024</h2>
+<h2>10 · Tendencia 1981–2024</h2>
 <table>
   <tr><td>Pendiente lineal de lluvia anual</td><td class="val" style="color:{'#c62828' if slope<-1 else '#2e7d32' if slope>1 else '#1c2b3a'}">{'+'if slope>0 else ''}{slope:.2f} mm/año</td></tr>
   <tr><td>Cambio acumulado 1981 → 2024</td><td class="val">{slope*43:+.0f} mm ({slope*43/(chirps_basin['mean_base'] if chirps_basin else 1)*100:+.0f}%)</td></tr>
@@ -466,7 +568,34 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
   <tr><td>Diagnóstico</td><td class="val">{'Aridización moderada' if slope < -1 else 'Humidificación leve' if slope > 1 else 'Estable, alta variabilidad interanual'}</td></tr>
 </table>
 
-<h2>10 · Caudal y cuerpos de agua cercanos</h2>
+<h2>11 · Proyecciones a futuro (CMIP6 · IPCC AR6)</h2>
+{f'''<table>
+  <tr><th>Variable</th><th>Histórico 1995–2014</th><th>2040–2059 SSP2-4.5</th><th>2040–2059 SSP5-8.5</th><th>2080–2099 SSP2-4.5</th><th>2080–2099 SSP5-8.5</th></tr>
+  <tr>
+    <td>Precipitación anual</td>
+    <td class="val">{round(cmip["pr_baseline"])} mm</td>
+    <td class="val" style="color:{'#1565c0' if cmip['delta_pr_2040_ssp245_pct'] > 0 else '#c62828'}">{round(cmip["pr_2040-2059_ssp245"])} mm <span class='small'>({'+'if cmip['delta_pr_2040_ssp245_pct']>0 else ''}{cmip['delta_pr_2040_ssp245_pct']:.1f}%)</span></td>
+    <td class="val" style="color:{'#1565c0' if cmip['delta_pr_2040_ssp585_pct'] > 0 else '#c62828'}">{round(cmip["pr_2040-2059_ssp585"])} mm <span class='small'>({'+'if cmip['delta_pr_2040_ssp585_pct']>0 else ''}{cmip['delta_pr_2040_ssp585_pct']:.1f}%)</span></td>
+    <td class="val" style="color:{'#1565c0' if cmip['delta_pr_2080_ssp245_pct'] > 0 else '#c62828'}">{round(cmip["pr_2080-2099_ssp245"])} mm <span class='small'>({'+'if cmip['delta_pr_2080_ssp245_pct']>0 else ''}{cmip['delta_pr_2080_ssp245_pct']:.1f}%)</span></td>
+    <td class="val" style="color:{'#1565c0' if cmip['delta_pr_2080_ssp585_pct'] > 0 else '#c62828'}">{round(cmip["pr_2080-2099_ssp585"])} mm <span class='small'>({'+'if cmip['delta_pr_2080_ssp585_pct']>0 else ''}{cmip['delta_pr_2080_ssp585_pct']:.1f}%)</span></td>
+  </tr>
+  <tr>
+    <td>Temperatura media</td>
+    <td class="val">{cmip["tas_baseline"]:.1f} °C</td>
+    <td class="val" style="color:#c62828">{cmip["tas_2040-2059_ssp245"]:.1f} °C <span class='small'>(+{cmip['delta_tas_2040_ssp245_C']:.1f})</span></td>
+    <td class="val" style="color:#c62828">{cmip["tas_2040-2059_ssp585"]:.1f} °C <span class='small'>(+{cmip['delta_tas_2040_ssp585_C']:.1f})</span></td>
+    <td class="val" style="color:#c62828">{cmip["tas_2080-2099_ssp245"]:.1f} °C <span class='small'>(+{cmip['delta_tas_2080_ssp245_C']:.1f})</span></td>
+    <td class="val" style="color:#c62828">{cmip["tas_2080-2099_ssp585"]:.1f} °C <span class='small'>(+{cmip['delta_tas_2080_ssp585_C']:.1f})</span></td>
+  </tr>
+</table>
+<div class="small" style="margin-top:6px">
+  <b>Lectura:</b> El cambio de precipitación promedio a nivel país es moderado, pero su distribución espacial cambia significativamente (NE más húmedo, NO/Patagonia más seco) — la cifra nacional puede no reflejar tu zona específica.
+  <b>Lo más cierto y consequential es la temperatura</b>: un aumento de +{cmip['delta_tas_2080_ssp585_C']:.1f}°C a 2080 implica ~10-20% más evapotranspiración, equivalente a perder ~100-150 mm de "lluvia útil" anual incluso si la lluvia total no baja.
+  <br><b>Resolución:</b> Promedio Argentina (CMIP6 0.25° ensemble). Para downscaling sub-nacional, consultar IPCC AR6 Regional Atlas o solicitar análisis personalizado.
+</div>
+''' if cmip else '<div class="small">Proyecciones futuras no disponibles.</div>'}
+
+<h2>12 · Caudal y cuerpos de agua cercanos</h2>
 {'<table><tr><th>Métrica caudal cuenca</th><th>Media histórica</th><th>Último valor</th><th>Estado</th></tr>'+f'<tr><td>{flow_metric["label"]}</td><td class="val">{flow_metric["historical_mean"]} {flow_metric["unit"]}</td><td class="val">{flow_metric["data"][-1]["value"]} {flow_metric["unit"]}</td><td><span class="badge b-{"red" if flow_metric["data"][-1]["value"] < flow_metric["historical_mean"]*0.7 else "yellow" if flow_metric["data"][-1]["value"] < flow_metric["historical_mean"]*0.9 else "green"}">{flow_metric["data"][-1]["year"]}</span></td></tr></table>' if flow_metric else '<div class="small">Sin estación de caudal medida en esta cuenca</div>'}
 
 <table>
@@ -474,7 +603,7 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
   {''.join(f'<tr><td>{b["name"]}</td><td class="val">{b["dist_km"]} km</td><td>{b["type"]}</td><td><span class="badge b-{"red" if b["trend"]=="critico" else "orange" if b["trend"]=="descendente" else "blue" if b["trend"]=="variable" else "green"}">{b["trend"]}</span></td><td class="val" style="color:{"#c62828" if b["growth_pct"]>30 else "#2e7d32" if b["growth_pct"]<-30 else "#1c2b3a"}">{"+"if b["growth_pct"]>0 else ""}{b["growth_pct"]}%</td></tr>' for b in nearby_bodies[:6])}
 </table>
 
-<h2>11 · Score de riesgo hídrico</h2>
+<h2>13 · Score de riesgo hídrico</h2>
 <div class="scorebox">
   <div class="score" style="background:{color_for_score(drought_score)}">
     <div class="lbl">Riesgo de sequía</div>
@@ -494,12 +623,12 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
 </div>
 <div class="small">Score 0–100. Sequía: combina aridización (tendencia), variabilidad interanual (CV) y estado actual (anomalía). Exceso: combina años de lluvia extrema (z&gt;+1.5) y cuerpos de agua cercanos en crecimiento &gt;30% en 10 años. Score agregado: 55% sequía + 45% exceso (calibración inicial — ajustable por uso).</div>
 
-<h2>12 · Recomendaciones técnicas</h2>
+<h2>14 · Recomendaciones técnicas</h2>
 <table>
   {''.join(f'<tr><td style="width:140px;vertical-align:top"><b>{label}</b></td><td>{text}</td></tr>' for label, text in recommendations)}
 </table>
 
-<h2>13 · Lectura ejecutiva</h2>
+<h2>15 · Lectura ejecutiva</h2>
 <div style="background:#f0f6fc;padding:16px;border-radius:6px;font-size:13px;line-height:1.6">
 {
   'El campo se ubica en una zona con <b>tendencia a aridización moderada</b> y alta variabilidad interanual típica de la pampa deprimida. ' if slope < -1 else
