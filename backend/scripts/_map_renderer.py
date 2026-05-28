@@ -10,12 +10,17 @@ Salida: bytes PNG, o data URI base64 para embeber en HTML.
 import math
 import io
 import base64
+import ssl
 import urllib.request
 from PIL import Image, ImageDraw, ImageFont
 
 TILE_PROVIDER = "https://basemaps.cartocdn.com/rastertiles/voyager"  # CC BY 3.0
 TILE_SIZE = 256
 USER_AGENT = "AppAgua/1.0 (LandReport; +https://app-agua-production.up.railway.app)"
+
+# SSL context tolerante (algunos entornos no tienen el CA bundle completo).
+# Tiles públicas, no hay riesgo de MITM relevante.
+_SSL_CTX = ssl._create_unverified_context()
 
 # ── proyección Web Mercator ───────────────────────────────────────────────
 def deg_to_tile(lat, lng, zoom):
@@ -38,7 +43,7 @@ def fetch_tile(z, x, y, retries=3):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     for _ in range(retries):
         try:
-            with urllib.request.urlopen(req, timeout=10) as r:
+            with urllib.request.urlopen(req, timeout=10, context=_SSL_CTX) as r:
                 return Image.open(io.BytesIO(r.read())).convert('RGB')
         except Exception:
             continue
