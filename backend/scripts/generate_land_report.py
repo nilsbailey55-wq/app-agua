@@ -1,17 +1,34 @@
 """
 generate_land_report.py
-Prototipo del producto "Reporte de Riesgo Hídrico para Campo".
+Generador del producto "Reporte de Riesgo Hídrico para Campo".
 
-Input:  --lat, --lng, --area-ha (opcional), --owner (opcional)
-Output: HTML self-contained en /tmp/land_report_<slug>.html
+Uso:
+  # HTML
+  python3 generate_land_report.py --lat -35.81 --lng -61.90 --area-ha 1247
+  # HTML + PDF
+  python3 generate_land_report.py --lat -35.81 --lng -61.90 --pdf
+  # Solo PDF (borra el HTML temporal)
+  python3 generate_land_report.py --lat -35.81 --lng -61.90 --pdf-only
 
-Datos usados (todos reales del backend):
+Datos del backend usados:
  - basins.json + basin_geometries → identificación cuenca
  - precip_heatmap.json → climatología NASA POWER (grilla 2°)
  - chirps_basin_precip.json → serie histórica 1981-2024 cuenca
  - ar_flow_series.json → caudal cuenca
  - water_body_area.json → cuerpos de agua cercanos
- - CONAE WMS → estado actual (linkeado, no embebido)
+ - ar_aquifers.geojson → acuíferos subyacentes
+ - ar_climate_projections.json → CMIP6 (precomputado vía CCKP)
+
+APIs externas (al vuelo):
+ - CARTO tiles → mapa de ubicación
+ - Open-Elevation → SRTM-30m para topografía
+ - Microsoft Planetary Computer → NDVI Sentinel-2 (sin auth)
+
+Dependencias del sistema (para PDF render):
+  macOS:   brew install pango
+           export DYLD_LIBRARY_PATH=/opt/homebrew/lib
+  Linux:   apt-get install libpango-1.0-0 libpangoft2-1.0-0
+  Python:  pip3 install weasyprint Pillow shapely
 """
 
 import json
@@ -498,6 +515,21 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
 <style>
   body{{margin:0;font-family:'Helvetica Neue',Arial,sans-serif;color:#1c2b3a;background:#f5f7fa;padding:24px;}}
   .doc{{max-width:820px;margin:0 auto;background:#fff;padding:36px 42px;box-shadow:0 4px 24px rgba(0,0,0,.06);border-radius:6px;}}
+
+  /* ── Estilos específicos para PDF (WeasyPrint) ────────────────────────── */
+  @page {{
+    size: A4;
+    margin: 16mm 14mm 18mm 14mm;
+    @bottom-left  {{ content: "App Agua · Reporte de Riesgo Hídrico"; font-family: 'Helvetica Neue', Arial; font-size: 8.5pt; color: #94a0ac; }}
+    @bottom-right {{ content: "Pág. " counter(page) " de " counter(pages); font-family: 'Helvetica Neue', Arial; font-size: 8.5pt; color: #94a0ac; }}
+  }}
+  @media print {{
+    body {{ background: #fff; padding: 0; }}
+    .doc {{ box-shadow: none; padding: 0; max-width: 100%; border-radius: 0; }}
+    h2 {{ page-break-after: avoid; }}
+    table, .scorebox, svg, img {{ page-break-inside: avoid; }}
+    .footer {{ page-break-before: avoid; }}
+  }}
   h1{{color:#0d3a5c;font-size:22px;margin:0 0 4px;border-bottom:3px solid #1565c0;padding-bottom:10px;}}
   .subtitle{{color:#5a6b7c;font-size:13px;margin-bottom:24px;}}
   .meta{{display:flex;flex-wrap:wrap;gap:18px;margin:18px 0 28px;padding:14px;background:#f0f6fc;border-radius:6px;font-size:12px;}}
@@ -747,6 +779,15 @@ Reporte generado por <b>App Agua</b> · {today_str} · v1.0 prototipo
     }
 
 
+def html_to_pdf(html_path, pdf_path):
+    """Convierte HTML self-contained → PDF con WeasyPrint."""
+    try:
+        import weasyprint
+    except ImportError as e:
+        raise RuntimeError("WeasyPrint no instalado. pip3 install weasyprint && brew install pango") from e
+    weasyprint.HTML(filename=str(html_path)).write_pdf(str(pdf_path))
+
+
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--lat', type=float, required=True)
@@ -754,11 +795,28 @@ if __name__ == '__main__':
     p.add_argument('--area-ha', type=float, default=None)
     p.add_argument('--owner', default=None)
     p.add_argument('--parcel-id', default=None)
+    p.add_argument('--pdf', action='store_true', help='Generar también el PDF')
+    p.add_argument('--pdf-only', action='store_true', help='Generar solo el PDF y borrar el HTML temporal')
     args = p.parse_args()
 
     out, summary = generate(args.lat, args.lng, args.area_ha, args.owner, args.parcel_id)
-    print(f"✓ Reporte generado: {out}")
-    print(f"  abrí en browser: open {out}")
+    print(f"✓ HTML generado: {out}")
+
+    if args.pdf or args.pdf_only:
+        pdf_path = Path(str(out).replace('.html', '.pdf'))
+        try:
+            html_to_pdf(out, pdf_path)
+            size_kb = pdf_path.stat().st_size / 1024
+            print(f"✓ PDF generado:  {pdf_path}  ({size_kb:.0f} KB)")
+            print(f"  abrí: open {pdf_path}")
+        except Exception as e:
+            print(f"✗ Error en PDF: {e}")
+        if args.pdf_only:
+            Path(out).unlink(missing_ok=True)
+            print(f"  HTML temporal eliminado")
+    else:
+        print(f"  abrí en browser: open {out}")
+
     print()
     for k, v in summary.items():
         print(f"  {k:20s}  {v}")
