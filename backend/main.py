@@ -7,14 +7,20 @@ Run: uvicorn main:app --reload --port 8000
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import HTMLResponse, Response
 from shapely.geometry import shape, Point
 from shapely.ops import nearest_points as _shp_nearest_points
 import json
 import os
+import sys
 import asyncio
 import ssl
 import urllib.request
 import urllib.parse
+from pathlib import Path
+
+# Permitir importar el generador de reportes desde scripts/
+sys.path.insert(0, str(Path(__file__).parent / "scripts"))
 
 # SSL: intentar cargar bundle de certificados del sistema o del framework de Python
 _SSL_CTX = ssl.create_default_context()
@@ -903,6 +909,70 @@ def get_precip_heatmap():
 # directo de CONAE (https://geoservicios2.conae.gov.ar/.../PrecipitacionAcumulada/wms),
 # consumido desde el frontend con L.tileLayer.wms() para los layers
 # MOM_GPMIMERG_PA1D_1..7. Mejor recencia (1-2 días vs 2-3) y datos oficiales.
+
+
+# ── Reporte de Riesgo Hídrico para Campo ───────────────────────────────────
+# Producto comercial: genera un reporte de ~6 páginas con 16 secciones de
+# análisis hídrico para una coordenada agropecuaria.
+
+@app.get("/api/report/land")
+async def get_land_report(
+    lat: float = Query(..., description="Latitud (-55 a -21)"),
+    lng: float = Query(..., description="Longitud (-74 a -52)"),
+    area_ha: float | None = Query(None, description="Superficie de la parcela en hectáreas"),
+    owner: str | None = Query(None, description="Propietario / razón social"),
+    parcel_id: str | None = Query(None, description="ID catastral o partida"),
+    format: str = Query("html", description="Formato de respuesta: 'html' o 'pdf'"),
+):
+    """Genera el Reporte de Riesgo Hídrico para una coordenada.
+
+    Producto MVP — destinado a brokers / inversores agro / aseguradoras.
+    Tiempo de respuesta típico: 5-15 s (depende de APIs externas: CONAE,
+    Microsoft Planetary Computer, Open-Elevation).
+    """
+    if format not in ("html", "pdf"):
+        raise HTTPException(400, "format debe ser 'html' o 'pdf'")
+    if not (-55 <= lat <= -21) or not (-74 <= lng <= -52):
+        raise HTTPException(400, "Coordenada fuera del bounding box de Argentina")
+
+    try:
+        # Importa dentro del handler para evitar costo de import al startup
+        from generate_land_report import generate, html_to_pdf_bytes
+    except Exception as e:
+        raise HTTPException(500, f"Generador no disponible: {e}")
+
+    # generate() llama a APIs externas → corre en threadpool para no bloquear
+    loop = asyncio.get_event_loop()
+    try:
+        html, summary = await loop.run_in_executor(
+            None,
+            lambda: generate(lat, lng, area_ha=area_ha, owner=owner, parcel_id=parcel_id),
+        )
+    except RuntimeError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(500, f"Error generando reporte: {type(e).__name__}: {e}")
+
+    if format == "html":
+        return HTMLResponse(content=html, headers={
+            "X-Summary": json.dumps({k: v for k, v in summary.items() if k != 'slug'}),
+        })
+
+    # PDF
+    try:
+        pdf_bytes = await loop.run_in_executor(None, html_to_pdf_bytes, html)
+    except Exception as e:
+        raise HTTPException(500, f"PDF render falló (¿Pango/Cairo instalados?): {e}")
+
+    filename = f"reporte_hidrico_{summary['slug']}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{filename}"',
+            "X-Summary": json.dumps({k: v for k, v in summary.items() if k != 'slug'}),
+        },
+    )
 
 
 @app.get("/api/argentina-border")

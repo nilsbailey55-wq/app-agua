@@ -763,9 +763,7 @@ Reporte generado por <b>App Agua</b> · {today_str} · v1.0 prototipo
 
 </div></body></html>"""
 
-    out_path = Path('/tmp') / f"land_report_{slug}.html"
-    out_path.write_text(html)
-    return out_path, {
+    summary = {
         'basin': basin['name'],
         'normal_91_20': round(normal_91_20) if normal_91_20 else None,
         'annual_2024': round(annual_2024) if annual_2024 else None,
@@ -776,11 +774,22 @@ Reporte generado por <b>App Agua</b> · {today_str} · v1.0 prototipo
         'composite_score': composite,
         'nearby_bodies': len(nearby_bodies),
         'growing_bodies': growing_count,
+        'slug': slug,
     }
+    return html, summary
+
+
+def html_to_pdf_bytes(html_str):
+    """HTML string → PDF bytes (en memoria, no toca disco)."""
+    try:
+        import weasyprint
+    except ImportError as e:
+        raise RuntimeError("WeasyPrint no instalado. pip3 install weasyprint && brew install pango") from e
+    return weasyprint.HTML(string=html_str).write_pdf()
 
 
 def html_to_pdf(html_path, pdf_path):
-    """Convierte HTML self-contained → PDF con WeasyPrint."""
+    """Convierte HTML self-contained → PDF con WeasyPrint (basado en archivos, CLI)."""
     try:
         import weasyprint
     except ImportError as e:
@@ -799,23 +808,25 @@ if __name__ == '__main__':
     p.add_argument('--pdf-only', action='store_true', help='Generar solo el PDF y borrar el HTML temporal')
     args = p.parse_args()
 
-    out, summary = generate(args.lat, args.lng, args.area_ha, args.owner, args.parcel_id)
-    print(f"✓ HTML generado: {out}")
+    html, summary = generate(args.lat, args.lng, args.area_ha, args.owner, args.parcel_id)
+    out_path = Path('/tmp') / f"land_report_{summary['slug']}.html"
+    out_path.write_text(html)
+    print(f"✓ HTML generado: {out_path}")
 
     if args.pdf or args.pdf_only:
-        pdf_path = Path(str(out).replace('.html', '.pdf'))
+        pdf_path = Path(str(out_path).replace('.html', '.pdf'))
         try:
-            html_to_pdf(out, pdf_path)
+            html_to_pdf(out_path, pdf_path)
             size_kb = pdf_path.stat().st_size / 1024
             print(f"✓ PDF generado:  {pdf_path}  ({size_kb:.0f} KB)")
             print(f"  abrí: open {pdf_path}")
         except Exception as e:
             print(f"✗ Error en PDF: {e}")
         if args.pdf_only:
-            Path(out).unlink(missing_ok=True)
+            out_path.unlink(missing_ok=True)
             print(f"  HTML temporal eliminado")
     else:
-        print(f"  abrí en browser: open {out}")
+        print(f"  abrí en browser: open {out_path}")
 
     print()
     for k, v in summary.items():

@@ -1,0 +1,14 @@
+# Configuración nixpacks para Railway
+# Agrega las dependencias de sistema necesarias para WeasyPrint (Pango/Cairo)
+# y Pillow. Sin esto, WeasyPrint falla con "cannot load library 'libgobject-2.0-0'".
+
+[phases.setup]
+aptPkgs = [
+  "libpango-1.0-0",
+  "libpangoft2-1.0-0",
+  "libcairo2",
+  "libharfbuzz0b",
+  "libgdk-pixbuf2.0-0",
+  "fonts-dejavu",
+  "fonts-liberation",
+]
