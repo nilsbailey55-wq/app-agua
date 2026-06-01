@@ -137,10 +137,21 @@ def render_land_map(lat, lng, zoom=10, width=620, height=380,
     return final
 
 def render_to_base64(lat, lng, **kwargs):
+    from _cache import get as _cache_get, put as _cache_put, TTL_MAP_RENDER
+    # Cachear por coordenada redondeada + zoom — los tiles CARTO son casi estáticos
+    zoom   = kwargs.get('zoom', 10)
+    width  = kwargs.get('width', 620)
+    height = kwargs.get('height', 380)
+    cache_key = ("map_b64", round(lat, 2), round(lng, 2), zoom, width, height)
+    cached = _cache_get(TTL_MAP_RENDER, *cache_key)
+    if cached is not None:
+        return cached
     img = render_land_map(lat, lng, **kwargs)
     buf = io.BytesIO()
     img.save(buf, format='PNG', optimize=True)
-    return base64.b64encode(buf.getvalue()).decode('ascii')
+    result = base64.b64encode(buf.getvalue()).decode('ascii')
+    _cache_put(result, *cache_key)
+    return result
 
 if __name__ == '__main__':
     import argparse

@@ -51,6 +51,8 @@ except Exception as e:
     MAP_AVAILABLE = False
     print(f"[warn] Map renderer no disponible: {e}", file=sys.stderr)
 
+from _cache import get as _cache_get, put as _cache_put, TTL_ELEVATION, TTL_NDVI
+
 # ── helpers ────────────────────────────────────────────────────────────────
 def load(name):
     with open(DATA / name) as f:
@@ -278,46 +280,51 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
     import urllib.request, urllib.error
     from _ssl_ctx import SSL_CTX as _topo_ctx
     topo = None
-    try:
-        d_lat = 0.018   # ~2 km
-        d_lng = 0.018 / max(math.cos(math.radians(lat)), 0.3)
-        pts = [(lat, lng)]
-        for dla, dln in [(0, 1), (0, -1), (1, 0), (-1, 0),
-                         (1, 1), (1, -1), (-1, 1), (-1, -1)]:
-            pts.append((lat + dla * d_lat, lng + dln * d_lng))
-        locs = '|'.join(f"{la},{ln}" for la, ln in pts)
-        url = f"https://api.open-elevation.com/api/v1/lookup?locations={locs}"
-        req = urllib.request.Request(url, headers={'User-Agent': 'AppAgua/1.0'})
-        with urllib.request.urlopen(req, timeout=15, context=_topo_ctx) as _resp:
-            elev_data = json.loads(_resp.read())
-        elevs = [e['elevation'] for e in elev_data.get('results', [])]
-        if len(elevs) >= 5:
-            field_elev = elevs[0]
-            neighbors  = elevs[1:]
-            mean_neigh = sum(neighbors) / len(neighbors)
-            range_total = max(elevs) - min(elevs)
-            relative = field_elev - mean_neigh
-            slope_m_per_km = range_total / 2  # range sobre ~2km de radio → ~m/km estimado
-            if relative > 1.5:
-                topo_diag = 'Posición elevada — buen drenaje'
-                topo_anega = 'Bajo'
-            elif relative < -1.5:
-                topo_diag = 'Depresión local — agua converge'
-                topo_anega = 'Elevado'
-            else:
-                topo_diag = 'Topografía similar al entorno'
-                topo_anega = 'Medio'
-            topo = {
-                'field_elev': round(field_elev),
-                'mean_neigh': round(mean_neigh),
-                'relative':   round(relative, 1),
-                'range':      round(range_total),
-                'slope':      round(slope_m_per_km, 1),
-                'diagnostic': topo_diag,
-                'flood_risk': topo_anega,
-            }
-    except Exception as e:
-        print(f"[warn] Topografía no disponible: {e}", file=sys.stderr)
+    # Clave de cache: coordenada redondeada a 0.01° (~1 km) — el terreno no cambia
+    _topo_cache_key = ("topo", round(lat, 2), round(lng, 2))
+    topo = _cache_get(TTL_ELEVATION, *_topo_cache_key)
+    if topo is None:
+        try:
+            d_lat = 0.018   # ~2 km
+            d_lng = 0.018 / max(math.cos(math.radians(lat)), 0.3)
+            pts = [(lat, lng)]
+            for dla, dln in [(0, 1), (0, -1), (1, 0), (-1, 0),
+                             (1, 1), (1, -1), (-1, 1), (-1, -1)]:
+                pts.append((lat + dla * d_lat, lng + dln * d_lng))
+            locs = '|'.join(f"{la},{ln}" for la, ln in pts)
+            url = f"https://api.open-elevation.com/api/v1/lookup?locations={locs}"
+            req = urllib.request.Request(url, headers={'User-Agent': 'AppAgua/1.0'})
+            with urllib.request.urlopen(req, timeout=15, context=_topo_ctx) as _resp:
+                elev_data = json.loads(_resp.read())
+            elevs = [e['elevation'] for e in elev_data.get('results', [])]
+            if len(elevs) >= 5:
+                field_elev = elevs[0]
+                neighbors  = elevs[1:]
+                mean_neigh = sum(neighbors) / len(neighbors)
+                range_total = max(elevs) - min(elevs)
+                relative = field_elev - mean_neigh
+                slope_m_per_km = range_total / 2  # range sobre ~2km de radio → ~m/km estimado
+                if relative > 1.5:
+                    topo_diag = 'Posición elevada — buen drenaje'
+                    topo_anega = 'Bajo'
+                elif relative < -1.5:
+                    topo_diag = 'Depresión local — agua converge'
+                    topo_anega = 'Elevado'
+                else:
+                    topo_diag = 'Topografía similar al entorno'
+                    topo_anega = 'Medio'
+                topo = {
+                    'field_elev': round(field_elev),
+                    'mean_neigh': round(mean_neigh),
+                    'relative':   round(relative, 1),
+                    'range':      round(range_total),
+                    'slope':      round(slope_m_per_km, 1),
+                    'diagnostic': topo_diag,
+                    'flood_risk': topo_anega,
+                }
+                _cache_put(topo, *_topo_cache_key)
+        except Exception as e:
+            print(f"[warn] Topografía no disponible: {e}", file=sys.stderr)
 
     # 11) Proyecciones CMIP6 (precomputado, country-level Argentina)
     cmip = None
@@ -329,62 +336,70 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
     # 11b) NDVI Sentinel-2 vía Microsoft Planetary Computer (sin auth)
     import base64 as _b64
     ndvi_b64, ndvi_meta = None, None
-    try:
-        # 1. STAC search: imagen Sentinel-2 reciente con poca nubosidad
-        from datetime import timedelta as _td
-        today = date.today()
-        # Buscar últimos 90 días
-        date_range = f"{(today - _td(days=90)).isoformat()}/{today.isoformat()}"
-        bbox = [lng-0.025, lat-0.025, lng+0.025, lat+0.025]   # ~5 km × 5 km
-        body = {
-            "collections": ["sentinel-2-l2a"],
-            "bbox": bbox,
-            "datetime": date_range,
-            "query": {"eo:cloud_cover": {"lt": 20}},
-            "sortby": [{"field": "properties.datetime", "direction": "desc"}],
-            "limit": 1,
-        }
-        stac_req = urllib.request.Request(
-            "https://planetarycomputer.microsoft.com/api/stac/v1/search",
-            method="POST",
-            data=json.dumps(body).encode(),
-            headers={"Content-Type": "application/json", "User-Agent": "AppAgua/1.0"}
-        )
-        with urllib.request.urlopen(stac_req, timeout=20, context=_topo_ctx) as _resp:
-            sd = json.loads(_resp.read())
-        feats = sd.get('features', [])
-        if feats:
-            item = feats[0]
-            item_id = item['id']
-            cloud  = item['properties'].get('eo:cloud_cover', 0)
-            img_dt = item['properties']['datetime'][:10]
-
-            # 2. Build URL del NDVI cropped
-            params = urllib.parse.urlencode({
-                'collection': 'sentinel-2-l2a',
-                'item': item_id,
-                'assets': 'B08',
-                'asset_as_band': 'true',
-                'expression': '(B08-B04)/(B08+B04)',
-                'rescale': '-0.2,0.8',
-                'colormap_name': 'rdylgn',
-            }, doseq=False)
-            # assets debe aparecer dos veces (B08 + B04) — agrego manualmente
-            params += '&assets=B04'
-            ndvi_url = (f"https://planetarycomputer.microsoft.com/api/data/v1/item/bbox/"
-                        f"{bbox[0]},{bbox[1]},{bbox[2]},{bbox[3]}/600x600.png?{params}")
-            ndvi_req = urllib.request.Request(ndvi_url, headers={"User-Agent": "AppAgua/1.0"})
-            with urllib.request.urlopen(ndvi_req, timeout=30, context=_topo_ctx) as _resp:
-                ndvi_bytes = _resp.read()
-            ndvi_b64 = _b64.b64encode(ndvi_bytes).decode('ascii')
-            ndvi_meta = {
-                'date': img_dt,
-                'cloud_cover': round(cloud, 1),
-                'platform': 'Sentinel-2 L2A',
-                'pixel_resolution_m': 10,
+    # Cache por celda de 0.025° (~2.5 km) — misma resolución que el bbox de búsqueda
+    # TTL 7 días: Sentinel-2 tiene revisita ~5 días, pero imagen válida por más tiempo
+    _ndvi_cache_key = ("ndvi", round(lat, 2), round(lng, 2))
+    _ndvi_cached = _cache_get(TTL_NDVI, *_ndvi_cache_key)
+    if _ndvi_cached is not None:
+        ndvi_b64, ndvi_meta = _ndvi_cached['b64'], _ndvi_cached['meta']
+    else:
+        try:
+            # 1. STAC search: imagen Sentinel-2 reciente con poca nubosidad
+            from datetime import timedelta as _td
+            today = date.today()
+            # Buscar últimos 90 días
+            date_range = f"{(today - _td(days=90)).isoformat()}/{today.isoformat()}"
+            bbox = [lng-0.025, lat-0.025, lng+0.025, lat+0.025]   # ~5 km × 5 km
+            body = {
+                "collections": ["sentinel-2-l2a"],
+                "bbox": bbox,
+                "datetime": date_range,
+                "query": {"eo:cloud_cover": {"lt": 20}},
+                "sortby": [{"field": "properties.datetime", "direction": "desc"}],
+                "limit": 1,
             }
-    except Exception as e:
-        print(f"[warn] NDVI no disponible: {e}", file=sys.stderr)
+            stac_req = urllib.request.Request(
+                "https://planetarycomputer.microsoft.com/api/stac/v1/search",
+                method="POST",
+                data=json.dumps(body).encode(),
+                headers={"Content-Type": "application/json", "User-Agent": "AppAgua/1.0"}
+            )
+            with urllib.request.urlopen(stac_req, timeout=20, context=_topo_ctx) as _resp:
+                sd = json.loads(_resp.read())
+            feats = sd.get('features', [])
+            if feats:
+                item = feats[0]
+                item_id = item['id']
+                cloud  = item['properties'].get('eo:cloud_cover', 0)
+                img_dt = item['properties']['datetime'][:10]
+
+                # 2. Build URL del NDVI cropped
+                params = urllib.parse.urlencode({
+                    'collection': 'sentinel-2-l2a',
+                    'item': item_id,
+                    'assets': 'B08',
+                    'asset_as_band': 'true',
+                    'expression': '(B08-B04)/(B08+B04)',
+                    'rescale': '-0.2,0.8',
+                    'colormap_name': 'rdylgn',
+                }, doseq=False)
+                # assets debe aparecer dos veces (B08 + B04) — agrego manualmente
+                params += '&assets=B04'
+                ndvi_url = (f"https://planetarycomputer.microsoft.com/api/data/v1/item/bbox/"
+                            f"{bbox[0]},{bbox[1]},{bbox[2]},{bbox[3]}/600x600.png?{params}")
+                ndvi_req = urllib.request.Request(ndvi_url, headers={"User-Agent": "AppAgua/1.0"})
+                with urllib.request.urlopen(ndvi_req, timeout=30, context=_topo_ctx) as _resp:
+                    ndvi_bytes = _resp.read()
+                ndvi_b64 = _b64.b64encode(ndvi_bytes).decode('ascii')
+                ndvi_meta = {
+                    'date': img_dt,
+                    'cloud_cover': round(cloud, 1),
+                    'platform': 'Sentinel-2 L2A',
+                    'pixel_resolution_m': 10,
+                }
+                _cache_put({'b64': ndvi_b64, 'meta': ndvi_meta}, *_ndvi_cache_key)
+        except Exception as e:
+            print(f"[warn] NDVI no disponible: {e}", file=sys.stderr)
 
     # 12) Mapa de la parcela con contexto (CARTO Voyager tiles)
     map_b64 = None
