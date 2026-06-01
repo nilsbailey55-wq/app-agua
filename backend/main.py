@@ -14,29 +14,14 @@ import json
 import os
 import sys
 import asyncio
-import ssl
 import urllib.request
 import urllib.parse
 from pathlib import Path
 
-# Permitir importar el generador de reportes desde scripts/
+# Permitir importar el generador de reportes y helpers desde scripts/
 sys.path.insert(0, str(Path(__file__).parent / "scripts"))
 
-# SSL: intentar cargar bundle de certificados del sistema o del framework de Python
-_SSL_CTX = ssl.create_default_context()
-for _cert_path in [
-    "/etc/ssl/certs/ca-certificates.crt",      # Debian/Ubuntu/Railway
-    "/etc/ssl/cert.pem",                        # Alpine/macOS (brew)
-    "/Library/Frameworks/Python.framework/Versions/3.13/etc/openssl/cert.pem",  # macOS Python.org
-    "/Library/Frameworks/Python.framework/Versions/3.12/etc/openssl/cert.pem",
-    "/Library/Frameworks/Python.framework/Versions/3.11/etc/openssl/cert.pem",
-]:
-    if os.path.exists(_cert_path):
-        try:
-            _SSL_CTX.load_verify_locations(_cert_path)
-        except Exception:
-            pass
-        break
+from _ssl_ctx import SSL_CTX as _SSL_CTX  # noqa: E402
 
 # ── load data ──────────────────────────────────────────────────────────────
 DATA_DIR  = os.path.join(os.path.dirname(__file__), "data")

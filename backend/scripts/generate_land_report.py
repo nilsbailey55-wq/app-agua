@@ -275,8 +275,8 @@ def generate(lat, lng, area_ha=None, owner=None, parcel_id=None):
     composite     = round(drought_score * 0.55 + excess_score * 0.45)
 
     # 10) Topografía (Open-Elevation: parcela + 8 vecinos a ~2 km)
-    import urllib.request, urllib.error, ssl as _ssl
-    _topo_ctx = _ssl._create_unverified_context()
+    import urllib.request, urllib.error
+    from _ssl_ctx import SSL_CTX as _topo_ctx
     topo = None
     try:
         d_lat = 0.018   # ~2 km
