@@ -4,7 +4,7 @@ FastAPI + Shapely (point-in-polygon locate)
 Run: uvicorn main:app --reload --port 8000
 """
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, Response
@@ -16,12 +16,40 @@ import sys
 import asyncio
 import urllib.request
 import urllib.parse
+import time
+import collections
+import threading
 from pathlib import Path
 
 # Permitir importar el generador de reportes y helpers desde scripts/
 sys.path.insert(0, str(Path(__file__).parent / "scripts"))
 
 from _ssl_ctx import SSL_CTX as _SSL_CTX  # noqa: E402
+
+# ── Rate limiting (in-memory, single-process) ──────────────────────────────
+# Ventana deslizante por IP. Suficiente para Railway con un solo worker.
+# Si escala a múltiples workers, migrar a Redis con slowapi.
+_RATE_LIMIT   = int(os.environ.get("REPORT_RATE_LIMIT", "5"))   # requests
+_RATE_WINDOW  = int(os.environ.get("REPORT_RATE_WINDOW", "3600"))  # segundos (1 hora)
+_rate_store: dict[str, collections.deque] = {}
+_rate_lock = threading.Lock()
+
+def _check_rate_limit(ip: str) -> tuple[bool, int]:
+    """
+    Ventana deslizante: guarda timestamps de los últimos requests del IP.
+    Retorna (allowed: bool, retry_after_seconds: int).
+    """
+    now = time.monotonic()
+    with _rate_lock:
+        timestamps = _rate_store.setdefault(ip, collections.deque())
+        # Descartar timestamps fuera de la ventana
+        while timestamps and now - timestamps[0] > _RATE_WINDOW:
+            timestamps.popleft()
+        if len(timestamps) >= _RATE_LIMIT:
+            retry_after = int(_RATE_WINDOW - (now - timestamps[0])) + 1
+            return False, retry_after
+        timestamps.append(now)
+        return True, 0
 
 # ── load data ──────────────────────────────────────────────────────────────
 DATA_DIR  = os.path.join(os.path.dirname(__file__), "data")
@@ -902,6 +930,7 @@ def get_precip_heatmap():
 
 @app.get("/api/report/land")
 async def get_land_report(
+    request: Request,
     lat: float = Query(..., description="Latitud (-55 a -21)"),
     lng: float = Query(..., description="Longitud (-74 a -52)"),
     area_ha: float | None = Query(None, description="Superficie de la parcela en hectáreas"),
@@ -914,7 +943,25 @@ async def get_land_report(
     Producto MVP — destinado a brokers / inversores agro / aseguradoras.
     Tiempo de respuesta típico: 5-15 s (depende de APIs externas: CONAE,
     Microsoft Planetary Computer, Open-Elevation).
+
+    Rate limit: 5 reportes por hora por IP (configurable via env vars
+    REPORT_RATE_LIMIT y REPORT_RATE_WINDOW).
     """
+    # ── Rate limiting ──────────────────────────────────────────────────────
+    # X-Forwarded-For: Railway pone la IP real del cliente en este header.
+    # Fallback a request.client.host si no hay proxy.
+    client_ip = (
+        request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        or (request.client.host if request.client else "unknown")
+    )
+    allowed, retry_after = _check_rate_limit(client_ip)
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Límite de {_RATE_LIMIT} reportes por hora alcanzado. "
+                   f"Reintentá en {retry_after // 60} min {retry_after % 60} s.",
+            headers={"Retry-After": str(retry_after)},
+        )
     if format not in ("html", "pdf"):
         raise HTTPException(400, "format debe ser 'html' o 'pdf'")
     if not (-55 <= lat <= -21) or not (-74 <= lng <= -52):
