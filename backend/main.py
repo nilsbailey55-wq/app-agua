@@ -26,6 +26,37 @@ sys.path.insert(0, str(Path(__file__).parent / "scripts"))
 
 from _ssl_ctx import SSL_CTX as _SSL_CTX  # noqa: E402
 
+import logging
+_log = logging.getLogger(__name__)
+
+# ── Auth — API key para /api/report/land ───────────────────────────────────
+# Setear REPORT_API_KEY en Railway Dashboard → Variables.
+# Sin la variable: modo desarrollo sin auth (warning en startup).
+# Con la variable: se requiere header X-Api-Key con el valor correcto.
+_REPORT_API_KEY: str | None = os.environ.get("REPORT_API_KEY") or None
+
+if _REPORT_API_KEY is None:
+    _log.warning(
+        "REPORT_API_KEY no configurada — /api/report/land sin autenticación. "
+        "Setear la variable en Railway antes de distribuir el endpoint."
+    )
+
+def _require_api_key(request: Request) -> None:
+    """Verifica el header X-Api-Key. Lanza HTTPException si falla."""
+    if _REPORT_API_KEY is None:
+        return   # dev mode — sin auth
+    key = request.headers.get("x-api-key", "")
+    if not key:
+        raise HTTPException(
+            status_code=401,
+            detail="Autenticación requerida. Incluir header X-Api-Key.",
+            headers={"WWW-Authenticate": "ApiKey"},
+        )
+    # Comparación en tiempo constante para evitar timing attacks
+    import hmac
+    if not hmac.compare_digest(key, _REPORT_API_KEY):
+        raise HTTPException(status_code=403, detail="API key inválida.")
+
 # ── Rate limiting (in-memory, single-process) ──────────────────────────────
 # Ventana deslizante por IP. Suficiente para Railway con un solo worker.
 # Si escala a múltiples workers, migrar a Redis con slowapi.
@@ -947,6 +978,9 @@ async def get_land_report(
     Rate limit: 5 reportes por hora por IP (configurable via env vars
     REPORT_RATE_LIMIT y REPORT_RATE_WINDOW).
     """
+    # ── Auth ───────────────────────────────────────────────────────────────
+    _require_api_key(request)
+
     # ── Rate limiting ──────────────────────────────────────────────────────
     # X-Forwarded-For: Railway pone la IP real del cliente en este header.
     # Fallback a request.client.host si no hay proxy.
