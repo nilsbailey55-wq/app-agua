@@ -1454,10 +1454,15 @@ function renderBasinList() {
       <h3>Seleccioná una cuenca</h3>
       <p>Hacé clic en el mapa o usá el botón de ubicación para ver de dónde viene tu agua.</p>
     </div>
-    <div class="section">
-      <p class="section-title">Todas las cuencas</p>
-      <div class="basin-list">${items}</div>
-    </div>
+    <details class="section" id="basinListSection" open>
+      <summary>
+        Todas las cuencas
+        <span class="summary-preview" id="basinListPreview"></span>
+      </summary>
+      <div class="section-body">
+        <div class="basin-list">${items}</div>
+      </div>
+    </details>
     <div id="basin-detail"></div>
   `;
 }
@@ -1566,6 +1571,16 @@ async function selectBasin(id, panTo = false) {
     el.style.background = el.dataset.id === id ? 'var(--blue-light)' : '';
     el.style.borderColor = el.dataset.id === id ? 'var(--border)' : 'transparent';
   });
+
+  // Colapsar la lista de cuencas y mostrar la seleccionada en el preview,
+  // para que el detalle de la cuenca quede a la vista de inmediato.
+  const _listSec  = document.getElementById('basinListSection');
+  const _listPrev = document.getElementById('basinListPreview');
+  const _selFeat  = allBasins.find(f => f.id === id);
+  if (_listPrev && _selFeat) {
+    _listPrev.innerHTML = `${dotSm(_selFeat.properties.status_overall)}<span class="preview-meta">${_selFeat.properties.name}</span>`;
+  }
+  if (_listSec) _listSec.open = false;
 
   // hide welcome
   const wm = document.getElementById('welcomeMsg');
