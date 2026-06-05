@@ -257,6 +257,9 @@
     .sources-list li::before { content: '·'; position: absolute; left: 0; font-weight: 700; color: var(--blue); }
     .sources-list a { color: var(--blue); text-decoration: none; }
     .sources-list a:hover { text-decoration: underline; }
+    /* enlaces de fuente embebidos en texto (popups, leyendas, atribuciones) */
+    .src-link { color: var(--blue); text-decoration: none; border-bottom: 1px dotted currentColor; }
+    .src-link:hover { text-decoration: none; border-bottom-style: solid; }
 
     /* water supply chain */
     .supply-chain { display: flex; flex-direction: column; gap: 0; }
@@ -1141,7 +1144,7 @@
       </details>
       <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">
         Backend: <code>localhost:8000</code><br>
-        Cuencas HydroBASINS L5 (divisorias topográficas, no áreas de servicio) · Hidrografía Natural Earth · Humedales OSM · Glaciares IANIGLA · Represas CAMMESA · Áreas APN · Ciudades INDEC 2022 · Acuíferos SEGEMAR/INA/SAG (aproximación 2D)
+        <span id="dataSourcesLine">Cuencas HydroBASINS L5 (divisorias topográficas, no áreas de servicio) · Hidrografía Natural Earth · Humedales OSM · Glaciares IANIGLA · Represas CAMMESA · Áreas APN · Ciudades INDEC 2022 · Acuíferos SEGEMAR/INA/SAG (aproximación 2D)</span>
       </div>
     </div>
   </aside>
@@ -1223,6 +1226,72 @@
 const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:8000'
   : 'https://app-agua-production.up.railway.app';
+
+// ── Registro central de fuentes citadas → URL oficial ───────────────────────
+// Único lugar para mantener/corregir las URLs. srcLink() arma un enlace para
+// una fuente puntual; linkifySources() convierte menciones dentro de un texto
+// plano (campos dinámicos, notas) en enlaces.
+const SOURCE_URLS = {
+  'OpenStreetMap': 'https://www.openstreetmap.org/',
+  'OSM':           'https://www.openstreetmap.org/',
+  'IANIGLA':       'https://www.argentina.gob.ar/ianigla',
+  'CONAE':         'https://www.argentina.gob.ar/conae',
+  'NASA POWER':    'https://power.larc.nasa.gov/',
+  'GPM-IMERG':     'https://gpm.nasa.gov/',
+  'GPM':           'https://gpm.nasa.gov/',
+  'MERRA-2':       'https://gmao.gsfc.nasa.gov/reanalysis/MERRA-2/',
+  'SAOCOM':        'https://www.argentina.gob.ar/conae/saocom',
+  'Natural Earth': 'https://www.naturalearthdata.com/',
+  'HydroSHEDS':    'https://www.hydrosheds.org/',
+  'HydroBASINS':   'https://www.hydrosheds.org/products/hydrobasins',
+  'HydroRIVERS':   'https://www.hydrosheds.org/products/hydrorivers',
+  'CHIRPS':        'https://www.chc.ucsb.edu/data/chirps',
+  'ERA5':          'https://www.ecmwf.int/en/forecasts/dataset/ecmwf-reanalysis-v5',
+  'CAMMESA':       'https://www.cammesa.com/',
+  'APN':           'https://www.argentina.gob.ar/parquesnacionales',
+  'SIB':           'https://www.sib.gob.ar/',
+  'SEGEMAR':       'https://www.segemar.gov.ar/',
+  'INDEC':         'https://www.indec.gob.ar/',
+  'INA':           'https://www.argentina.gob.ar/ina',
+  'JRC-GSW':       'https://global-surface-water.appspot.com/',
+  'JRC':           'https://global-surface-water.appspot.com/',
+  'GSW':           'https://global-surface-water.appspot.com/',
+  'Landsat':       'https://www.usgs.gov/landsat-missions',
+  'USGS':          'https://www.usgs.gov/landsat-missions',
+};
+
+// Enlace para una fuente puntual. label opcional para mostrar otro texto.
+function srcLink(key, label) {
+  const url = SOURCE_URLS[key];
+  const text = label || key;
+  return url
+    ? `<a href="${url}" target="_blank" rel="noopener" class="src-link">${text}</a>`
+    : text;
+}
+
+// Convierte menciones de fuentes conocidas dentro de un texto PLANO en enlaces.
+// Procesa las claves más largas primero y usa placeholders para no re-enlazar.
+const _SOURCE_KEYS = Object.keys(SOURCE_URLS).sort((a, b) => b.length - a.length);
+function linkifySources(text) {
+  if (!text) return text;
+  let out = String(text);
+  const tokens = [];
+  for (const key of _SOURCE_KEYS) {
+    let idx;
+    while ((idx = out.indexOf(key)) !== -1) {
+      const tk = '@@SRC' + tokens.length + '@@';
+      tokens.push(`<a href="${SOURCE_URLS[key]}" target="_blank" rel="noopener" class="src-link">${key}</a>`);
+      out = out.slice(0, idx) + tk + out.slice(idx + key.length);
+    }
+  }
+  return out.replace(/@@SRC(\d+)@@/g, (m, i) => tokens[+i]);
+}
+
+// Linkificar el pie de "fuentes de datos" del panel (HTML estática)
+(function () {
+  const el = document.getElementById('dataSourcesLine');
+  if (el) el.innerHTML = linkifySources(el.textContent);
+})();
 
 // ── status helpers ────────────────────────────────────────────────────────
 const STATUS_COLOR = { red: '#c0392b', yellow: '#d4a017', green: '#2d9b5a', na: '#aaa' };
@@ -2290,7 +2359,7 @@ async function buildWaterLayers() {
          <div class="popup-body">
            Tipo: <b>${wt}</b><br>
            Superficie: <b>${p.area_km2.toLocaleString('es-AR')} km²</b><br>
-           <em>Fuente: OpenStreetMap (${p.osm_id})</em>
+           <em>Fuente: ${srcLink('OpenStreetMap')} (${p.osm_id})</em>
          </div>`
       );
     }
@@ -2344,7 +2413,7 @@ async function buildWaterLayers() {
          <div class="popup-body">
            ${s.label}${flag}<br>
            Superficie: ${p.area_km2?.toLocaleString('es-AR') ?? '?'} km²<br>
-           <em>Fuente: OpenStreetMap (${p.osm_id})</em>
+           <em>Fuente: ${srcLink('OpenStreetMap')} (${p.osm_id})</em>
          </div>`
       );
     }
@@ -2395,7 +2464,7 @@ async function buildWaterLayers() {
        <div class="popup-body">
          ${GLACIER_TYPE_LABEL[p.tipo] || p.tipo}<br>
          Superficie: <b>${p.area_km2} km²</b><br>
-         <em>Fuente: IANIGLA — Inventario Nacional de Glaciares 2018 (Ley 26.639)</em>
+         <em>Fuente: ${srcLink('IANIGLA')} — Inventario Nacional de Glaciares 2018 (Ley 26.639)</em>
        </div>`
     )
     .addTo(glaciersLayer);
@@ -2424,7 +2493,7 @@ async function buildWaterLayers() {
          ${p.reservoir ? `Embalse: ${p.reservoir}<br>` : ''}
          ${p.binacional ? '<span style="color:#7b1fa2;font-weight:700">⚐ Binacional</span><br>' : ''}
          ${p.note ? `<em>${p.note}</em><br>` : ''}
-         <em style="color:#999">Fuente: CAMMESA / Wikipedia</em>
+         <em style="color:#999">Fuente: ${srcLink('CAMMESA')} / Wikipedia</em>
        </div>`
     )
     .addTo(damsLayer);
@@ -2456,7 +2525,7 @@ async function buildWaterLayers() {
          ${isUnesco ? '<span style="color:#bf360c;font-weight:700">★ Patrimonio UNESCO</span><br>' : ''}
          ${isRamsar ? '<span style="color:#1565c0;font-weight:700">💧 Sitio RAMSAR</span><br>' : ''}
          ${p.note ? `<em>${p.note}</em><br>` : ''}
-         <em style="color:#999">Fuente: APN / SIB</em>
+         <em style="color:#999">Fuente: ${srcLink('APN')} / ${srcLink('SIB')}</em>
        </div>`
     )
     .addTo(protectedLayer);
@@ -2709,7 +2778,7 @@ async function buildWaterLayers() {
     })
     .bindPopup(
       `<div class="popup-title" style="color:#0d47a1">🌊 ${name}</div>
-       <div class="popup-body">${note}</div>`
+       <div class="popup-body">${linkifySources(note)}</div>`
     )
     .addTo(waterLayerGroup);
   });
@@ -2735,7 +2804,7 @@ async function buildWaterLayers() {
            ${p.glaciers_count > 1 ? `<b>${p.glaciers_count}</b> glaciares unidos<br>` : ''}
            Superficie: <b>${p.area_km2.toLocaleString('es-AR')} km²</b><br>
            ${p.note ? `<em>${p.note}</em><br>` : ''}
-           <em style="color:#999;font-size:0.68rem;">Fuente: OpenStreetMap (natural=glacier)</em>
+           <em style="color:#999;font-size:0.68rem;">Fuente: ${srcLink('OpenStreetMap')} (natural=glacier)</em>
          </div>`
       );
     }
@@ -3131,7 +3200,7 @@ function renderLegend() {
         </div>
 
         <div style="margin-top:8px;padding-top:7px;border-top:1px solid #d0dce8;color:#bbb;font-size:0.63rem;line-height:1.4;">
-          Cuencas: HydroBASINS L5<br>Hidrografía: Natural Earth 1:10m<br>Humedales: OSM<br>Glaciares: IANIGLA 2018<br>Represas/Áreas: APN+Wikipedia<br>Acuíferos: SEGEMAR/INA/SAG (aprox.)
+          ${linkifySources(`Cuencas: HydroBASINS L5<br>Hidrografía: Natural Earth 1:10m<br>Humedales: OSM<br>Glaciares: IANIGLA 2018<br>Represas/Áreas: APN+Wikipedia<br>Acuíferos: SEGEMAR/INA/SAG (aprox.)`)}
         </div>
       </div>`;
     L.DomEvent.disableClickPropagation(d);
@@ -3927,7 +3996,7 @@ async function loadPrecipChart(lat, lng, containerId) {
       <div class="flow-chart-note">
         Media 1990-2025: <b>${metric.historical_mean} mm/año</b> ·
         ${d.lat.toFixed(2)}°S, ${Math.abs(d.lng).toFixed(2)}°O ·
-        Fuente: ${metric.source}
+        Fuente: ${linkifySources(metric.source)}
       </div>`;
   } catch(e) {
     el.style.display = 'none';
@@ -4438,7 +4507,7 @@ function _updateConaeLegend(dayIdx) {
       <img src="${legendUrl}" alt="leyenda CONAE" style="display:block;height:auto;max-height:60vh;"
            onload="_restackLegends()" onerror="this.style.display='none'"/>
     </div>
-    <div style="text-align:center;margin-top:6px;font-size:0.62rem;color:#888;">CONAE · GPM-IMERG · mm</div>
+    <div style="text-align:center;margin-top:6px;font-size:0.62rem;color:#888;">${srcLink('CONAE')} · ${srcLink('GPM-IMERG')} · mm</div>
   `;
   document.getElementById('map').appendChild(el);
   L.DomEvent.disableClickPropagation(el);
@@ -4483,7 +4552,7 @@ function _updatePrecipLegend(period, maxVal) {
     <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:0.72rem;color:#333;font-weight:600;">
       ${tickLabels.map(v => `<span>${v.toLocaleString('es-AR')}</span>`).join('')}
     </div>
-    <div style="text-align:center;margin-top:5px;font-size:0.6rem;color:#888;">NASA POWER · MERRA-2</div>
+    <div style="text-align:center;margin-top:5px;font-size:0.6rem;color:#888;">${srcLink('NASA POWER')} · ${srcLink('MERRA-2')}</div>
   `;
   document.getElementById('map').appendChild(el);
   L.DomEvent.disableClickPropagation(el);
@@ -4663,7 +4732,7 @@ function _updateSaocomLegend(dayIdx) {
       <img src="${legendUrl}" alt="leyenda SAOCOM" style="display:block;height:auto;max-height:55vh;"
            onload="_restackLegends()" onerror="this.style.display='none'"/>
     </div>
-    <div style="text-align:center;margin-top:6px;font-size:0.62rem;color:#888;">CONAE · SAOCOM (0-50cm)</div>
+    <div style="text-align:center;margin-top:6px;font-size:0.62rem;color:#888;">${srcLink('CONAE')} · ${srcLink('SAOCOM')} (0-50cm)</div>
   `;
   document.getElementById('map').appendChild(el);
   L.DomEvent.disableClickPropagation(el);
@@ -4786,7 +4855,7 @@ function _updateDroughtLegend(metric, dayIdx) {
       <img src="${legendUrl}" alt="leyenda" style="display:block;height:auto;max-height:55vh;"
            onload="_restackLegends()" onerror="this.style.display='none'"/>
     </div>
-    <div style="text-align:center;margin-top:6px;font-size:0.62rem;color:#888;">CONAE · GPM-IMERG</div>
+    <div style="text-align:center;margin-top:6px;font-size:0.62rem;color:#888;">${srcLink('CONAE')} · ${srcLink('GPM-IMERG')}</div>
   `;
   document.getElementById('map').appendChild(el);
   L.DomEvent.disableClickPropagation(el);
@@ -5449,7 +5518,7 @@ function _renderWbDetail(wb) {
     <div class="wb-chart-wrap">${buildAreaChartSVG(wb)}</div>
 
     <div class="wb-desc">${wb.description || ''}</div>
-    <div style="font-size:0.59rem;color:var(--text-muted);margin-top:4px;">Fuente: ${wb.refs || 'JRC-GSW / Landsat'}</div>
+    <div style="font-size:0.59rem;color:var(--text-muted);margin-top:4px;">Fuente: ${linkifySources(wb.refs || 'JRC-GSW / Landsat')}</div>
   `;
 }
 </script>
