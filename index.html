@@ -1012,11 +1012,53 @@
     }
     .wb-map-btn:hover { background: var(--blue-light); }
 
-    /* responsive */
+    /* Asa del bottom sheet — sólo visible en mobile */
+    .sheet-handle { display: none; }
+
+    /* ── Mobile: mapa a pantalla completa + panel como bottom sheet ── */
     @media (max-width: 700px) {
-      #app { flex-direction: column; }
-      #panel { width: 100%; min-width: unset; max-height: 55vh; border-right: none; border-bottom: 1px solid var(--border); }
-      #map { height: 45vh; }
+      html, body { height: 100dvh; }
+      #app { display: block; position: relative; height: 100dvh; }
+
+      /* El mapa ocupa toda la pantalla, detrás del cajón */
+      #map {
+        position: fixed; inset: 0;
+        width: 100vw; height: 100dvh;
+        flex: none;
+      }
+
+      /* El panel pasa a ser un cajón deslizable desde abajo */
+      #panel {
+        position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+        width: 100%; min-width: 0;
+        height: 88dvh; max-height: 88dvh;
+        border-right: none;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -6px 24px rgba(0,0,0,0.22);
+        transform: translateY(calc(100% - 96px));   /* estado "peek": sólo asomado */
+        transition: transform 0.28s cubic-bezier(.22,.61,.36,1);
+        z-index: 1200;
+      }
+      #panel.sheet-open   { transform: translateY(0); }
+      #panel.sheet-dragging { transition: none; }
+
+      /* Neutralizar el colapso de escritorio en mobile */
+      #panel.panel-collapsed { width: 100%; min-width: 0; }
+      #panel.panel-collapsed > *:not(#panelReopenStrip) { display: revert !important; }
+      #panelCollapseBtn, #panelReopenStrip { display: none !important; }
+
+      /* Asa de arrastre, fija arriba del cajón */
+      .sheet-handle {
+        display: flex; align-items: center; justify-content: center;
+        height: 26px; flex-shrink: 0;
+        position: sticky; top: 0; z-index: 2;
+        background: #fff; border-radius: 16px 16px 0 0;
+        cursor: grab; touch-action: none;
+      }
+      .sheet-handle::before {
+        content: ''; width: 42px; height: 5px; border-radius: 3px;
+        background: rgba(0,0,0,0.22);
+      }
     }
   </style>
 </head>
@@ -1025,6 +1067,9 @@
 
   <!-- ═══════ PANEL ═══════ -->
   <aside id="panel">
+
+    <!-- Asa del bottom sheet (sólo visible/funcional en mobile) -->
+    <div class="sheet-handle" id="sheetHandle" title="Arrastrá o tocá para expandir"></div>
 
     <!-- Strip visible sólo cuando el panel está colapsado -->
     <button id="panelReopenStrip" title="Expandir panel" onclick="document.getElementById('panel').classList.remove('panel-collapsed')">
@@ -1581,6 +1626,9 @@ async function selectBasin(id, panTo = false) {
     _listPrev.innerHTML = `${dotSm(_selFeat.properties.status_overall)}<span class="preview-meta">${_selFeat.properties.name}</span>`;
   }
   if (_listSec) _listSec.open = false;
+
+  // En mobile, expandir el bottom sheet para mostrar el detalle de la cuenca
+  if (window.mobileSheetOpen) window.mobileSheetOpen();
 
   // hide welcome
   const wm = document.getElementById('welcomeMsg');
@@ -4345,11 +4393,14 @@ function _onPrecipPeriodChange() {
 // cargar (su ancho recién entonces es real).
 function _restackLegends() {
   const order = ['precip-legend', 'saocom-legend', 'drought-legend'];
+  // En mobile el bottom sheet asoma ~96px desde abajo: levantamos la base
+  // para que las leyendas no queden tapadas por el asa del cajón.
+  const baseBottom = window.matchMedia('(max-width: 700px)').matches ? 108 : 48;
   let right = 12;
   for (const id of order) {
     const el = document.getElementById(id);
     if (!el) continue;
-    el.style.bottom = '48px';
+    el.style.bottom = baseBottom + 'px';
     el.style.right  = right + 'px';
     right += el.offsetWidth + 8;
   }
@@ -4747,6 +4798,71 @@ function _removeDroughtLegend() {
   if (el) el.remove();
   _restackLegends();
 }
+
+// ── Bottom sheet móvil ──────────────────────────────────────────────────────
+// El panel se vuelve un cajón deslizable desde abajo (patrón mapas). Se arrastra
+// o toca el asa para expandir/colapsar; se auto-expande al seleccionar cuenca.
+(function initMobileSheet() {
+  const mq     = window.matchMedia('(max-width: 700px)');
+  const panel  = document.getElementById('panel');
+  const handle = document.getElementById('sheetHandle');
+  if (!panel || !handle) return;
+
+  const PEEK = 96;                         // px asomados en estado "peek"
+  let dragging = false, moved = false, startY = 0, startT = 0, panelH = 0;
+  const isMobile = () => mq.matches;
+  const open  = () => panel.classList.add('sheet-open');
+  const peek  = () => panel.classList.remove('sheet-open');
+
+  // Expuesto para que selectBasin() abra el cajón al elegir una cuenca
+  window.mobileSheetOpen = () => { if (isMobile()) open(); };
+
+  const pointY = e => (e.touches ? e.touches[0].clientY : e.clientY);
+
+  function onStart(e) {
+    if (!isMobile()) return;
+    dragging = true; moved = false;
+    panelH = panel.offsetHeight;
+    startY = pointY(e);
+    startT = panel.classList.contains('sheet-open') ? 0 : (panelH - PEEK);
+    panel.classList.add('sheet-dragging');
+  }
+  function onMove(e) {
+    if (!dragging) return;
+    let t = startT + (pointY(e) - startY);
+    t = Math.max(0, Math.min(panelH - PEEK, t));
+    if (Math.abs(pointY(e) - startY) > 4) moved = true;
+    panel.style.transform = `translateY(${t}px)`;
+    if (e.cancelable) e.preventDefault();
+  }
+  function onEnd() {
+    if (!dragging) return;
+    dragging = false;
+    panel.classList.remove('sheet-dragging');
+    if (moved) {
+      const m = /translateY\(([-\d.]+)px\)/.exec(panel.style.transform);
+      const t = m ? parseFloat(m[1]) : 0;
+      panel.style.transform = '';
+      (t < (panelH - PEEK) / 2) ? open() : peek();
+    } else {
+      panel.style.transform = '';           // tap → lo maneja el click
+    }
+  }
+
+  handle.addEventListener('touchstart', onStart, { passive: true });
+  handle.addEventListener('touchmove',  onMove,  { passive: false });
+  handle.addEventListener('touchend',   onEnd);
+  handle.addEventListener('mousedown',  onStart);
+  window.addEventListener('mousemove',  onMove);
+  window.addEventListener('mouseup',    onEnd);
+  // Tap simple (sin arrastre) alterna el estado
+  handle.addEventListener('click', () => { if (isMobile() && !moved) panel.classList.toggle('sheet-open'); });
+
+  // Al volver a escritorio, limpiar estado móvil
+  mq.addEventListener('change', e => {
+    if (!e.matches) { panel.classList.remove('sheet-open', 'sheet-dragging'); panel.style.transform = ''; }
+  });
+})();
 
 // ── init ──────────────────────────────────────────────────────────────────
 loadAll();
