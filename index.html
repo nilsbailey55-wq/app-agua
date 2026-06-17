@@ -1143,7 +1143,6 @@
         </div>
       </details>
       <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">
-        Backend: <code>localhost:8000</code><br>
         <span id="dataSourcesLine">Cuencas HydroBASINS L5 (divisorias topográficas, no áreas de servicio) · Hidrografía Natural Earth · Humedales OSM · Glaciares IANIGLA · Represas CAMMESA · Áreas APN · Ciudades INDEC 2022 · Acuíferos SEGEMAR/INA/SAG (aproximación 2D)</span>
       </div>
     </div>
@@ -1258,6 +1257,8 @@ const SOURCE_URLS = {
   'GSW':           'https://global-surface-water.appspot.com/',
   'Landsat':       'https://www.usgs.gov/landsat-missions',
   'USGS':          'https://www.usgs.gov/landsat-missions',
+  'SAG':           'https://www.argentina.gob.ar/jefatura/turismo-y-ambiente/ambiente/recursos-naturales/cuencas-hidricas/sistema-acuifero-guarani',
+  'Wikipedia':     'https://es.wikipedia.org/',
 };
 
 // Enlace para una fuente puntual. label opcional para mostrar otro texto.
@@ -2493,7 +2494,7 @@ async function buildWaterLayers() {
          ${p.reservoir ? `Embalse: ${p.reservoir}<br>` : ''}
          ${p.binacional ? '<span style="color:#7b1fa2;font-weight:700">⚐ Binacional</span><br>' : ''}
          ${p.note ? `<em>${p.note}</em><br>` : ''}
-         <em style="color:#999">Fuente: ${srcLink('CAMMESA')} / Wikipedia</em>
+         <em style="color:#999">Fuente: ${srcLink('CAMMESA')} / ${srcLink('Wikipedia')}</em>
        </div>`
     )
     .addTo(damsLayer);
